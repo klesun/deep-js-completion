@@ -1,0 +1,32 @@
+<idea-plugin>
+  <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
+  <name>deep-js-completion</name>
+  <version>2018.06.05.001</version>
+  <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
+
+  <description><![CDATA[
+      Enter short description for your plugin here.<br>
+      <em>most HTML tags may be used</em>
+    ]]></description>
+
+  <change-notes><![CDATA[
+    <ul>
+      <li>Add description</li>
+    </ul>
+    ]]>
+  </change-notes>
+
+  <idea-version since-build="173.0"/>
+
+  <depends>JavaScript</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepKeysCbtr"/>
+    <!-- Add your extensions here -->
+  </extensions>
+
+  <actions>
+    <!-- Add your actions here -->
+  </actions>
+
+</idea-plugin>
