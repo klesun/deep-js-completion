@@ -16,6 +16,7 @@ import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.types.{JSArrayType, JSContextualUnionTypeImpl, JSGenericTypeImpl, JSUnknownType}
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
+import com.intellij.lang.javascript.settings.JSRootConfiguration
 import org.klesun.deep_js_completion.helpers.SearchCtx
 import org.klesun.lang.Lang._
 
@@ -89,15 +90,28 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
 
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]
+    val onlyTyped = JSRootConfiguration.getInstance(psi.getProject).isOnlyTypeBasedCompletion
 
     result.runRemainingContributors(parameters, otherSourceResult => {
-      // remove dupe built-in suggestions
       val lookup = otherSourceResult.getLookupElement
-      nameToLookup.remove(lookup.getLookupString)
-      if (lookup.getLookupString.endsWith("()")) {
-        nameToLookup.remove(substr(lookup.getLookupString, 0, -2))
+      var memName = lookup.getLookupString
+      if (memName.endsWith("()")) {
+        memName = memName.substring(0, -2)
       }
-      builtInSuggestions.add(lookup)
+      var keepBuiltIn = true
+      if (nameToLookup.contains(memName)) {
+        // built-in already suggests this member
+        if (onlyTyped) {
+          // built-in suggestion is qualitative, keep it, remove ours
+          nameToLookup.remove(memName)
+        } else {
+          // built-in suggestion is mixed with rubbish - remove it, keep ours
+          keepBuiltIn = false
+        }
+      }
+      if (keepBuiltIn) {
+        builtInSuggestions.add(lookup)
+      }
     })
 
     result.addAllElements(nameToLookup.values.asJava)
