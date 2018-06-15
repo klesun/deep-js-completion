@@ -61,4 +61,12 @@ object Lang {
   def substr(str: String, startIndex: Int): String = {
       substr(str, startIndex, str.length())
   }
+
+  def all[T](opts: List[Option[T]]): Option[List[T]] = {
+    if (opts.exists(o => o.isEmpty)) {
+      None
+    } else {
+      Some(opts.map(o => o.get))
+    }
+  }
 }

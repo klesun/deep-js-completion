@@ -1,0 +1,32 @@
+package org.klesun.deep_js_completion.resolvers
+
+import java.util
+
+import com.intellij.lang.javascript.psi.impl.JSDefinitionExpressionImpl
+import com.intellij.lang.javascript.psi._
+import com.intellij.psi.PsiElement
+import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
+import org.klesun.deep_js_completion.helpers.ICtx
+
+import scala.collection.JavaConverters._
+import org.klesun.lang.Lang._
+
+/**
+ * resolves variable type
+ */
+case class VarRes(ctx: ICtx) {
+  def resolve(ref: JSReferenceExpression): Option[JSType] = {
+    // TODO: manually support re-assignment, like
+    // var someVar = null;
+    // ... code
+    // someVar = initializeSomething()
+    Option(ref.resolve())
+      .flatMap(psi => psi match {
+        case dest: JSVariable => Option(dest.getInitializer)
+        case prop: JSProperty => Option(prop.getValue)
+        case prop: JSDefinitionExpression => Option(prop.getExpression)
+        case _ => None
+      })
+      .flatMap(expr => ctx.findExprType(expr))
+  }
+}

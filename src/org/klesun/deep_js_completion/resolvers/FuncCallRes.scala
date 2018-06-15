@@ -5,8 +5,10 @@ import com.intellij.lang.javascript.psi.types.primitives.JSBooleanType
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSType}
 import com.intellij.util.containers.ContainerUtil
-import org.klesun.deep_js_completion.helpers.ICtx
+import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
 import org.klesun.lang.Lang._
+
+import scala.collection.JavaConverters._
 
 /**
  * resolves type of a function call expression like:
@@ -14,15 +16,16 @@ import org.klesun.lang.Lang._
  */
 case class FuncCallRes(ctx: ICtx) {
   def resolve(funcCall: JSCallExpression): Option[JSType] = {
-    Option(funcCall.getMethodExpression)
+    val rTypes = Option(funcCall.getMethodExpression)
       .flatMap(expr => ctx.findExprType(expr))
-      .filter(typ => log("zhopa called var " + typ.getClass))
-      .flatMap(cast[JSFunctionTypeImpl](_))
+      .toList
+      .flatMap(funcT => funcT match {
+        case funcT: JSFunctionTypeImpl => List(funcT)
+        case mt: JSContextualUnionTypeImpl => mt.getTypes.asScala
+            .flatMap(cast[JSFunctionTypeImpl](_))
+        case _ => List()
+      })
       .flatMap(funcT => Option(funcT.getReturnType))
-
-//    val typeMembers = ContainerUtil.newArrayList[TypeMember]
-//    val boolT = new JSBooleanType(false, JSTypeSource.EMPTY, JSTypeContext.UNKNOWN)
-//    typeMembers.add(new JSRecordTypeImpl.PropertySignatureImpl("someHujProp", boolT, false, funcCall))
-//    new JSSimpleRecordTypeImpl(JSTypeSource.EMPTY, typeMembers)
+    MultiType.mergeTypes(rTypes)
   }
 }
