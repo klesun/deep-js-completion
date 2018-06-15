@@ -1,23 +1,39 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.06.05.001</version>
+  <version>2018.06.16.001</version>
   <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
-      Enter short description for your plugin here.<br>
-      <em>most HTML tags may be used</em>
+  <p>
+This is a Webstorm plugin for Javascript deep-type-inference-based property completion and annotation.
+  </p>
+  <p>
+As you may know, by default Webstorm suggests any property ever defined in your project when you ask for completion in someVar. no matter in what context.
+  </p>
+  <p>
+You may check the "Only type-based completion" flag in settings, but you will quickly notice that there is no completion in some places that could have it.
+  </p>
+  <p>
+For example, arguments of functions like map, filter, reduce, sort and functions defined by user won't get completion.
+  </p>
+  <p>
+So, that's why I'm writing this plugin - to make it possible to code in js as comfortable as you would in some static-typed language with the help of type inference and doc-comments.
+  </p>
+  <p>
+This plugin will be highly inspired by my other plugin, <a href="https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion">deep-assoc-completion</a> and most features will be borrowed from there
+  </p>
     ]]></description>
 
   <change-notes><![CDATA[
-    <ul>
-      <li>Add description</li>
-    </ul>
+  <li>First change note</li>
     ]]>
   </change-notes>
 
   <idea-version since-build="173.0"/>
 
+  <!-- if you don't add this, you'll get "plugin does not include any module dependency tags" error  -->
+  <depends>com.intellij.modules.lang</depends>
   <depends>JavaScript</depends>
 
   <extensions defaultExtensionNs="com.intellij">
