@@ -4,7 +4,7 @@ import java.util
 
 import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSSimpleTypeProcessor, JSTypeEvaluator, JSTypeFromResolveResultProcessor}
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.impl.JSFunctionExpressionImpl
+import com.intellij.lang.javascript.psi.impl.{JSFunctionExpressionImpl, JSLiteralExpressionImpl}
 import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSEvaluationPlace
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
@@ -12,6 +12,7 @@ import org.klesun.deep_js_completion.resolvers.{FuncCallRes, VarRes}
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object DeepTypeResolver {
 
@@ -50,6 +51,12 @@ object DeepTypeResolver {
             .getOrElse(JSUnknownType.INSTANCE))
           .toList.asJava
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true))
+      case lit: JSLiteralExpressionImpl => lit.getExpressionKind(false) match {
+        case JSLiteralExpressionKind.BOOLEAN => Some(new JSBooleanLiteralTypeImpl(lit.getValue.asInstanceOf[Boolean], false, JSTypeSource.EMPTY))
+        case _ if lit.isNumericLiteral => Try((lit.getValue + "").toDouble).toOption
+          .map(valu => new JSNumberLiteralTypeImpl(valu, false, JSTypeSource.EMPTY, lit.getValue + ""))
+        case _ => None
+      }
       case _ => None
     }}: Option[JSType]
 

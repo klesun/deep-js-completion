@@ -96,7 +96,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       val lookup = otherSourceResult.getLookupElement
       var memName = lookup.getLookupString
       if (memName.endsWith("()")) {
-        memName = memName.substring(0, -2)
+        memName = substr(memName, 0, -2)
       }
       var keepBuiltIn = true
       if (nameToLookup.contains(memName)) {

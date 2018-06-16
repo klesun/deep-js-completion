@@ -80,7 +80,7 @@
         getComplexSale();
         
         // should get [from, to, dt] completion getComplexSale().itinerary[0].<here>
-        getComplexSale().itinerary['2'];
+        getComplexSale().itinerary[2];
 
         // should get array method completion getLineNumbers().<here>
         let lineNumbers = getLineNumbers();

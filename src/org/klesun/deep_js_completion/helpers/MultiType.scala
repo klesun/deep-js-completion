@@ -44,12 +44,10 @@ object MultiType {
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
     arrT match {
       case tupT: JSTupleTypeImpl =>
-        val arrFallback: Option[JSType] = Option(tupT.toArrayType(true))
-          .flatMap(cast[JSArrayTypeImpl](_))
-          .flatMap(arrT => Option(arrT.getType))
-        val tupResultOpt: Option[JSType] = litValsOpt.map(litVals => {
+        val arrFallback = mergeTypes(tupT.getTypes.asScala.toList)
+        val tupResultOpt = litValsOpt.map(litVals => {
           val types = litVals
-            .flatMap(litVal => Try(litVal.toInt).toOption)
+            .flatMap(litVal => Try(litVal.toDouble.toInt).toOption)
             .flatMap(num => Option(tupT.getTypeByIndex(num)))
           mergeTypes(types).getOrElse(new JSUndefinedType(JSTypeSource.EMPTY))
         })
