@@ -1,22 +1,20 @@
 package org.klesun.deep_js_completion.completion_providers
 
-import java.net.URL
 import java.util
 
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
-import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
-import com.intellij.openapi.util.IconLoader
-import com.intellij.util.{PlatformIcons, ProcessingContext}
-import icons.JavaScriptPsiIcons
-import javax.swing.ImageIcon
-import DeepKeysPvdr._
-import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature}
+import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.types.{JSArrayType, JSContextualUnionTypeImpl, JSGenericTypeImpl, JSUnknownType}
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
+import com.intellij.lang.javascript.psi.resolve.JSClassResolver
+import com.intellij.lang.javascript.psi.types._
+import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
+import com.intellij.psi.PsiElement
+import com.intellij.util.ProcessingContext
+import javax.swing.ImageIcon
+import org.klesun.deep_js_completion.completion_providers.DeepKeysPvdr._
 import org.klesun.deep_js_completion.helpers.SearchCtx
 import org.klesun.lang.Lang._
 
@@ -56,7 +54,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       PrioritizedLookupElement.withPriority(lookup, 200 - i)
     }
 
-    def getProps(typ: JSType): List[PropertySignature] = {
+    def getProps(typ: JSType, psi: PsiElement): List[PropertySignature] = {
       typ match {
         case objT: JSRecordType => objT.getTypeMembers.asScala
           .flatMap(cast[PropertySignature](_))
@@ -65,8 +63,13 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
           val genT = arrT.asGenericType().asRecordType()
           genT.getTypeMembers.asScala
             .flatMap(cast[PropertySignature](_)).toList
+        case arrT: JSTupleTypeImpl =>
+          Option(JSClassResolver.getInstance().findClassByQName("Array", psi))
+            .flatMap(cast[TypeScriptInterfaceImpl](_))
+            .toList.flatMap(ifc => ifc.getMembers.asScala)
+            .flatMap(cast[PropertySignature](_))
         case mt: JSContextualUnionTypeImpl =>
-          mt.getTypes.asScala.flatMap(t => getProps(t)).toList
+          mt.getTypes.asScala.flatMap(t => getProps(t, psi)).toList
         case _ =>
           List()
       }
@@ -80,7 +83,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       .flatMap(cast[JSReferenceExpression](_))
       .flatMap(ref => Option(ref.getQualifier))
       .flatMap(qual => search.findExprType(qual))
-      .toList.flatMap(typ => getProps(typ))
+      .toList.flatMap(typ => getProps(typ, psi))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})

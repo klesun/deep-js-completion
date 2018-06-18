@@ -85,7 +85,7 @@
         // should get array method completion getLineNumbers().<here>
         let lineNumbers = getLineNumbers();
         // should get array method completion lineNumbers.<here>
-        lineNumbers;
+        lineNumbers.;
 
         let pnr = {
             recordLocator: 'QWE123',
