@@ -51,12 +51,15 @@ object DeepTypeResolver {
             .getOrElse(JSUnknownType.INSTANCE))
           .toList.asJava
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true))
-      case lit: JSLiteralExpressionImpl => lit.getExpressionKind(false) match {
-        case JSLiteralExpressionKind.BOOLEAN => Some(new JSBooleanLiteralTypeImpl(lit.getValue.asInstanceOf[Boolean], false, JSTypeSource.EMPTY))
-        case _ if lit.isNumericLiteral => Try((lit.getValue + "").toDouble).toOption
-          .map(valu => new JSNumberLiteralTypeImpl(valu, false, JSTypeSource.EMPTY, lit.getValue + ""))
-        case _ => None
-      }
+      case lit: JSLiteralExpressionImpl =>
+        if (lit.isBooleanLiteral) {
+          Some(new JSBooleanLiteralTypeImpl(lit.getValue.asInstanceOf[Boolean], false, JSTypeSource.EMPTY))
+        } else if (lit.isNumericLiteral) {
+          Try((lit.getValue + "").toDouble).toOption
+            .map(valu => new JSNumberLiteralTypeImpl(valu, false, JSTypeSource.EMPTY, lit.getValue + ""))
+        } else {
+          None
+        }
       case _ => None
     }}: Option[JSType]
 
