@@ -82,10 +82,15 @@
         // should get [from, to, dt] completion getComplexSale().itinerary[0].<here>
         getComplexSale().itinerary[2];
 
+        // should get [a, b] completion obj..<here>
+        [{a:5, b:6}, {a:6, b:3}].map(obj => {
+            obj.
+        });
+
         // should get array method completion getLineNumbers().<here>
         let lineNumbers = getLineNumbers();
         // should get array method completion lineNumbers.<here>
-        lineNumbers.;
+        lineNumbers;
 
         let pnr = {
             recordLocator: 'QWE123',
