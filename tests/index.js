@@ -83,14 +83,14 @@
         getComplexSale().itinerary[2];
 
         // should get [a, b] completion obj..<here>
-        [{a:5, b:6}, {a:6, b:3}].map(obj => {
+        [{a:5, b:6}, {a:6, b:3}].forEach(obj => {
             obj.
         });
 
         // should get array method completion getLineNumbers().<here>
         let lineNumbers = getLineNumbers();
         // should get array method completion lineNumbers.<here>
-        lineNumbers;
+        lineNumbers.forEach(a => a.isOnlySsr);
 
         let pnr = {
             recordLocator: 'QWE123',

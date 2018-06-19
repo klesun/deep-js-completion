@@ -52,6 +52,10 @@ object MultiType {
           mergeTypes(types).getOrElse(new JSUndefinedType(JSTypeSource.EMPTY))
         })
         tupResultOpt.orElse(arrFallback)
+      case mt: JSContextualUnionTypeImpl =>
+        val keyTypes = mt.getTypes.asScala
+          .flatMap(arrT => getKey(arrT, keyTOpt)).toList
+        mergeTypes(keyTypes)
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
       case _ => None
     }
