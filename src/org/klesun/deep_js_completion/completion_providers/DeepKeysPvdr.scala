@@ -11,6 +11,7 @@ import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
+import com.intellij.openapi.actionSystem.DataConstants
 import com.intellij.psi.PsiElement
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
@@ -77,21 +78,25 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       }
     }
 
-    val psi = parameters.getPosition
+    // originalPosition gives you ";" in "smfAdapter.;"
+    def findRefExpr(psi: PsiElement): Option[JSReferenceExpression] = {
+      psi match {
+        case ref: JSReferenceExpression => Some(ref)
+        case _ => psi.getChildren.flatMap(c => findRefExpr(c)).lift(0)
+      }
+    }
+
+    val psi = parameters.getOriginalPosition
     val depth = getMaxDepth(parameters.isAutoPopup)
     val search = new SearchCtx().setDepth(depth)
-
-    val suggestions = Option(parameters.getPosition.getParent)
-      .flatMap(cast[JSReferenceExpression](_))
+    val suggestions = Option(parameters.getOriginalPosition.getParent)
+      .flatMap(findRefExpr(_))
       .flatMap(ref => Option(ref.getQualifier))
       .flatMap(qual => search.findExprType(qual))
       .toList.flatMap(typ => getProps(typ, psi))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
-
-    /** @debug */
-    println("resolved: " + suggestions.map(s => s.getLookupString))
 
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]

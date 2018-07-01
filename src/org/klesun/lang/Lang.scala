@@ -65,4 +65,9 @@ object Lang {
       Some(opts.map(o => o.get))
     }
   }
+
+  def singleLine(text: String, length: Int): String = {
+    val lines = text.split("\n").map(l => l.trim)
+    substr(lines.mkString(" "), 0, length)
+  }
 }

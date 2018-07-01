@@ -35,6 +35,7 @@ object MainRes {
   }
 
   def resolveIn(expr: JSExpression, ctx: ICtx): Option[JSType] = {
+
     val resolved = {expr match {
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
@@ -80,7 +81,7 @@ object MainRes {
     }}: Option[JSType]
 
     /** @debug */
-    //println("resolution of " + expr.getText + " " + expr.getClass + " - " + resolved)
+    //println("resolution of " + singleLine(expr.getText, 100) + " " + expr.getClass + " - " + resolved)
 
     val result = resolved.orElse(getWsType(expr))
 

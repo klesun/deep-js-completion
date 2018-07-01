@@ -1,6 +1,6 @@
 package org.klesun.deep_js_completion.helpers
 
-import com.intellij.lang.javascript.psi.JSType
+import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSType}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 
@@ -59,5 +59,12 @@ object MultiType {
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
       case _ => None
     }
+  }
+
+  def getReturnType(funcT: JSType): Option[JSType] = {
+    val retTs = flattenTypes(funcT)
+      .flatMap(cast[JSFunctionTypeImpl](_))
+      .flatMap(func => Option(func.getReturnType))
+    mergeTypes(retTs)
   }
 }
