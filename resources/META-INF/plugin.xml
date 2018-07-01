@@ -38,7 +38,7 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
 
   <extensions defaultExtensionNs="com.intellij">
     <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepKeysCbtr"/>
-    <!-- Add your extensions here -->
+    <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.PathStrGoToDecl"/>
   </extensions>
 
   <actions>
