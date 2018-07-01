@@ -68,9 +68,11 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
             .flatMap(cast[TypeScriptInterfaceImpl](_))
             .toList.flatMap(ifc => ifc.getMembers.asScala)
             .flatMap(cast[PropertySignature](_))
-        case mt: JSContextualUnionTypeImpl =>
+        case mt: JSUnionOrIntersectionType =>
           mt.getTypes.asScala.flatMap(t => getProps(t, psi)).toList
         case _ =>
+          /** @debug */
+          //println("Unsupported typ " + typ.getClass + " " + typ)
           List()
       }
     }

@@ -75,16 +75,42 @@
         ];
     };
 
+    let getVeryComplexSale = () => {
+        let sale = getComplexSale();
+        sale.currency = 'USD';
+        return sale;
+    };
+
+    let getBinaryOp = () => 1 && {
+        name: 'Vasya',
+        age: 19,
+        nationality: 'latvian',
+    };
+
     let testArrFuncResult = function() {
 
-        getComplexSale();
-        
+        getBinaryOp().n;
+
+        let sale = getVeryComplexSale();
+        sale.currency;
+
+        let delayedData = null;
+        setTimeout(() => {
+            delayedData.responses.map(a => a);
+        }, 100);
+        delayedData = {
+            id: 123,
+            type: 'comment',
+            content: 'ololo 123',
+            responses: [{a: 5}, {n:6}],
+        };
+
         // should get [from, to, dt] completion getComplexSale().itinerary[0].<here>
         getComplexSale().itinerary[2];
 
         // should get [a, b] completion obj..<here>
         [{a:5, b:6}, {a:6, b:3}].forEach(obj => {
-            obj.
+            obj.a;
         });
 
         // should get array method completion getLineNumbers().<here>
@@ -97,11 +123,11 @@
             ssrLineNumbers: getLineNumbers(),
         };
         // should get array method completion pnr.ssrLineNumbers.<here>
-        pnr.ssrLineNumbers;
+        pnr.ssrLineNumbers.map(a => a.isOnlySsr);
         // should get [major, minor, isOnlySsr] completion pnr.ssrLineNumbers[0].<here>
         pnr.ssrLineNumbers[0];
-        pnr.names = {main: 'Vova', secondary: 'Lena'};
-        // should get [main, secondary] completion pnr.names.<here>
-        pnr.names;
+        pnr.names = [{main: 'Vova', secondary: 'Lena'}];
+        // should get [main, secondary] completion pnr.names[0].<here>
+        pnr.names.map(a => a.main);
     };
 })();

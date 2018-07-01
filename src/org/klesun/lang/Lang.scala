@@ -7,18 +7,14 @@ import scala.reflect.runtime.universe._
 
 /** provides some core functions needed for IDEA plugin development */
 object Lang {
+  // it would be nice to tell compiler somehow that T
+  // is subclass of value arg... I could not find the way
   def cast[T : ClassTag](value: Object): Option[T] = {
-    //println("checking val type " + value.getClass + " against expected " + classTag[T])
     value match {
       /** @see https://stackoverflow.com/a/21640639/2750743 */
       case matched: T if classTag[T].runtimeClass.isInstance(matched) => Some(matched)
       case _ => None
     }
-//    if (value.isInstanceOf[T]) {
-//      Option(value.asInstanceOf[T])
-//    } else {
-//      None
-//    }
   }
 
   // looks like it's to complex for Scala compiler so I guess I won't use it after all...

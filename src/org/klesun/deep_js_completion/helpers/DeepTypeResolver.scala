@@ -2,10 +2,13 @@ package org.klesun.deep_js_completion.helpers
 
 import java.util
 
+import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSSimpleTypeProcessor, JSTypeEvaluator, JSTypeFromResolveResultProcessor}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.impl.{JSFunctionExpressionImpl, JSLiteralExpressionImpl}
 import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSEvaluationPlace
+import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.resolvers.{FuncCallRes, VarRes}
@@ -16,14 +19,18 @@ import scala.util.Try
 
 object DeepTypeResolver {
 
-  def getReturns(func: PsiElement): List[JSExpression] = {
-    func.getChildren.toList
+  private def getReturns(func: PsiElement): List[JSExpression] = {
+    val arrow = cast[JSFunctionExpression](func)
+      .flatMap(f => Option(f.getLastChild))
+      .flatMap(cast[JSExpression](_))
+    val classic = func.getChildren.toList
       .filter(c => !c.isInstanceOf[JSFunction])
       .flatMap(c => getReturns(c) ++ cast[JSReturnStatement](c)
         .flatMap(ret => Option(ret.getExpression)))
+    arrow.++(classic).toList
   }
 
-  def getWsType(expr: JSExpression) = {
+  private def getWsType(expr: JSExpression) = {
     // TODO: seems that it should be called differently . getExpressionType() looses array element/object key types
     Option(JSTypeEvaluator.getExpressionType(expr).getType)
   }
@@ -51,6 +58,16 @@ object DeepTypeResolver {
             .getOrElse(JSUnknownType.INSTANCE))
           .toList.asJava
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true))
+      case obje: JSObjectLiteralExpression =>
+        val props: util.List[TypeMember] = obje.getProperties.map(p => {
+          val valT = ctx.findExprType(p.getValue).getOrElse(JSUnknownType.INSTANCE)
+          new PropertySignatureImpl(p.getName, valT, false, new EmptyMemberSource)
+        }).map(_.asInstanceOf[TypeMember]).toList.asJava
+        Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
+      case bina: JSBinaryExpression =>
+        val types = List(bina.getLOperand, bina.getROperand)
+          .flatMap(op => ctx.findExprType(op))
+        MultiType.mergeTypes(types)
       case lit: JSLiteralExpressionImpl =>
         if (lit.isBooleanLiteral) {
           Some(new JSBooleanLiteralTypeImpl(lit.getValue.asInstanceOf[Boolean], false, JSTypeSource.EMPTY))

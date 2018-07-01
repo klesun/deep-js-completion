@@ -4,6 +4,7 @@ import java.util
 
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.psi.PsiElement
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
