@@ -3,7 +3,7 @@ package org.klesun.deep_js_completion.resolvers
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.types.primitives.JSBooleanType
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.{JSCallExpression, JSType}
+import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import com.intellij.util.containers.ContainerUtil
 import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
 import org.klesun.lang.Lang._
@@ -15,17 +15,37 @@ import scala.collection.JavaConverters._
  * someVar(arg1, arg2)
  */
 case class FuncCallRes(ctx: ICtx) {
+
+  def resolveBuiltInCall(obj: JSExpression, methName: String, args: List[JSExpression]): Option[JSType] = {
+    // Unsupported: reduce, concat, shift, pop
+    if (List("filter", "sort", "slice", "splice").contains(methName)) {
+      ctx.findExprType(obj)
+    } else if (List("reduce", "map").contains(methName)) {
+      args.lift(0).flatMap(arg => ctx.findExprType(arg))
+        .flatMap(funcT => MultiType.getReturnType(funcT))
+        .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    } else {
+      None
+    }
+  }
+
   def resolve(funcCall: JSCallExpression): Option[JSType] = {
-    val rTypes = Option(funcCall.getMethodExpression)
-      .flatMap(expr => ctx.findExprType(expr))
-      .toList
-      .flatMap(funcT => funcT match {
-        case funcT: JSFunctionTypeImpl => List(funcT)
-        case mt: JSContextualUnionTypeImpl => mt.getTypes.asScala
-            .flatMap(cast[JSFunctionTypeImpl](_))
-        case _ => List()
+    Option(funcCall.getMethodExpression)
+      .flatMap(expr => {
+        val definedRts = ctx.findExprType(expr)
+          .toList.flatMap(funcT => funcT match {
+            case funcT: JSFunctionTypeImpl => List(funcT)
+            case mt: JSContextualUnionTypeImpl => mt.getTypes.asScala
+                .flatMap(cast[JSFunctionTypeImpl](_))
+            case _ => List()
+          })
+          .flatMap(funcT => Option(funcT.getReturnType))
+        val builtInRts = cast[JSReferenceExpression](expr)
+          .flatMap(ref => Option(ref.getReferenceName)
+            .flatMap(name => Option(ref.getQualifier)
+              .flatMap(qual => resolveBuiltInCall(qual, name, funcCall.getArguments.toList))))
+
+        MultiType.mergeTypes(definedRts ++ builtInRts)
       })
-      .flatMap(funcT => Option(funcT.getReturnType))
-    MultiType.mergeTypes(rTypes)
   }
 }

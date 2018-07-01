@@ -1,6 +1,7 @@
 package org.klesun.deep_js_completion.helpers
 
-import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSType}
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
+import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 
@@ -14,12 +15,12 @@ import scala.util.Try
  * either be some particular type or array of types
  */
 object MultiType {
-  def mergeTypes(types: List[JSType]): Option[JSType] = {
+  def mergeTypes(types: Iterable[JSType]): Option[JSType] = {
     if (types.size > 1) {
-      val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.asJava)
+      val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.asJava)
       Some(mt)
     } else {
-      types.lift(0)
+      types.toList.lift(0)
     }
   }
 
@@ -57,6 +58,13 @@ object MultiType {
           .flatMap(arrT => getKey(arrT, keyTOpt)).toList
         mergeTypes(keyTypes)
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
+      case objT: JSRecordType =>
+        val keyTypes = objT.getTypeMembers.asScala
+          .flatMap(cast[PropertySignatureImpl](_))
+          .filter(mem => litValsOpt.map(vals => vals
+            .contains(mem.getMemberName)).getOrElse(true))
+          .flatMap(mem => Option(mem.getType))
+        mergeTypes(keyTypes)
       case _ => None
     }
   }

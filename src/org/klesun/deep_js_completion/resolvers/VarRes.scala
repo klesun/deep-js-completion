@@ -4,7 +4,7 @@ import java.util
 
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.types.{JSFunctionTypeImpl, JSRecordTypeImpl, JSTypeSource}
+import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.{PsiElement, PsiFile}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.util.PsiTreeUtil
@@ -87,7 +87,15 @@ case class VarRes(ctx: ICtx) {
     // var someVar = null;
     // ... code
     // someVar = initializeSomething()
-    Option(ref.resolve())
+    val deepRef = Option(ref.getQualifier)
+      .flatMap(qual => ctx.findExprType(qual))
+      .flatMap(qualT => {
+        val keyTOpt = Option(ref.getReferenceName)
+          .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+        MultiType.getKey(qualT, keyTOpt)
+      })
+
+    val breifRef = Option(ref.resolve())
       .flatMap(psi => psi match {
         case para: JSParameter => resolveArg(para)
         case dest: JSVariable => Option(dest.getInitializer)
@@ -100,5 +108,6 @@ case class VarRes(ctx: ICtx) {
           println("Unsupported var declaration - " + psi.getClass)
           None
       })
+    MultiType.mergeTypes(deepRef ++ breifRef)
   }
 }
