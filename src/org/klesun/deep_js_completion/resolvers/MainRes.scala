@@ -1,23 +1,22 @@
-package org.klesun.deep_js_completion.helpers
+package org.klesun.deep_js_completion.resolvers
 
 import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
-import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSSimpleTypeProcessor, JSTypeEvaluator, JSTypeFromResolveResultProcessor}
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.impl.{JSFunctionExpressionImpl, JSLiteralExpressionImpl}
-import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSEvaluationPlace
+import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
+import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.resolvers.{FuncCallRes, VarRes}
+import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-object DeepTypeResolver {
+object MainRes {
 
   private def getReturns(func: PsiElement): List[JSExpression] = {
     val arrow = cast[JSFunctionExpression](func)

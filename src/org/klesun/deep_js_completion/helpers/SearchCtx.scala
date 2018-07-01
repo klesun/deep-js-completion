@@ -2,6 +2,7 @@ package org.klesun.deep_js_completion.helpers;
 
 import com.intellij.lang.javascript.psi.types.JSUnknownType
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
+import org.klesun.deep_js_completion.resolvers.MainRes
 
 class SearchCtx extends ICtx
 {
@@ -20,7 +21,7 @@ class SearchCtx extends ICtx
             None
         } else {
             depth -= 1
-            val result = DeepTypeResolver.resolveIn(expr, this)
+            val result = MainRes.resolveIn(expr, this)
             depth += 1
             result
         }
