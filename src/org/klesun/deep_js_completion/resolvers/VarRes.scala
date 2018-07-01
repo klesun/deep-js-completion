@@ -5,7 +5,7 @@ import java.util
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.types.{JSFunctionTypeImpl, JSRecordTypeImpl, JSTypeSource}
-import com.intellij.psi.PsiElement
+import com.intellij.psi.{PsiElement, PsiFile}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.util.PsiTreeUtil
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
@@ -38,6 +38,27 @@ case class VarRes(ctx: ICtx) {
     MultiType.mergeTypes(funcTs)
   }
 
+  private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): Option[JSType] = {
+    PsiTreeUtil.findChildrenOfType(file, classOf[JSAssignmentExpression]).asScala
+      .filter(assi => assi.getText.startsWith("klesun.whenLoaded")).toList.lift(0)
+      .flatMap(assi => Option(assi.getROperand)) // \(^o^)/
+      .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
+  }
+
+  private def resolveRequireJsSupplierDef(file: PsiFile): Option[JSType] = {
+    PsiTreeUtil.findChildrenOfType(file, classOf[JSCallExpression]).asScala
+      .filter(assi => assi.getText.startsWith("define(")).toList.lift(0)
+      .flatMap(call => call.getArguments.lift(1))
+      .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
+  }
+
+  private def resolveRequireJsFormatDef(file: PsiFile): Option[JSType] = {
+    val types = List[JSType]() ++
+      resolveKlesunWhenLoadedSupplierDef(file) ++
+      resolveRequireJsSupplierDef(file)
+    MultiType.mergeTypes(types.flatMap(sup => MultiType.getReturnType(sup)))
+  }
+
   private def getKlesunRequiresArgType(func: JSFunction): Option[JSType] = Option(func.getParent)
     .flatMap(cast[JSAssignmentExpression](_))
     .flatMap(assi => Option(assi.getDefinitionExpression))
@@ -50,11 +71,7 @@ case class VarRes(ctx: ICtx) {
       .map(e => e.getText).getOrElse("").equals("klesun.requires"))
     .flatMap(call => call.getArguments.toList.lift(0))
     .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
-    .flatMap(file => PsiTreeUtil.findChildrenOfType(file, classOf[JSAssignmentExpression]).asScala
-      .filter(assi => assi.getText.startsWith("klesun.whenLoaded")).toList.lift(0))
-    .flatMap(assi => Option(assi.getROperand)) // \(^o^)/
-    .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
-    .flatMap(sup => MultiType.getReturnType(sup))
+    .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
 
   private def resolveArg(para: JSParameter): Option[JSType] = {
