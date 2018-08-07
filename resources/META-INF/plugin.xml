@@ -30,7 +30,7 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
     ]]>
   </change-notes>
 
-  <idea-version since-build="173.0"/>
+  <idea-version since-build="182.3569.36"/>
 
   <!-- if you don't add this, you'll get "plugin does not include any module dependency tags" error  -->
   <depends>com.intellij.modules.lang</depends>

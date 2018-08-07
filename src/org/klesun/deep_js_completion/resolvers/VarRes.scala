@@ -82,6 +82,11 @@ case class VarRes(ctx: ICtx) {
     MultiType.mergeTypes(types)
   }
 
+  def first[T](suppliers: (() => Option[T])*): Option[T] = {
+    suppliers.iterator.flatMap(s => s())
+      .take(1).toList.lift(0)
+  }
+
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
     // TODO: manually support re-assignment, like
     // var someVar = null;
@@ -95,11 +100,26 @@ case class VarRes(ctx: ICtx) {
         MultiType.getKey(qualT, keyTOpt)
       })
 
-    val breifRef = Option(ref.resolve())
+    val briefRef = Option(ref.resolve())
       .flatMap(psi => psi match {
         case para: JSParameter => resolveArg(para)
-        case dest: JSVariable => Option(dest.getInitializer)
-          .flatMap(expr => ctx.findExprType(expr))
+        case dest: JSVariable => first(() => None
+          , () => Option(dest.getInitializer)
+            .flatMap(expr => ctx.findExprType(expr))
+          , () => Option(dest.getParent)
+            .flatMap(cast[JSDestructuringShorthandedProperty](_))
+            .flatMap(prop => Option(prop.getParent))
+            .flatMap(cast[JSDestructuringObject](_))
+            .flatMap(obj => Option(obj.getParent))
+            .flatMap(cast[JSDestructuringElement](_))
+            .flatMap(obj => Option(obj.getInitializer))
+            .flatMap(qual => ctx.findExprType(qual))
+            .flatMap(qualT => {
+              val keyTOpt = Option(dest.getName)
+                .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+              MultiType.getKey(qualT, keyTOpt)
+            })
+        )
         case prop: JSProperty => Option(prop.getValue)
           .flatMap(expr => ctx.findExprType(expr))
         case prop: JSDefinitionExpression => Option(prop.getExpression)
@@ -108,6 +128,6 @@ case class VarRes(ctx: ICtx) {
           println("Unsupported var declaration - " + psi.getClass)
           None
       })
-    MultiType.mergeTypes(deepRef ++ breifRef)
+    MultiType.mergeTypes(deepRef ++ briefRef)
   }
 }

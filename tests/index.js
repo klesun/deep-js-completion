@@ -1,5 +1,7 @@
 (function(){
 
+    let ssrLineNumbers = [];
+
     let testMiscStuff = function() {
         let getObj = function () {
             return {
@@ -118,6 +120,8 @@
         // should get array method completion lineNumbers.<here>
         lineNumbers.forEach(a => a.isOnlySsr);
 
+        let zhopa = {ssrLineNumbers: [{huj: 123}]};
+
         let pnr = {
             recordLocator: 'QWE123',
             ssrLineNumbers: getLineNumbers(),
@@ -129,5 +133,8 @@
         pnr.names = [{main: 'Vova', secondary: 'Lena'}];
         // should get [main, secondary] completion pnr.names[0].<here>
         pnr.names.map(a => a.main);
+
+        let {recordLocator, ssrLineNumbers} = pnr;
+        ssrLineNumbers[0];
     };
 })();
