@@ -13,6 +13,7 @@ import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JS
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.actionSystem.DataConstants
 import com.intellij.psi.PsiElement
+import com.intellij.psi.search.{EverythingGlobalScope, GlobalSearchScope}
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.DeepKeysPvdr._
@@ -65,7 +66,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
           genT.getTypeMembers.asScala
             .flatMap(cast[PropertySignature](_)).toList
         case arrT: JSTupleTypeImpl =>
-          Option(JSClassResolver.getInstance().findClassByQName("Array", psi))
+          JSClassResolver.getInstance().findClassesByQName("Array", new EverythingGlobalScope(psi.getProject)).asScala
             .flatMap(cast[TypeScriptInterfaceImpl](_))
             .toList.flatMap(ifc => ifc.getMembers.asScala)
             .flatMap(cast[PropertySignature](_))
