@@ -31,7 +31,8 @@ object MainRes {
 
   private def getWsType(expr: JSExpression) = {
     // TODO: seems that it should be called differently . getExpressionType() looses array element/object key types
-    Option(JSTypeEvaluator.getExpressionType(expr).getType)
+    Option(JSTypeEvaluator.getExpressionType(expr))
+      .flatMap(res => Option(res.getType))
   }
 
   def resolveIn(expr: JSExpression, ctx: ICtx): Option[JSType] = {

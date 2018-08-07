@@ -120,7 +120,7 @@
         // should get array method completion lineNumbers.<here>
         lineNumbers.forEach(a => a.isOnlySsr);
 
-        let zhopa = {ssrLineNumbers: [{huj: 123}]};
+        let zhopa = {ssrLineNumbers: [{huj: 123, isOnlySsr: 123}]};
 
         let pnr = {
             recordLocator: 'QWE123',
@@ -135,6 +135,6 @@
         pnr.names.map(a => a.main);
 
         let {recordLocator, ssrLineNumbers} = pnr;
-        ssrLineNumbers[0];
+        ssrLineNumbers[0].isOnlySsr;
     };
 })();

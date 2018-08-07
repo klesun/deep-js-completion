@@ -11,6 +11,8 @@ class SearchCtx extends ICtx
     // for performance measurement
     val expressionsResolved = 0
 
+    val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
+
     def setDepth(value: Int): SearchCtx = {
         depth = value
         this
@@ -23,6 +25,9 @@ class SearchCtx extends ICtx
             depth -= 1
             val result = MainRes.resolveIn(expr, this)
             depth += 1
+            if (result.isDefined) {
+                typeToDecl.put(result.get, expr)
+            }
             result
         }
     }

@@ -125,7 +125,7 @@ case class VarRes(ctx: ICtx) {
         case prop: JSDefinitionExpression => Option(prop.getExpression)
           .flatMap(expr => ctx.findExprType(expr))
         case _ =>
-          println("Unsupported var declaration - " + psi.getClass)
+          println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
       })
     MultiType.mergeTypes(deepRef ++ briefRef)
