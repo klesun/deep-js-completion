@@ -55,14 +55,14 @@ object MainRes {
       case arr: JSArrayLiteralExpression =>
         val typeTuple = arr.getExpressions
           .map(el => ctx.findExprType(el)
-            .getOrElse(JSUnknownType.INSTANCE))
+            .getOrElse(JSUnknownType.JS_INSTANCE))
           .toList.asJava
-        Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true))
+        Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true, -1))
       case obje: JSObjectLiteralExpression =>
         val props: util.List[TypeMember] = obje.getProperties.map(p => {
           val valT = Option(p.getValue)
             .flatMap(expr => ctx.findExprType(expr))
-            .getOrElse(JSUnknownType.INSTANCE)
+            .getOrElse(JSUnknownType.JS_INSTANCE)
           new PropertySignatureImpl(p.getName, valT, false, new EmptyMemberSource)
         }).map(_.asInstanceOf[TypeMember]).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
