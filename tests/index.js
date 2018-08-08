@@ -2,6 +2,49 @@
 
     let ssrLineNumbers = [];
 
+    let collectSmfNotes = function(smf) {
+        let notes = [];
+        notes.push({zalupa:123});
+        let otherEvents = [];
+        let chanToNotes = range(0,16).map(i => []);
+        for (let [i, track] of Object.entries(smf.tracks)) {
+            let time = 0;
+            let noteOnIndex = 0;
+            for (let event of track.events) {
+                time += event.delta;
+                if (isNoteOn(event)) {
+                    let chan = event.midiChannel;
+                    let tone = event.parameter1;
+                    let velo = event.parameter2;
+                    let dura = 0;
+                    chanToNotes[chan][tone] = chanToNotes[chan][tone] || [];
+                    chanToNotes[chan][tone].push({
+                        tone, time, dura, chan, track: i,
+                        velo, index: noteOnIndex++,
+                    });
+                } else if (isNoteOff(event)) {
+                    let chan = event.midiChannel;
+                    let tone = event.parameter1;
+                    for (let note of chanToNotes[chan][tone] || []) {
+                        note.dura = time - note.time;
+                        notes.push(note);
+                    }
+                    chanToNotes[chan][tone] = [];
+                } else {
+                    otherEvents.push({time, event, track: i});
+                }
+            }
+        }
+        notes[0].a;
+        return {notes, otherEvents};
+    };
+
+    let testPushInference = function() {
+        let collected = collectSmfNotes();
+        // should suggest: zalupa, dura, tone, time, chan, track, velo, index
+        collected.notes[0].z;
+    };
+
     let testMiscStuff = function() {
         let getObj = function () {
             return {

@@ -1,15 +1,20 @@
 package org.klesun.deep_js_completion.resolvers
 
 import java.util
+import java.util.Objects
 
+import com.intellij.lang.javascript.dialects.JSDialectSpecificHandlersFactory
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
+import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.psi.impl.source.resolve.ResolveCache.PolyVariantResolver
 import com.intellij.psi.{PsiElement, PsiFile}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.util.PsiTreeUtil
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
+import org.klesun.lang.Lang
 
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
@@ -87,6 +92,17 @@ case class VarRes(ctx: ICtx) {
       .take(1).toList.lift(0)
   }
 
+  def findUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
+    Option(ref.resolve()).toList.flatMap(decl => {
+      val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
+        .getOrElse(decl.getContainingFile)
+      Lang.findChildren[JSReferenceExpression](scope)
+          .filter(usage => Objects.equals(usage.getReferenceName, ref.getReferenceName))
+          .filter(usage => !Objects.equals(usage, ref))
+          .filter(usage => Objects.equals(decl, usage.resolve()))
+    })
+  }
+
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
     // TODO: manually support re-assignment, like
     // var someVar = null;
@@ -99,6 +115,17 @@ case class VarRes(ctx: ICtx) {
           .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
         MultiType.getKey(qualT, keyTOpt)
       })
+
+    val pushRef = findUsages(ref)
+      .flatMap(usage => Option(usage.getParent))
+      .flatMap(cast[JSReferenceExpression](_))
+      .filter(superRef => "push".equals(superRef.getReferenceName))
+      .flatMap(psi => Option(psi.getParent))
+      .flatMap(cast[JSCallExpression](_))
+      .flatMap(call => call.getArguments.lift(0))
+      .filter(arg => Lang.log("arg " + arg.getText + " " + arg.getClass))
+      .flatMap(value => ctx.findExprType(value))
+      .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
 
     val briefRef = Option(ref.resolve())
       .flatMap(psi => psi match {
@@ -128,6 +155,6 @@ case class VarRes(ctx: ICtx) {
           println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
       })
-    MultiType.mergeTypes(deepRef ++ briefRef)
+    MultiType.mergeTypes(deepRef ++ pushRef ++ briefRef)
   }
 }

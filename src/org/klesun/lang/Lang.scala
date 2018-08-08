@@ -2,6 +2,8 @@ package org.klesun.lang
 
 import com.intellij.psi.PsiElement
 
+import com.intellij.psi.PsiElement
+
 import scala.reflect.{ClassTag, classTag}
 import scala.reflect.runtime.universe._
 
@@ -69,5 +71,22 @@ object Lang {
   def singleLine(text: String, length: Int): String = {
     val lines = text.split("\n").map(l => l.trim)
     substr(lines.mkString(" "), 0, length)
+  }
+
+  def findParent[T <: PsiElement : ClassTag](psi: PsiElement): Option[T] = {
+    var parent = psi.getParent
+    var matching: Option[T] = None
+    while (parent != null && matching.isEmpty) {
+      matching = cast[T](parent)
+      parent = parent.getParent
+    }
+    matching
+  }
+
+  def findChildren[T <: PsiElement : ClassTag](parent: PsiElement): List[T] = {
+    parent.getChildren
+      .flatMap(c => findChildren[T](c))
+      .++(List(parent).flatMap(cast[T](_)))
+      .toList
   }
 }
