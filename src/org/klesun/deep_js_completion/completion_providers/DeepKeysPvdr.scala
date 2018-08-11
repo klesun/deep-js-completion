@@ -90,6 +90,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
     val psi = parameters.getOriginalPosition
     val depth = getMaxDepth(parameters.isAutoPopup)
     val search = new SearchCtx().setDepth(depth)
+    val startTime = System.nanoTime
     val suggestions = Option(parameters.getOriginalPosition.getParent)
       .flatMap(findRefExpr(_))
       .flatMap(ref => Option(ref.getQualifier))
@@ -98,6 +99,9 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
+
+    val elapsed = System.nanoTime - startTime
+    result.addLookupAdvertisement("Resolved in " + (elapsed / 1000000000.0) + " seconds")
 
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]

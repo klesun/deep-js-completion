@@ -2,6 +2,60 @@
 
     let ssrLineNumbers = [];
 
+    var klesun = Klesun();
+    klesun.requires('./Tls.js').then = Tls =>
+    klesun.whenLoaded = () => (...ctorParams) => {
+        let tls = Tls();
+        // should suggest: opt, promise, http, mkDom, range, deepCopy
+        tls.o;
+    };
+
+    define(['./Tls.js'], (Tls) => (...ctorArgs) => {
+        let tls = Tls();
+        // should suggest: opt, promise, http, mkDom, range, deepCopy
+        tls.o;
+    });
+
+    /**
+     * @typedef {Object} generatedPoint
+     * @type {Object}
+     * @property {number} x The x coordinate.
+     * @property {number} y The y coordinate.
+     * @property {number} amount
+     */
+
+    let a = 5,
+        b = 6;
+
+    /** @param whiskey {generatedPoint} */
+    let Denis = function(whiskey){
+        return {
+            monthsTilDiploma: 12 + whiskey.amount / 1000,
+            takeTripleShot: () => alert('I aint drunk yeaaaat'),
+            dropTheLocker: () => alert('Bam!'),
+        };
+    };
+
+    setTimeout(() => {
+        /**
+         * @param denis = Denis()
+         * @param tls = from('./Tls.js')()
+         * @param smf {from('./SmfAdapter.js')()}
+         * @param pax {{first: 'Vova', last: 'Pupkin', age: '18'}}
+         * @param segment {{a: string, b: int}}
+         * @param segment.from
+         * @param segment.to
+         */
+        let testArgDocComment = function(denis, tls, smf, pax, segment) {
+            // should suggest: yearsTilDiploma, takeTripleShot, dropTheLocker
+            denis.t;
+            // should suggest: first, last, age
+            pax.f;
+            // should suggest: opt, promise, http, mkDom, range, deepCopy
+            tls.o;
+        };
+    }, 100);
+
     let collectSmfNotes = function(smf) {
         let notes = [];
         notes.push({zalupa:123});

@@ -18,7 +18,7 @@ import scala.util.Try
 
 object MainRes {
 
-  private def getReturns(func: PsiElement): List[JSExpression] = {
+  def getReturns(func: PsiElement): List[JSExpression] = {
     val arrow = cast[JSFunctionExpression](func)
       .flatMap(f => Option(f.getLastChild))
       .flatMap(cast[JSExpression](_))

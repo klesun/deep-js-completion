@@ -4,13 +4,17 @@ import java.util
 import java.util.Objects
 
 import com.intellij.lang.javascript.dialects.JSDialectSpecificHandlersFactory
+import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
+import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
+import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.resolve.ResolveCache.PolyVariantResolver
-import com.intellij.psi.{PsiElement, PsiFile}
+import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
@@ -18,6 +22,9 @@ import org.klesun.lang.Lang
 
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
+
+import scala.collection.GenTraversable
+import scala.collection.mutable.ListBuffer
 
 /**
  * resolves variable type
@@ -79,9 +86,70 @@ case class VarRes(ctx: ICtx) {
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
 
+  private def getDocTagComment(docTag: JSDocTag) = {
+    var next = docTag.getNextSibling
+    val tokens = new ListBuffer[PsiElement]
+    while (next != null && (
+      next.isInstanceOf[LeafPsiElement] ||
+      next.isInstanceOf[PsiWhiteSpace]
+    )) {
+      tokens.append(next)
+      next = next.getNextSibling
+    }
+    tokens.map(t => t.getText).mkString("")
+      .replaceAll("""\n\s*\* """, "\n")
+  }
+
+  private def findVarDecl(caretPsi: PsiElement, varName: String): Option[JSType] = {
+    Lang.findParent[JSBlockStatement](caretPsi)
+      .toList.flatMap(b => b.getStatements
+        .flatMap(st => st match {
+          case varSt: JSVarStatement =>
+            varSt.getDeclarations
+              .filter(own => varName.equals(own.getName))
+              .map(own => own.getInitializer)
+              .flatMap(expr => ctx.findExprType(expr))
+          case func: JSFunctionDeclaration =>
+            if (varName.equals(func.getName)) {
+              val rts = MainRes.getReturns(func)
+                .flatMap(ret => ctx.findExprType(ret))
+              val rt = MultiType.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
+              Some(new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList, rt))
+            } else {
+              None
+            }
+          case _ => None
+        })
+        .++(findVarDecl(b, varName))
+      )
+      .lift(0)
+  }
+
+  private def parseDocExpr(caretPsi: PsiElement, expr: String): Option[JSType] = {
+    """^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+      .flatMap(found => {
+        val varName = found.group(1)
+        val isFuncCall = !found.group(2).equals("")
+        findVarDecl(caretPsi, varName)
+          .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
+      })
+  }
+
+  private def getArgDocExprType(func: JSFunction, para: JSParameter): List[JSType] = {
+    Option(JSDocumentationUtils.findDocComment(para))
+      .flatMap(cast[JSDocCommentImpl](_)).toList
+      .flatMap(tag => tag.getTags)
+      .filter(tag => "param".equals(tag.getName))
+      .filter(tag => Option(tag.getDocCommentData)
+        .exists(data => Objects.equals(para.getName, data.getText)))
+      .map(tag => getDocTagComment(tag))
+      .flatMap(expr => parseDocExpr(para, expr))
+  }
+
   private def resolveArg(para: JSParameter): Option[JSType] = {
     val types = Option(para.getDeclaringFunction)
       .toList.flatMap(func => List[JSType]()
+        ++ getArgDocExprType(func, para)
         ++ getInlineFuncArgType(func)
         ++ getKlesunRequiresArgType(func))
     MultiType.mergeTypes(types)

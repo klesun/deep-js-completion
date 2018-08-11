@@ -33,13 +33,7 @@ case class FuncCallRes(ctx: ICtx) {
     Option(funcCall.getMethodExpression)
       .flatMap(expr => {
         val definedRts = ctx.findExprType(expr)
-          .toList.flatMap(funcT => funcT match {
-            case funcT: JSFunctionTypeImpl => List(funcT)
-            case mt: JSContextualUnionTypeImpl => mt.getTypes.asScala
-                .flatMap(cast[JSFunctionTypeImpl](_))
-            case _ => List()
-          })
-          .flatMap(funcT => Option(funcT.getReturnType))
+          .toList.flatMap(funcT => MultiType.getReturnType(funcT))
         val builtInRts = cast[JSReferenceExpression](expr)
           .flatMap(ref => Option(ref.getReferenceName)
             .flatMap(name => Option(ref.getQualifier)
