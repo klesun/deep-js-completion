@@ -13,17 +13,21 @@ import scala.collection.JavaConverters._
 import PathStrGoToDecl._
 
 object PathStrGoToDecl {
+  def getReferencedFile(relPath: String, caretFile: PsiFile): Option[PsiFile] = {
+    Option(caretFile.getContainingDirectory)
+      .flatMap(f => Option(f.getVirtualFile))
+      .map(f => f.getPath + "/" + relPath)
+      .flatMap(fullPath => Option(LocalFileSystem.getInstance.findFileByPath(fullPath)))
+      .flatMap(f => Option(PsiManager.getInstance(caretFile.getProject).findFile(f)))
+  }
+
   def getReferencedFile(expr: JSExpression): Option[PsiFile] = {
     cast[JSLiteralExpressionImpl](expr)
       .flatMap(lit => {
         val relPath = lit.getValue.toString
         if (relPath.startsWith("./") || relPath.startsWith("../")) {
           Option(lit.getContainingFile)
-            .flatMap(f => Option(f.getContainingDirectory))
-            .flatMap(f => Option(f.getVirtualFile))
-            .map(f => f.getPath + "/" + relPath)
-            .flatMap(fullPath => Option(LocalFileSystem.getInstance.findFileByPath(fullPath)))
-            .flatMap(f => Option(PsiManager.getInstance(lit.getProject).findFile(f)))
+            .flatMap(f => getReferencedFile(relPath, f))
         } else {
           None
         }

@@ -98,6 +98,7 @@ case class VarRes(ctx: ICtx) {
     }
     tokens.map(t => t.getText).mkString("")
       .replaceAll("""\n\s*\* """, "\n")
+      .replaceAll("""\*\/$""", "")
   }
 
   private def findVarDecl(caretPsi: PsiElement, varName: String): Option[JSType] = {
@@ -126,13 +127,23 @@ case class VarRes(ctx: ICtx) {
   }
 
   private def parseDocExpr(caretPsi: PsiElement, expr: String): Option[JSType] = {
-    """^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
-      .flatMap(found => {
-        val varName = found.group(1)
-        val isFuncCall = !found.group(2).equals("")
-        findVarDecl(caretPsi, varName)
-          .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
-      })
+    Option(null)
+      .orElse("""^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+        .flatMap(found => {
+          val varName = found.group(1)
+          val isFuncCall = !found.group(2).equals("")
+          findVarDecl(caretPsi, varName)
+            .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
+        }))
+      .orElse("""^\s*=\s*from\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+        .flatMap(found => {
+          val path = found.group(1)
+          val isFuncCall = !found.group(2).equals("")
+          Option(caretPsi.getContainingFile)
+            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f))
+            .flatMap(file => resolveRequireJsFormatDef(file))
+            .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
+        }))
   }
 
   private def getArgDocExprType(func: JSFunction, para: JSParameter): List[JSType] = {
@@ -220,7 +231,7 @@ case class VarRes(ctx: ICtx) {
         case prop: JSDefinitionExpression => Option(prop.getExpression)
           .flatMap(expr => ctx.findExprType(expr))
         case _ =>
-          println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
+          //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
       })
     MultiType.mergeTypes(deepRef ++ pushRef ++ briefRef)
