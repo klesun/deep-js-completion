@@ -106,7 +106,11 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
 
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]
-    val onlyTyped = JSRootConfiguration.getInstance(psi.getProject).isOnlyTypeBasedCompletion
+    val jsConfig = JSRootConfiguration.getInstance(psi.getProject)
+    var onlyTyped = false
+    if (jsConfig != null) {
+      onlyTyped = jsConfig.isOnlyTypeBasedCompletion
+    }
 
     result.runRemainingContributors(parameters, otherSourceResult => {
       val lookup = otherSourceResult.getLookupElement
