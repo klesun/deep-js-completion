@@ -104,13 +104,16 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
     val elapsed = System.nanoTime - startTime
     result.addLookupAdvertisement("Resolved in " + (elapsed / 1000000000.0) + " seconds")
 
+    // test
+    // test
+    // test
+    // test
+
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]
-    val jsConfig = JSRootConfiguration.getInstance(psi.getProject)
-    var onlyTyped = false
-    if (jsConfig != null) {
-      onlyTyped = jsConfig.isOnlyTypeBasedCompletion
-    }
+    val project = if (psi != null) psi.getProject else null
+    val jsConfig = if (project != null) JSRootConfiguration.getInstance(project) else null
+    val onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
 
     result.runRemainingContributors(parameters, otherSourceResult => {
       val lookup = otherSourceResult.getLookupElement
