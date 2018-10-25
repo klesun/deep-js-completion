@@ -16,7 +16,7 @@ object PathStrGoToDecl {
   def getReferencedFile(relPath: String, caretFile: PsiFile): Option[PsiFile] = {
     Option(caretFile.getContainingDirectory)
       .flatMap(f => Option(f.getVirtualFile))
-      .map(f => f.getPath + "/" + relPath)
+      .map(f => f.getPath + "/" + relPath + (if (relPath.matches(".*\\.[a-zA-Z0-9]+$")) "" else ".js"))
       .flatMap(fullPath => Option(LocalFileSystem.getInstance.findFileByPath(fullPath)))
       .flatMap(f => Option(PsiManager.getInstance(caretFile.getProject).findFile(f)))
   }
@@ -24,7 +24,7 @@ object PathStrGoToDecl {
   def getReferencedFile(expr: JSExpression): Option[PsiFile] = {
     cast[JSLiteralExpressionImpl](expr)
       .flatMap(lit => {
-        val relPath = lit.getValue.toString
+        val relPath = Option(lit.getValue).map(_.toString).getOrElse("")
         if (relPath.startsWith("./") || relPath.startsWith("../")) {
           Option(lit.getContainingFile)
             .flatMap(f => getReferencedFile(relPath, f))

@@ -3,7 +3,7 @@
     let ssrLineNumbers = [];
 
     var klesun = Klesun();
-    klesun.requires('./Tls.js').then = Tls =>
+    klesun.requires('./Tls').then = Tls =>
     klesun.whenLoaded = () => (...ctorParams) => {
         let tls = Tls();
         // should suggest: opt, promise, http, mkDom, range, deepCopy

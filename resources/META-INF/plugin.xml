@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.10.18.001</version>
+  <version>2018.10.25.001</version>
   <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
@@ -26,7 +26,8 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Fix: null pointer on JSRootConfiguration.getInstance</li>
+  <li>GoTo string paths like './dir/file', even if it does not end with '.js'</li>
+  <li>Fix: null pointer on JSLiteralExpressionImpl.getValue</li>
     ]]>
   </change-notes>
 
