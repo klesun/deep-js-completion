@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.10.25.001</version>
+  <version>2018.12.03.001</version>
   <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
@@ -26,8 +26,7 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>GoTo string paths like './dir/file', even if it does not end with '.js'</li>
-  <li>Fix: null pointer on JSLiteralExpressionImpl.getValue</li>
+  <li>Allow to specify node module in the doc like `@param db = from('./../../../Utils/Db.es6')()` (similar to how it works for requirejs)</li>
     ]]>
   </change-notes>
 

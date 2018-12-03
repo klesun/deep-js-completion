@@ -5,11 +5,14 @@ import java.util.Objects
 
 import com.intellij.lang.javascript.dialects.JSDialectSpecificHandlersFactory
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
+import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
+import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.resolve.ResolveCache.PolyVariantResolver
 import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
@@ -62,6 +65,35 @@ case class VarRes(ctx: ICtx) {
       .filter(assi => assi.getText.startsWith("define(")).toList.lift(0)
       .flatMap(call => call.getArguments.lift(1))
       .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
+  }
+
+  private def resolveCommonJsFormatDef(file: PsiFile): Option[JSType] = {
+    val types = file.getChildren
+      .flatMap(cast[JSExpressionStatement](_))
+      .flatMap(_.getChildren)
+      .flatMap(cast[JSAssignmentExpression](_))
+      .flatMap(ass => Option(ass.getROperand)
+        .flatMap(value => Option(ass.getLOperand)
+          .flatMap(vari => {
+            val txt = Option(vari.getText).getOrElse("")
+            if (txt startsWith "module.exports") {
+              ctx.findExprType(value)
+            } else if (txt startsWith "exports.") {
+              cast[JSDefinitionExpression](vari)
+                .filter(ref => Option(vari.getText).exists(txt => txt startsWith "exports."))
+                .flatMap(defi => Option(defi.getFirstChild))
+                .flatMap(cast[JSReferenceExpressionImpl](_))
+                .flatMap(ref => Option(ref.getReferencedName))
+                .flatMap(name => ctx.findExprType(value)
+                  .map(valT => new PropertySignatureImpl(name, valT, false, new EmptyMemberSource)))
+                .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
+            } else {
+              None
+            }
+          })
+        )
+      )
+    MultiType.mergeTypes(types)
   }
 
   private def resolveRequireJsFormatDef(file: PsiFile): Option[JSType] = {
@@ -126,7 +158,7 @@ case class VarRes(ctx: ICtx) {
       .lift(0)
   }
 
-  private def parseDocExpr(caretPsi: PsiElement, expr: String): Option[JSType] = {
+  private def parseDocExpr(caretPsi: PsiElement, expr: String): Iterable[JSType] = {
     Option(null)
       .orElse("""^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
         .flatMap(found => {
@@ -140,8 +172,11 @@ case class VarRes(ctx: ICtx) {
           val path = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           Option(caretPsi.getContainingFile)
-            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f))
-            .flatMap(file => resolveRequireJsFormatDef(file))
+            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f)).toList
+            .flatMap(file => List()
+              ++ resolveCommonJsFormatDef(file)
+              ++ resolveRequireJsFormatDef(file)
+            ).lift(0)
             .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
         }))
   }
