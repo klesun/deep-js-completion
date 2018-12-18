@@ -14,7 +14,8 @@ import PathStrGoToDecl._
 
 object PathStrGoToDecl {
   def getReferencedFile(relPath: String, caretFile: PsiFile): Option[PsiFile] = {
-    Option(caretFile.getContainingDirectory)
+    Option(caretFile.getOriginalFile)
+      .flatMap(f => Option(f.getContainingDirectory))
       .flatMap(f => Option(f.getVirtualFile))
       .map(f => f.getPath + "/" + relPath + (if (relPath.matches(".*\\.[a-zA-Z0-9]+$")) "" else ".js"))
       .flatMap(fullPath => Option(LocalFileSystem.getInstance.findFileByPath(fullPath)))

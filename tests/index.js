@@ -1,3 +1,44 @@
+
+let SomeCjsModule = require('./SomeCjsModule.js');
+
+SomeCjsModule({}).runInputCmd('*R').then(resp => {
+    resp.;
+});
+
+let makeCmdResponse = (data) => 1 && {
+    success: true,
+    data: Object.assign({
+        output: 'NO RESPONSE',
+        tabCommands: [],
+        clearScreen: false,
+        canCreatePq: false,
+        canCreatePqErrors: [],
+        area: 'A',
+        pcc: '1O3K',
+        prompt: "",
+        startNewSession: false,
+        userMessages: null,
+        appliedRules: [],
+        legend: [],
+    }, data),
+};
+
+let whenFetched = fetch('https://google.com')
+    .then(resp => resp.text());
+
+let whenRules = Promise.resolve({len: 5, appliedRules: [{id: 123, decoration: ['italic']}], patterns: [{ruleId: 123, value: "%  3 KL %"}]});
+
+let whenTime = whenRules.then(rules => {
+    return {time: Math.random(), rules: rules};
+});
+
+let running = whenTime.then(makeCmdResponse)
+    .then(resp => resp.);
+
+running.then(timed => {
+    timed.;
+});
+
 (function(){
 
     let ssrLineNumbers = [];
@@ -13,7 +54,7 @@
     define(['./Tls.js'], (Tls) => (...ctorArgs) => {
         let tls = Tls();
         // should suggest: opt, promise, http, mkDom, range, deepCopy
-        tls.o;
+        tls.a;
     });
 
     /**
