@@ -13,7 +13,7 @@ class SearchCtx extends ICtx
     var debug = false
 
     // for performance measurement
-    val expressionsResolved = 0
+    var expressionsResolved = 0
 
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
 
@@ -34,7 +34,10 @@ class SearchCtx extends ICtx
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
+        expressionsResolved += 1
         if (depth > maxDepth) {
+            None
+        } else if (expressionsResolved >= 7500) {
             None
         } else {
             depth += 1
