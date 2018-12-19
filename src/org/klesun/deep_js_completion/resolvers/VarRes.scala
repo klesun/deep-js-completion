@@ -248,6 +248,14 @@ case class VarRes(ctx: ICtx) {
           .flatMap(call => call.getArguments.lift(0))
           .flatMap(value => ctx.findExprType(value))
           .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+        // someVar[i] = value
+        case indexing: JSIndexedPropertyAccessExpression => Option(indexing.getParent)
+          .flatMap(cast[JSDefinitionExpression](_))
+          .flatMap(defi => Option(defi.getParent))
+          .flatMap(cast[JSAssignmentExpression](_))
+          .flatMap(defi => Option(defi.getROperand))
+          .flatMap(expr => ctx.findExprType(expr))
+          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
         // var someVar = null;
         // ... code
         // someVar = initializeSomething()
