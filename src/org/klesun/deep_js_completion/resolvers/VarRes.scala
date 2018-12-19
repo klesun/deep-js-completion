@@ -237,6 +237,62 @@ case class VarRes(ctx: ICtx) {
     })
   }
 
+  private def resolveFromUsage(usage: JSReferenceExpression): GenTraversableOnce[JSType] = {
+    Option(usage.getParent).toList
+      .flatMap {
+        // someVar.push(value)
+        case superRef: JSReferenceExpression => Option(superRef.getReferenceName)
+          .filter(refName => List("push", "unshift").contains(refName))
+          .flatMap(refName => Option(superRef.getParent))
+          .flatMap(cast[JSCallExpression](_))
+          .flatMap(call => call.getArguments.lift(0))
+          .flatMap(value => ctx.findExprType(value))
+          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+        // var someVar = null;
+        // ... code
+        // someVar = initializeSomething()
+        case usage: JSDefinitionExpression => Option(usage.getParent)
+          .flatMap(cast[JSAssignmentExpression](_))
+          .flatMap(defi => Option(defi.getROperand))
+          .flatMap(expr => ctx.findExprType(expr))
+        case _ => List[JSType]()
+      }
+  }
+
+  // may be defined in a different file unlike resolveFromUsage()
+  private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
+    psi match {
+      case para: JSParameter => resolveArg(para)
+      case dest: JSVariable => first(() => None
+        , () => Option(dest.getInitializer)
+          .flatMap(expr => ctx.findExprType(expr))
+        , () => Option(dest.getParent)
+          .flatMap(cast[JSDestructuringShorthandedProperty](_))
+          .flatMap(prop => Option(prop.getParent))
+          .flatMap(cast[JSDestructuringObject](_))
+          .flatMap(obj => Option(obj.getParent))
+          .flatMap(cast[JSDestructuringElement](_))
+          .flatMap(obj => Option(obj.getInitializer))
+          .flatMap(qual => ctx.findExprType(qual))
+          .flatMap(qualT => {
+            val keyTOpt = Option(dest.getName)
+              .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+            Mt.getKey(qualT, keyTOpt)
+          })
+      )
+      case prop: JSProperty => Option(prop.getValue)
+        .flatMap(expr => ctx.findExprType(expr))
+      case prop: JSDefinitionExpression => Option(prop.getExpression)
+        .flatMap(expr => ctx.findExprType(expr))
+      case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
+        .flatMap(expr => ctx.findExprType(expr))
+        .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), rett)))
+      case _ =>
+        //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
+        None
+    }
+  }
+
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
     val deepRef = Option(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual))
@@ -246,61 +302,12 @@ case class VarRes(ctx: ICtx) {
         Mt.getKey(qualT, keyTOpt)
       })
 
-    val refs = findUsages(ref)
+    val fromUsages = findUsages(ref)
+      .flatMap(usage => resolveFromUsage(usage))
 
-    val pushRef = refs
-      .flatMap(usage => Option(usage.getParent))
-      .flatMap(cast[JSReferenceExpression](_))
-      .filter(superRef => List("push", "unshift")
-        .contains(superRef.getReferenceName))
-      .flatMap(psi => Option(psi.getParent))
-      .flatMap(cast[JSCallExpression](_))
-      .flatMap(call => call.getArguments.lift(0))
-      .flatMap(value => ctx.findExprType(value))
-      .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    val fromMainDecl = Option(ref.resolve()).toList
+      .flatMap(psi => resolveFromMainDecl(psi))
 
-    // var someVar = null;
-    // ... code
-    // someVar = initializeSomething()
-    val assRef = refs
-      .flatMap(usage => Option(usage.getParent))
-      .flatMap(cast[JSDefinitionExpression](_))
-      .flatMap(usage => Option(usage.getParent))
-      .flatMap(cast[JSAssignmentExpression](_))
-      .flatMap(defi => Option(defi.getROperand))
-      .flatMap(expr => ctx.findExprType(expr))
-
-    val briefRef = Option(ref.resolve())
-      .flatMap(psi => psi match {
-        case para: JSParameter => resolveArg(para)
-        case dest: JSVariable => first(() => None
-          , () => Option(dest.getInitializer)
-            .flatMap(expr => ctx.findExprType(expr))
-          , () => Option(dest.getParent)
-            .flatMap(cast[JSDestructuringShorthandedProperty](_))
-            .flatMap(prop => Option(prop.getParent))
-            .flatMap(cast[JSDestructuringObject](_))
-            .flatMap(obj => Option(obj.getParent))
-            .flatMap(cast[JSDestructuringElement](_))
-            .flatMap(obj => Option(obj.getInitializer))
-            .flatMap(qual => ctx.findExprType(qual))
-            .flatMap(qualT => {
-              val keyTOpt = Option(dest.getName)
-                .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-              Mt.getKey(qualT, keyTOpt)
-            })
-        )
-        case prop: JSProperty => Option(prop.getValue)
-          .flatMap(expr => ctx.findExprType(expr))
-        case prop: JSDefinitionExpression => Option(prop.getExpression)
-          .flatMap(expr => ctx.findExprType(expr))
-        case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
-          .flatMap(expr => ctx.findExprType(expr))
-          .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), rett)))
-        case _ =>
-          //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
-          None
-      })
-    Mt.mergeTypes(deepRef ++ assRef ++ pushRef ++ briefRef)
+    Mt.mergeTypes(deepRef ++ fromUsages ++ fromMainDecl)
   }
 }
