@@ -77,6 +77,8 @@ object MainRes {
       case tern: JSConditionalExpression =>
         Mt.mergeTypes(List(tern.getThen, tern.getElse)
           .flatMap(expr => ctx.findExprType(expr)))
+      case par: JSParenthesizedExpression =>
+        ctx.findExprType(par.getInnerExpression)
       case _ => None
     }
   }
