@@ -30,15 +30,8 @@ object MainRes {
     arrow.++(classic).toList
   }
 
-  private def getWsType(expr: JSExpression) = {
-    // TODO: seems that it should be called differently . getExpressionType() looses array element/object key types
-    Option(JSTypeEvaluator.getExpressionType(expr))
-      .flatMap(res => Option(res.getType))
-  }
-
   def resolveIn(expr: JSExpression, ctx: ICtx): Option[JSType] = {
-
-    val resolved = {expr match {
+    expr match {
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
       case indx: JSIndexedPropertyAccessExpression =>
@@ -82,18 +75,6 @@ object MainRes {
           None
         }
       case _ => None
-    }}: Option[JSType]
-
-    /** @debug */
-    //println("resolution of " + singleLine(expr.getText, 100) + " " + expr.getClass + " - " + resolved)
-
-    val result = resolved.orElse(getWsType(expr))
-
-    if (resolved.isEmpty) {
-      /** @debug */
-      //println("built-in of " + result)
     }
-
-    result
   }
 }

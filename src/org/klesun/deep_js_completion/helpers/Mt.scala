@@ -79,9 +79,11 @@ object Mt {
     mergeTypes(retTs)
   }
 
-  def getPromiseValue(promiset: JSType): GenTraversableOnce[JSType] = {
-    cast[JSGenericTypeImpl](promiset)
+  def getPromiseValue(promiset: JSType): Option[JSType] = {
+    val promisedt = flattenTypes(promiset)
+      .flatMap(cast[JSGenericTypeImpl](_))
       .filter(gene => gene.getType.getTypeText(TypeTextFormat.CODE) equals "Promise")
       .flatMap(gene => gene.getArguments.asScala.lift(0))
+    mergeTypes(promisedt)
   }
 }
