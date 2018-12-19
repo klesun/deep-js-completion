@@ -25,6 +25,10 @@ case class FuncCallRes(ctx: ICtx) {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
         .flatMap(funcT => Mt.getReturnType(funcT))
         .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    } else if ((obj.getText equals "Object") && (methName equals "assign")) {
+      // IDEA actually has the built-in function generic return type mapping, but I'm
+      // not able to get the info (getReturnType returns AnyType instead of A & B)
+      Mt.mergeTypes(args.flatMap(arg => ctx.findExprType(arg)))
     } else {
       None
     }
