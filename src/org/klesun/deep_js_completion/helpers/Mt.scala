@@ -11,10 +11,11 @@ import org.klesun.lang.Lang._
 import scala.util.Try
 
 /**
+ * stands for Multi-Type
  * provides handy functions to work with JSType that can
  * either be some particular type or array of types
  */
-object MultiType {
+object Mt {
   def mergeTypes(types: Iterable[JSType]): Option[JSType] = {
     if (types.size > 1) {
       val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.asJava)

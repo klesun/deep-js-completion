@@ -20,7 +20,7 @@ import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileRefere
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
+import org.klesun.deep_js_completion.helpers.{ICtx, Mt}
 import org.klesun.lang.Lang
 
 import scala.collection.JavaConverters._
@@ -43,14 +43,14 @@ case class VarRes(ctx: ICtx) {
     .filter(ref => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
     .flatMap(ref => Option(ref.getQualifier))
     .flatMap(expr => ctx.findExprType(expr))
-    .flatMap(arrt => MultiType.getKey(arrt, None))
+    .flatMap(arrt => Mt.getKey(arrt, None))
 
   private def ensureFunc(clsT: JSType): Option[JSType] = {
-    val funcTs = MultiType.flattenTypes(clsT).map(t => {t match {
+    val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
       case funcT: JSFunctionTypeImpl => funcT
       case _ => new JSFunctionTypeImpl(JSTypeSource.EMPTY, List[JSParameterTypeDecorator]().asJava, clsT)
     }}: JSFunctionTypeImpl)
-    MultiType.mergeTypes(funcTs)
+    Mt.mergeTypes(funcTs)
   }
 
   private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): Option[JSType] = {
@@ -93,14 +93,14 @@ case class VarRes(ctx: ICtx) {
           })
         )
       )
-    MultiType.mergeTypes(types)
+    Mt.mergeTypes(types)
   }
 
   private def resolveRequireJsFormatDef(file: PsiFile): Option[JSType] = {
     val types = List[JSType]() ++
       resolveKlesunWhenLoadedSupplierDef(file) ++
       resolveRequireJsSupplierDef(file)
-    MultiType.mergeTypes(types.flatMap(sup => MultiType.getReturnType(sup)))
+    Mt.mergeTypes(types.flatMap(sup => Mt.getReturnType(sup)))
   }
 
   private def getKlesunRequiresArgType(func: JSFunction): Option[JSType] = Option(func.getParent)
@@ -146,7 +146,7 @@ case class VarRes(ctx: ICtx) {
             if (varName.equals(func.getName)) {
               val rts = MainRes.getReturns(func)
                 .flatMap(ret => ctx.findExprType(ret))
-              val rt = MultiType.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
+              val rt = Mt.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
               Some(new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList, rt))
             } else {
               None
@@ -165,7 +165,7 @@ case class VarRes(ctx: ICtx) {
           val varName = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           findVarDecl(caretPsi, varName)
-            .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
+            .flatMap(t => if (isFuncCall) Mt.getReturnType(t) else Some(t))
         }))
       .orElse("""^\s*=\s*from\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
         .flatMap(found => {
@@ -177,7 +177,7 @@ case class VarRes(ctx: ICtx) {
               ++ resolveCommonJsFormatDef(file)
               ++ resolveRequireJsFormatDef(file)
             ).lift(0)
-            .flatMap(t => if (isFuncCall) MultiType.getReturnType(t) else Some(t))
+            .flatMap(t => if (isFuncCall) Mt.getReturnType(t) else Some(t))
         }))
   }
 
@@ -198,7 +198,7 @@ case class VarRes(ctx: ICtx) {
         ++ getArgDocExprType(func, para)
         ++ getInlineFuncArgType(func)
         ++ getKlesunRequiresArgType(func))
-    MultiType.mergeTypes(types)
+    Mt.mergeTypes(types)
   }
 
   def first[T](suppliers: (() => Option[T])*): Option[T] = {
@@ -227,7 +227,7 @@ case class VarRes(ctx: ICtx) {
       .flatMap(qualT => {
         val keyTOpt = Option(ref.getReferenceName)
           .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-        MultiType.getKey(qualT, keyTOpt)
+        Mt.getKey(qualT, keyTOpt)
       })
 
     val pushRef = findUsages(ref)
@@ -258,7 +258,7 @@ case class VarRes(ctx: ICtx) {
             .flatMap(qualT => {
               val keyTOpt = Option(dest.getName)
                 .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-              MultiType.getKey(qualT, keyTOpt)
+              Mt.getKey(qualT, keyTOpt)
             })
         )
         case prop: JSProperty => Option(prop.getValue)
@@ -269,6 +269,6 @@ case class VarRes(ctx: ICtx) {
           //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
       })
-    MultiType.mergeTypes(deepRef ++ pushRef ++ briefRef)
+    Mt.mergeTypes(deepRef ++ pushRef ++ briefRef)
   }
 }

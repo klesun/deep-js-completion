@@ -10,7 +10,7 @@ import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyM
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
+import org.klesun.deep_js_completion.helpers.{ICtx, Mt}
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
@@ -46,13 +46,13 @@ object MainRes {
           .flatMap(arrT => {
             val keyTOpt = Option(indx.getIndexExpression)
               .flatMap(qua => ctx.findExprType(qua))
-            MultiType.getKey(arrT, keyTOpt)
+            Mt.getKey(arrT, keyTOpt)
           })
       case func: JSFunctionExpression =>
         val types = getReturns(func)
           .flatMap(valu => ctx.findExprType(valu))
           .map(retT => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), retT))
-        MultiType.mergeTypes(types)
+        Mt.mergeTypes(types)
       case arr: JSArrayLiteralExpression =>
         val typeTuple = arr.getExpressions
           .map(el => ctx.findExprType(el)
@@ -70,7 +70,7 @@ object MainRes {
       case bina: JSBinaryExpression =>
         val types = List(bina.getLOperand, bina.getROperand)
           .flatMap(op => ctx.findExprType(op))
-        MultiType.mergeTypes(types)
+        Mt.mergeTypes(types)
       case lit: JSLiteralExpressionImpl =>
         if (lit.isBooleanLiteral) {
           Some(new JSBooleanLiteralTypeImpl(lit.getValue.asInstanceOf[Boolean], false, JSTypeSource.EMPTY))

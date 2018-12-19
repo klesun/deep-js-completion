@@ -5,7 +5,7 @@ import com.intellij.lang.javascript.psi.types.primitives.JSBooleanType
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import com.intellij.util.containers.ContainerUtil
-import org.klesun.deep_js_completion.helpers.{ICtx, MultiType}
+import org.klesun.deep_js_completion.helpers.{ICtx, Mt}
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
@@ -22,7 +22,7 @@ case class FuncCallRes(ctx: ICtx) {
       ctx.findExprType(obj)
     } else if (List("reduce", "map").contains(methName)) {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
-        .flatMap(funcT => MultiType.getReturnType(funcT))
+        .flatMap(funcT => Mt.getReturnType(funcT))
         .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
     } else {
       None
@@ -33,13 +33,13 @@ case class FuncCallRes(ctx: ICtx) {
     Option(funcCall.getMethodExpression)
       .flatMap(expr => {
         val definedRts = ctx.findExprType(expr)
-          .toList.flatMap(funcT => MultiType.getReturnType(funcT))
+          .toList.flatMap(funcT => Mt.getReturnType(funcT))
         val builtInRts = cast[JSReferenceExpression](expr)
           .flatMap(ref => Option(ref.getReferenceName)
             .flatMap(name => Option(ref.getQualifier)
               .flatMap(qual => resolveBuiltInCall(qual, name, funcCall.getArguments.toList))))
 
-        MultiType.mergeTypes(definedRts ++ builtInRts)
+        Mt.mergeTypes(definedRts ++ builtInRts)
       })
   }
 }

@@ -8,7 +8,7 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
-import org.klesun.deep_js_completion.helpers.{MultiType, SearchCtx}
+import org.klesun.deep_js_completion.helpers.{Mt, SearchCtx}
 import org.klesun.lang.Lang._
 
 
@@ -31,7 +31,7 @@ class DestrPropGoToDecl extends GotoDeclarationHandler {
           .flatMap(qualT => {
             val keyTOpt = Option(varPsi.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            MultiType.getKey(qualT, keyTOpt)
+            Mt.getKey(qualT, keyTOpt)
           })
       })
       .flatMap(t => search.typeToDecl.get(t))

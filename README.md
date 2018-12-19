@@ -11,7 +11,6 @@ For example, arguments of functions like `map`, `filter`, `reduce`,
 
 So, that's why I'm writing this plugin - to make it possible to code in js as comfortable as you 
 would in some static-typed language with the help of type inference and doc-comments.
-(My another reason is that I want to learn how to code in Scala =P)
 
 This plugin will be highly inspired by my other plugin, 
 [deep-assoc-completion](https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion) 
