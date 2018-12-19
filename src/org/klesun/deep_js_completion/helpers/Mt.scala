@@ -32,6 +32,9 @@ object Mt {
       case mt: JSContextualUnionTypeImpl => {
         mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
       }
+      case mt: JSCompositeTypeImpl => {
+        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
+      }
       case _ => List(t)
     }
   }
@@ -82,7 +85,8 @@ object Mt {
   def getPromiseValue(promiset: JSType): Option[JSType] = {
     val promisedt = flattenTypes(promiset)
       .flatMap(cast[JSGenericTypeImpl](_))
-      .filter(gene => gene.getType.getTypeText(TypeTextFormat.CODE) equals "Promise")
+      .filter(gene => List("Promise", "Bluebird")
+        .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
       .flatMap(gene => gene.getArguments.asScala.lift(0))
     mergeTypes(promisedt)
   }
