@@ -4,7 +4,7 @@ import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.primitives.JSBooleanType
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi._
 import com.intellij.util.containers.ContainerUtil
 import org.klesun.deep_js_completion.contexts.ICtx
 import org.klesun.deep_js_completion.helpers.Mt
@@ -31,18 +31,10 @@ case class FuncCallRes(ctx: ICtx) {
       // not able to get the info (getReturnType returns AnyType instead of A & B)
       Mt.mergeTypes(args.flatMap(arg => ctx.findExprType(arg)))
     } else if (methName equals "then") {
-      val types = ctx.findExprType(obj).toList
-        .flatMap(t => Mt.flattenTypes(t))
-        .map {
-          case mt: JSGenericTypeImpl => mt.getType
-          case promt => promt
-        }
-        .filter(promt => promt.getTypeText(TypeTextFormat.CODE) equals "Promise")
-        .flatMap(promt => args.lift(0).flatMap(arg => ctx.findExprType(arg))
+      args.lift(0).flatMap(arg => ctx.findExprType(arg))
           .flatMap(funcT => Mt.getReturnType(funcT))
           .map(value => Mt.getPromiseValue(value).getOrElse(value))
-          .map(value => new JSGenericTypeImpl(JSTypeSource.EMPTY, promt, List(value).asJava)))
-      Mt.mergeTypes(types)
+          .map(value => new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava))
     } else {
       None
     }
