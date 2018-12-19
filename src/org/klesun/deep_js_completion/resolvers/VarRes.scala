@@ -210,12 +210,12 @@ case class VarRes(ctx: ICtx) {
     Mt.mergeTypes(types)
   }
 
-  def first[T](suppliers: (() => Option[T])*): Option[T] = {
+  private def first[T](suppliers: (() => Option[T])*): Option[T] = {
     suppliers.iterator.flatMap(s => s())
       .take(1).toList.lift(0)
   }
 
-  def findUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
+  private def findUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
     Option(ref.resolve()).toList.flatMap(decl => {
       val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
         .getOrElse(decl.getContainingFile)
@@ -227,10 +227,6 @@ case class VarRes(ctx: ICtx) {
   }
 
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
-    // TODO: manually support re-assignment, like
-    // var someVar = null;
-    // ... code
-    // someVar = initializeSomething()
     val deepRef = Option(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual))
       .flatMap(qualT => {
@@ -239,16 +235,29 @@ case class VarRes(ctx: ICtx) {
         Mt.getKey(qualT, keyTOpt)
       })
 
-    val pushRef = findUsages(ref)
+    val refs = findUsages(ref)
+
+    val pushRef = refs
       .flatMap(usage => Option(usage.getParent))
       .flatMap(cast[JSReferenceExpression](_))
-      .filter(superRef => "push".equals(superRef.getReferenceName))
+      .filter(superRef => List("push", "unshift")
+        .contains(superRef.getReferenceName))
       .flatMap(psi => Option(psi.getParent))
       .flatMap(cast[JSCallExpression](_))
       .flatMap(call => call.getArguments.lift(0))
-      .filter(arg => Lang.log("arg " + arg.getText + " " + arg.getClass))
       .flatMap(value => ctx.findExprType(value))
       .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+
+    // var someVar = null;
+    // ... code
+    // someVar = initializeSomething()
+    val assRef = refs
+      .flatMap(usage => Option(usage.getParent))
+      .flatMap(cast[JSDefinitionExpression](_))
+      .flatMap(usage => Option(usage.getParent))
+      .flatMap(cast[JSAssignmentExpression](_))
+      .flatMap(defi => Option(defi.getROperand))
+      .flatMap(expr => ctx.findExprType(expr))
 
     val briefRef = Option(ref.resolve())
       .flatMap(psi => psi match {
@@ -278,6 +287,6 @@ case class VarRes(ctx: ICtx) {
           //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
       })
-    Mt.mergeTypes(deepRef ++ pushRef ++ briefRef)
+    Mt.mergeTypes(deepRef ++ assRef ++ pushRef ++ briefRef)
   }
 }
