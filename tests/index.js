@@ -2,7 +2,7 @@
 let SomeCjsModule = require('./SomeCjsModule.js');
 
 SomeCjsModule({}).runInputCmd('*R').then(resp => {
-    resp.;
+    resp.o;
 });
 
 let makeCmdResponse = (data) => 1 && {

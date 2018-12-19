@@ -72,6 +72,11 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
             .flatMap(cast[PropertySignature](_))
         case mt: JSUnionOrIntersectionType =>
           mt.getTypes.asScala.flatMap(t => getProps(t, psi)).toList
+        case mt: JSGenericTypeImpl =>
+          val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
+          JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(psi.getProject)).asScala
+            .toList.flatMap(ifc => ifc.getMembers.asScala)
+            .flatMap(cast[PropertySignature](_))
         case _ =>
           /** @debug */
           //println("Unsupported typ " + typ.getClass + " " + typ)
@@ -87,16 +92,16 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       }
     }
 
-    val psi = parameters.getOriginalPosition
+    val nullPsi = parameters.getPosition
     val depth = getMaxDepth(parameters.isAutoPopup)
     val search = new SearchCtx().setDepth(depth)
     val startTime = System.nanoTime
-    val suggestions = Option(parameters.getPosition)
+    val suggestions = Option(nullPsi)
       .flatMap(pos => Option(pos.getParent))
       .flatMap(findRefExpr(_))
       .flatMap(ref => Option(ref.getQualifier))
       .flatMap(qual => search.findExprType(qual))
-      .toList.flatMap(typ => getProps(typ, psi))
+      .toList.flatMap(typ => getProps(typ, nullPsi))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
@@ -111,7 +116,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
 
     val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
     val builtInSuggestions = new util.ArrayList[LookupElement]
-    val project = if (psi != null) psi.getProject else null
+    val project = if (nullPsi != null) nullPsi.getProject else null
     val jsConfig = if (project != null) JSRootConfiguration.getInstance(project) else null
     val onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
 
