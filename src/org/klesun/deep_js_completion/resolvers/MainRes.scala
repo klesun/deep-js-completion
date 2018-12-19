@@ -2,6 +2,7 @@ package org.klesun.deep_js_completion.resolvers
 
 import java.util
 
+import com.intellij.lang.javascript.JSKeywordElementType
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
@@ -79,6 +80,14 @@ object MainRes {
           .flatMap(expr => ctx.findExprType(expr)))
       case par: JSParenthesizedExpression =>
         ctx.findExprType(par.getInnerExpression)
+      case pref: JSPrefixExpression =>
+        if ("JS:AWAIT_KEYWORD" equals (pref.getOperationSign + "")) {
+          Option(pref.getExpression)
+            .flatMap(expr => ctx.findExprType(expr))
+            .flatMap(pomiset => Mt.getPromiseValue(pomiset))
+        } else {
+          None
+        }
       case _ => None
     }
   }
