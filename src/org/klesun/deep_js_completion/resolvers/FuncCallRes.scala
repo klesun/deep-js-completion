@@ -7,6 +7,7 @@ import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi._
 import com.intellij.util.containers.ContainerUtil
 import org.klesun.deep_js_completion.contexts.ICtx
+import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang._
 
@@ -18,7 +19,7 @@ import scala.collection.JavaConverters._
  */
 case class FuncCallRes(ctx: ICtx) {
 
-  def resolveBuiltInCall(obj: JSExpression, methName: String, args: List[JSExpression]): Option[JSType] = {
+  def resolveBuiltInMethCall(obj: JSExpression, methName: String, args: List[JSExpression]): Option[JSType] = {
     // Unsupported: reduce, concat, shift, pop
     if (List("filter", "sort", "slice", "splice").contains(methName)) {
       ctx.findExprType(obj)
@@ -40,6 +41,16 @@ case class FuncCallRes(ctx: ICtx) {
     }
   }
 
+  def resolveBuiltInFuncCall(funcName: String, args: List[JSExpression]): Option[JSType] = {
+    if (List("require").contains(funcName)) {
+      args.lift(0)
+        .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
+        .flatMap(file => VarRes(ctx).resolveCommonJsFormatDef(file))
+    } else {
+      None
+    }
+  }
+
   def resolve(funcCall: JSCallExpression): Option[JSType] = {
     Option(funcCall.getMethodExpression)
       .flatMap(expr => {
@@ -47,8 +58,10 @@ case class FuncCallRes(ctx: ICtx) {
           .toList.flatMap(funcT => Mt.getReturnType(funcT))
         val builtInRts = cast[JSReferenceExpression](expr)
           .flatMap(ref => Option(ref.getReferenceName)
-            .flatMap(name => Option(ref.getQualifier)
-              .flatMap(qual => resolveBuiltInCall(qual, name, funcCall.getArguments.toList))))
+            .flatMap(name => Option(ref.getQualifier) match {
+              case Some(qual) => resolveBuiltInMethCall(qual, name, funcCall.getArguments.toList)
+              case None => resolveBuiltInFuncCall(name, funcCall.getArguments.toList)
+            }))
 
         Mt.mergeTypes(definedRts ++ builtInRts)
       })

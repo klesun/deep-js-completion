@@ -76,7 +76,7 @@ case class VarRes(ctx: ICtx) {
       .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
   }
 
-  private def resolveCommonJsFormatDef(file: PsiFile): Option[JSType] = {
+  def resolveCommonJsFormatDef(file: PsiFile): Option[JSType] = {
     val types = file.getChildren
       .flatMap(cast[JSExpressionStatement](_))
       .flatMap(_.getChildren)
@@ -143,28 +143,39 @@ case class VarRes(ctx: ICtx) {
   }
 
   private def findVarDecl(caretPsi: PsiElement, varName: String): Option[JSType] = {
-    Lang.findParent[JSBlockStatement](caretPsi)
-      .toList.flatMap(b => b.getStatements
-        .flatMap(st => st match {
-          case varSt: JSVarStatement =>
-            varSt.getDeclarations
-              .filter(own => varName.equals(own.getName))
-              .map(own => own.getInitializer)
-              .flatMap(expr => ctx.findExprType(expr))
-          case func: JSFunctionDeclaration =>
-            if (varName.equals(func.getName)) {
-              val rts = MainRes.getReturns(func)
-                .flatMap(ret => ctx.findExprType(ret))
-              val rt = Mt.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
-              Some(new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList, rt))
-            } else {
-              None
-            }
-          case _ => None
-        })
-        .++(findVarDecl(b, varName))
-      )
-      .lift(0)
+    var scope: Option[PsiElement] = None
+    var stmts = List[JSStatement]()
+    val funcOpt = Lang.findParent[JSBlockStatement](caretPsi)
+    val fileOpt = Lang.findParent[JSFile](caretPsi)
+    if (funcOpt.isDefined) {
+      scope = funcOpt
+      stmts = funcOpt.get.getStatements.toList
+    } else if (fileOpt.isDefined) {
+      scope = fileOpt
+      stmts = fileOpt.get.getStatements.toList
+        .flatMap(cast[JSStatement](_))
+    }
+    val types = scope.toList.flatMap(b => stmts
+      .flatMap(st => st match {
+        case varSt: JSVarStatement =>
+          varSt.getDeclarations
+            .filter(own => varName.equals(own.getName))
+            .map(own => own.getInitializer)
+            .flatMap(expr => ctx.findExprType(expr))
+        case func: JSFunctionDeclaration =>
+          if (varName.equals(func.getName)) {
+            val rts = MainRes.getReturns(func)
+              .flatMap(ret => ctx.findExprType(ret))
+            val rt = Mt.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
+            Some(new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList, rt))
+          } else {
+            None
+          }
+        case _ => None
+      })
+      .++(findVarDecl(b, varName))
+    )
+    Mt.mergeTypes(types)
   }
 
   private def parseDocExpr(caretPsi: PsiElement, expr: String): Iterable[JSType] = {
