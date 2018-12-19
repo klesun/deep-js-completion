@@ -1,4 +1,4 @@
-package org.klesun.deep_js_completion.helpers
+package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 

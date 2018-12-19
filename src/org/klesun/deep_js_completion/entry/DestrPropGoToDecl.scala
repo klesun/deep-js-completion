@@ -7,8 +7,9 @@ import com.intellij.lang.javascript.psi.types.{JSStringLiteralTypeImpl, JSTypeSo
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
-import org.klesun.deep_js_completion.helpers.{Mt, SearchCtx}
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang._
 
 

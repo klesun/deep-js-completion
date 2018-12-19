@@ -17,7 +17,7 @@ import com.intellij.psi.search.{EverythingGlobalScope, GlobalSearchScope}
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.DeepKeysPvdr._
-import org.klesun.deep_js_completion.helpers.SearchCtx
+import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._

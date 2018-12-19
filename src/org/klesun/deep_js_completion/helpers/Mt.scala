@@ -1,5 +1,6 @@
 package org.klesun.deep_js_completion.helpers
 
+import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType}
 import com.intellij.lang.javascript.psi.types._
@@ -8,6 +9,7 @@ import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 
+import scala.collection.GenTraversableOnce
 import scala.util.Try
 
 /**
@@ -75,5 +77,11 @@ object Mt {
       .flatMap(cast[JSFunctionTypeImpl](_))
       .flatMap(func => Option(func.getReturnType))
     mergeTypes(retTs)
+  }
+
+  def getPromiseValue(promiset: JSType): GenTraversableOnce[JSType] = {
+    cast[JSGenericTypeImpl](promiset)
+      .filter(gene => gene.getType.getTypeText(TypeTextFormat.CODE) equals "Promise")
+      .flatMap(gene => gene.getArguments.asScala.lift(0))
   }
 }

@@ -19,14 +19,15 @@ import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import org.klesun.deep_js_completion.contexts.ICtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.{ICtx, Mt}
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang
 
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 
-import scala.collection.GenTraversable
+import scala.collection.{GenTraversable, GenTraversableOnce}
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -34,16 +35,24 @@ import scala.collection.mutable.ListBuffer
  */
 case class VarRes(ctx: ICtx) {
 
-  private def getInlineFuncArgType(func: JSFunction): Option[JSType] = Option(func.getParent)
+  private def getInlineFuncArgType(func: JSFunction): GenTraversableOnce[JSType] = Option(func.getParent)
     .flatMap(cast[JSArgumentList](_))
     .flatMap(func => Option(func.getParent))
     .flatMap(cast[JSCallExpression](_))
     .flatMap(call => Option(call.getMethodExpression))
     .flatMap(cast[JSReferenceExpressionImpl](_))
-    .filter(ref => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
-    .flatMap(ref => Option(ref.getQualifier))
-    .flatMap(expr => ctx.findExprType(expr))
-    .flatMap(arrt => Mt.getKey(arrt, None))
+    .toList
+    .flatMap(ref =>
+      Option(ref.getQualifier)
+        .filter(expr => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
+        .flatMap(expr => ctx.findExprType(expr))
+        .flatMap(arrt => Mt.getKey(arrt, None))
+      ++
+      Option(ref.getQualifier)
+        .filter(expr => List("then").contains(ref.getReferencedName))
+        .flatMap(expr => ctx.findExprType(expr)).toList
+        .flatMap(promiset => Mt.getPromiseValue(promiset))
+    )
 
   private def ensureFunc(clsT: JSType): Option[JSType] = {
     val funcTs = Mt.flattenTypes(clsT).map(t => {t match {

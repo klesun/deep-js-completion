@@ -10,7 +10,8 @@ import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyM
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.helpers.{ICtx, Mt}
+import org.klesun.deep_js_completion.contexts.ICtx
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
