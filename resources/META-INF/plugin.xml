@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.12.03.001</version>
+  <version>2018.12.19.001</version>
   <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
@@ -26,7 +26,14 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Allow to specify node module in the doc like `@param db = from('./../../../Utils/Db.es6')()` (similar to how it works for requirejs)</li>
+  <li>Support parenthesized expressions</li>
+  <li>Resolve functions in other files even when IDEA does not manage</li>
+  <li>Infer type of variable assigned few lines after declaration (For cases when in "if" it is assigned one value, but in "else" another)</li>
+  <li>Support ternary operator</li>
+  <li>Add resolved expression caching (Irreplacable when you resolve a recursive function)</li>
+  <li>Infer return type of Object.assign from passed args</li>
+  <li>Provide completion inside/from Promise.then</li>
+  <li>Provide completion on any class instance, not just Array instances</li>
     ]]>
   </change-notes>
 
