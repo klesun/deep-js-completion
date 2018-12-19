@@ -1,7 +1,6 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.types.JSAnyType
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
@@ -57,7 +56,6 @@ class SearchCtx extends ICtx
             if (debug) {
                 /** @debug */
                 println(indent + "resolution: " + resolved)
-
                 if (resolved.isEmpty) {
                     /** @debug */
                     println(indent + "built-in of " + result)

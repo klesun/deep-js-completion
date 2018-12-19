@@ -283,6 +283,9 @@ case class VarRes(ctx: ICtx) {
           .flatMap(expr => ctx.findExprType(expr))
         case prop: JSDefinitionExpression => Option(prop.getExpression)
           .flatMap(expr => ctx.findExprType(expr))
+        case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
+          .flatMap(expr => ctx.findExprType(expr))
+          .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), rett)))
         case _ =>
           //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
           None
