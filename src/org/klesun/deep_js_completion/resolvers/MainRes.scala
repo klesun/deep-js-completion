@@ -74,6 +74,9 @@ object MainRes {
         } else {
           None
         }
+      case tern: JSConditionalExpression =>
+        Mt.mergeTypes(List(tern.getThen, tern.getElse)
+          .flatMap(expr => ctx.findExprType(expr)))
       case _ => None
     }
   }
