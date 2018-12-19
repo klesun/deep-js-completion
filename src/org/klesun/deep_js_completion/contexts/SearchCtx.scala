@@ -1,6 +1,7 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
+import com.intellij.lang.javascript.psi.types.JSAnyType
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
@@ -15,7 +16,10 @@ class SearchCtx extends ICtx
     // for performance measurement
     var expressionsResolved = 0
 
+    // for very basic GoTo
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
+    // caching - to not re-resolve same expression 100500 times
+    val exprToResult = scala.collection.mutable.Map[JSExpression, Option[JSType]]()
 
     def setMaxDepth(value: Int): SearchCtx = {
         maxDepth = value
@@ -39,7 +43,11 @@ class SearchCtx extends ICtx
             None
         } else if (expressionsResolved >= 7500) {
             None
+        } else if (exprToResult.contains(expr)) {
+            exprToResult(expr)
         } else {
+            exprToResult.put(expr, None)
+
             depth += 1
             val resolved = MainRes.resolveIn(expr, this)
             depth -= 1
@@ -57,6 +65,7 @@ class SearchCtx extends ICtx
             }
 
             if (result.isDefined) {
+                exprToResult.put(expr, result)
                 typeToDecl.put(result.get, expr)
             }
             result
