@@ -32,13 +32,19 @@ class SearchCtx extends ICtx
     }
 
     def findExprType(expr: JSExpression): Option[JSType] = {
+      val funcCtx = new FuncCtx(this)
+      val exprCtx = new ExprCtx(funcCtx, expr, 0)
+      findExprType(expr, exprCtx)
+    }
+
+    def findExprType(expr: JSExpression, exprCtx: ExprCtx): Option[JSType] = {
         val indent = "  " * depth + "| "
         if (debug) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
         expressionsResolved += 1
-        if (depth > maxDepth) {
+        if (exprCtx.depth > maxDepth) {
             None
         } else if (expressionsResolved >= 7500) {
             None
@@ -48,7 +54,7 @@ class SearchCtx extends ICtx
             exprToResult.put(expr, None)
 
             depth += 1
-            val resolved = MainRes.resolveIn(expr, this)
+            val resolved = MainRes.resolveIn(expr, exprCtx)
             depth -= 1
 
             val result = Mt.mergeTypes(resolved ++ getWsType(expr))
