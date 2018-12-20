@@ -12,7 +12,7 @@ import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.{IndexSignatureImpl, PropertySignatureImpl}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.resolve.ResolveCache.PolyVariantResolver
 import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
@@ -238,26 +238,33 @@ case class VarRes(ctx: ICtx) {
   }
 
   private def resolveFromUsage(usage: JSReferenceExpression): GenTraversableOnce[JSType] = {
-    Option(usage.getParent).toList
-      .flatMap {
-        // someVar.push(value)
-        case superRef: JSReferenceExpression => Option(superRef.getReferenceName)
-          .filter(refName => List("push", "unshift").contains(refName))
-          .flatMap(refName => Option(superRef.getParent))
-          .flatMap(cast[JSCallExpression](_))
-          .flatMap(call => call.getArguments.lift(0))
-          .flatMap(value => ctx.findExprType(value))
-          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    def resolveParent(parent: PsiElement): GenTraversableOnce[JSType] = {
+      parent match {
+        case superRef: JSReferenceExpression => first(() => None
+          // someVar.push(value)
+          , () => Option(superRef.getReferenceName)
+            .filter(refName => List("push", "unshift").contains(refName))
+            .flatMap(refName => Option(superRef.getParent))
+            .flatMap(cast[JSCallExpression](_))
+            .flatMap(call => call.getArguments.lift(0))
+            .flatMap(value => ctx.findExprType(value))
+            .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+          // someVar.someKey = 123
+          , () => Mt.mergeTypes(Option(superRef.getReferencedName).toList
+            .flatMap(name => Option(superRef.getParent).toList
+              .flatMap(parent => resolveParent(parent))
+              .map(valT => new PropertySignatureImpl(name, valT, false, new EmptyMemberSource))
+              .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
+        )
         // someVar[i] = value
-        case indexing: JSIndexedPropertyAccessExpression => Option(indexing.getParent)
-          .flatMap(cast[JSDefinitionExpression](_))
-          .flatMap(defi => Option(defi.getParent))
-          .flatMap(cast[JSAssignmentExpression](_))
-          .flatMap(defi => Option(defi.getROperand))
-          .flatMap(expr => ctx.findExprType(expr))
+        case indexing: JSIndexedPropertyAccessExpression => Option(indexing.getParent).toList
+          .flatMap(parent => resolveParent(parent))
+//          .map(valT => new IndexSignatureImpl(ctx.findExprType(indexing.getIndexExpression).orNull, valT, new EmptyMemberSource))
+//          .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
+          // it would actually be more correct to make it "object with any key", not
+          // an array... and resolving key string value when we can would be nice too
           .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
         // var someVar = null;
-        // ... code
         // someVar = initializeSomething()
         case usage: JSDefinitionExpression => Option(usage.getParent)
           .flatMap(cast[JSAssignmentExpression](_))
@@ -265,6 +272,9 @@ case class VarRes(ctx: ICtx) {
           .flatMap(expr => ctx.findExprType(expr))
         case _ => List[JSType]()
       }
+    }
+    Option(usage.getParent).toList
+      .flatMap(parent => resolveParent(parent))
   }
 
   // may be defined in a different file unlike resolveFromUsage()
