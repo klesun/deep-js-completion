@@ -6,11 +6,10 @@ import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.Lang.singleLine
 
-class SearchCtx extends ICtx
-{
-    var maxDepth = 20
-    var depth = 0
-    var debug = false
+class SearchCtx(
+    val maxDepth: Integer = 20,
+    val debug: Boolean = false,
+) {
 
     // for performance measurement
     var expressionsResolved = 0
@@ -19,11 +18,6 @@ class SearchCtx extends ICtx
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
     // caching - to not re-resolve same expression 100500 times
     val exprToResult = scala.collection.mutable.Map[JSExpression, Option[JSType]]()
-
-    def setMaxDepth(value: Int): SearchCtx = {
-        maxDepth = value
-        this
-    }
 
     private def getWsType(expr: JSExpression) = {
         // TODO: seems that it should be called differently . getExpressionType() looses array element/object key types
@@ -38,7 +32,7 @@ class SearchCtx extends ICtx
     }
 
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): Option[JSType] = {
-        val indent = "  " * depth + "| "
+        val indent = "  " * exprCtx.depth + "| "
         if (debug) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
@@ -52,25 +46,19 @@ class SearchCtx extends ICtx
             exprToResult(expr)
         } else {
             exprToResult.put(expr, None)
-
-            depth += 1
             val resolved = MainRes.resolveIn(expr, exprCtx)
-            depth -= 1
-
             val result = Mt.mergeTypes(resolved ++ getWsType(expr))
-
+            if (result.isDefined) {
+                exprToResult.put(expr, result)
+                typeToDecl.put(result.get, expr)
+            }
             if (debug) {
                 /** @debug */
-                println(indent + "resolution: " + resolved)
+                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
                 if (resolved.isEmpty) {
                     /** @debug */
                     println(indent + "built-in of " + result)
                 }
-            }
-
-            if (result.isDefined) {
-                exprToResult.put(expr, result)
-                typeToDecl.put(result.get, expr)
             }
             result
         }

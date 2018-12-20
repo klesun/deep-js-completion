@@ -6,7 +6,7 @@ import com.intellij.lang.javascript.psi.types.primitives.JSBooleanType
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi._
 import com.intellij.util.containers.ContainerUtil
-import org.klesun.deep_js_completion.contexts.ICtx
+import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang._
@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
  * resolves type of a function call expression like:
  * someVar(arg1, arg2)
  */
-case class FuncCallRes(ctx: ICtx) {
+case class FuncCallRes(ctx: IExprCtx) {
 
   def resolveBuiltInMethCall(obj: JSExpression, methName: String, args: List[JSExpression]): Option[JSType] = {
     // Unsupported: reduce, concat, shift, pop
@@ -25,7 +25,7 @@ case class FuncCallRes(ctx: ICtx) {
       ctx.findExprType(obj)
     } else if (List("reduce", "map").contains(methName)) {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
-        .flatMap(funcT => Mt.getReturnType(funcT))
+        .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
         .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
     } else if ((obj.getText equals "Object") && (methName equals "assign")) {
       // IDEA actually has the built-in function generic return type mapping, but I'm
@@ -33,9 +33,11 @@ case class FuncCallRes(ctx: ICtx) {
       Mt.mergeTypes(args.flatMap(arg => ctx.findExprType(arg)))
     } else if (methName equals "then") {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
-          .flatMap(funcT => Mt.getReturnType(funcT))
+          .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
           .map(value => Mt.getPromiseValue(value).getOrElse(value))
           .map(value => new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava))
+    } else if (methName equals "catch") {
+      ctx.findExprType(obj) // Promise .catch(), could actually add the type from callback, but nah for now
     } else {
       None
     }
@@ -55,7 +57,7 @@ case class FuncCallRes(ctx: ICtx) {
     Option(funcCall.getMethodExpression)
       .flatMap(expr => {
         val definedRts = ctx.findExprType(expr)
-          .toList.flatMap(funcT => Mt.getReturnType(funcT))
+          .toList.flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxDirect(funcCall)))
         val builtInRts = cast[JSReferenceExpression](expr)
           .flatMap(ref => Option(ref.getReferenceName)
             .flatMap(name => Option(ref.getQualifier) match {

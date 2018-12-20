@@ -5,6 +5,8 @@ import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignature
 import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
+import org.klesun.deep_js_completion.contexts.IExprCtx
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
@@ -75,10 +77,13 @@ object Mt {
     }
   }
 
-  def getReturnType(funcT: JSType): Option[JSType] = {
+  def getReturnType(funcT: JSType, ctx: IExprCtx): Option[JSType] = {
     val retTs = flattenTypes(funcT)
-      .flatMap(cast[JSFunctionTypeImpl](_))
-      .flatMap(func => Option(func.getReturnType))
+      .flatMap {
+        case func: JSFunctionTypeImpl => Option(func.getReturnType)
+        case func: JSDeepFunctionTypeImpl => func.getReturnType(ctx)
+        case _ => None
+      }
     mergeTypes(retTs)
   }
 

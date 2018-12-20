@@ -94,7 +94,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
 
     val nullPsi = parameters.getPosition
     val depth = getMaxDepth(parameters.isAutoPopup)
-    val search = new SearchCtx().setMaxDepth(depth)
+    val search = new SearchCtx(depth)
     val startTime = System.nanoTime
     val suggestions = Option(nullPsi)
       .flatMap(pos => Option(pos.getParent))

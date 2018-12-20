@@ -19,7 +19,7 @@ import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import org.klesun.deep_js_completion.contexts.ICtx
+import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang
@@ -33,7 +33,7 @@ import scala.collection.mutable.ListBuffer
 /**
  * resolves variable type
  */
-case class VarRes(ctx: ICtx) {
+case class VarRes(ctx: IExprCtx) {
 
   private def getInlineFuncArgType(func: JSFunction): GenTraversableOnce[JSType] = Option(func.getParent)
     .flatMap(cast[JSArgumentList](_))
@@ -53,6 +53,24 @@ case class VarRes(ctx: ICtx) {
         .flatMap(expr => ctx.findExprType(expr)).toList
         .flatMap(promiset => Mt.getPromiseValue(promiset))
     )
+
+  private def grabClosureCtxs(leafCtx: IFuncCtx): GenTraversableOnce[IFuncCtx] = {
+    var next: Option[IFuncCtx] = Some(leafCtx)
+    var result: GenTraversableOnce[IFuncCtx] = List()
+    while (next.isDefined) {
+      result = next ++ result
+      next = next.get.getClosureCtx()
+    }
+    result
+  }
+
+  private def getCtxArgType(func: JSFunction, para: JSParameter): GenTraversableOnce[JSType] = {
+    val order = func.getParameters.indexOf(para)
+    grabClosureCtxs(ctx.func()).toList
+      .filter(_.getClosurePsi().exists(_ equals func))
+      .lift(0).toList
+      .flatMap(_.getArg(order))
+  }
 
   private def ensureFunc(clsT: JSType): Option[JSType] = {
     val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
@@ -109,7 +127,7 @@ case class VarRes(ctx: ICtx) {
     val types = List[JSType]() ++
       resolveKlesunWhenLoadedSupplierDef(file) ++
       resolveRequireJsSupplierDef(file)
-    Mt.mergeTypes(types.flatMap(sup => Mt.getReturnType(sup)))
+    Mt.mergeTypes(types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty())))
   }
 
   private def getKlesunRequiresArgType(func: JSFunction): Option[JSType] = Option(func.getParent)
@@ -185,7 +203,7 @@ case class VarRes(ctx: ICtx) {
           val varName = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           findVarDecl(caretPsi, varName)
-            .flatMap(t => if (isFuncCall) Mt.getReturnType(t) else Some(t))
+            .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
         }))
       .orElse("""^\s*=\s*from\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
         .flatMap(found => {
@@ -197,7 +215,7 @@ case class VarRes(ctx: ICtx) {
               ++ resolveCommonJsFormatDef(file)
               ++ resolveRequireJsFormatDef(file)
             ).lift(0)
-            .flatMap(t => if (isFuncCall) Mt.getReturnType(t) else Some(t))
+            .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
         }))
   }
 
@@ -217,6 +235,7 @@ case class VarRes(ctx: ICtx) {
       .toList.flatMap(func => List[JSType]()
         ++ getArgDocExprType(func, para)
         ++ getInlineFuncArgType(func)
+        ++ getCtxArgType(func, para)
         ++ getKlesunRequiresArgType(func))
     Mt.mergeTypes(types)
   }

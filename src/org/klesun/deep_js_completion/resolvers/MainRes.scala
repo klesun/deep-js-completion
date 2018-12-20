@@ -11,8 +11,9 @@ import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyM
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.contexts.ICtx
+import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
@@ -31,7 +32,7 @@ object MainRes {
     arrow.++(classic).toList
   }
 
-  def resolveIn(expr: JSExpression, ctx: ICtx): Option[JSType] = {
+  def resolveIn(expr: JSExpression, ctx: IExprCtx): Option[JSType] = {
     expr match {
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
@@ -44,10 +45,10 @@ object MainRes {
             Mt.getKey(arrT, keyTOpt)
           })
       case func: JSFunctionExpression =>
-        val types = getReturns(func)
-          .flatMap(valu => ctx.findExprType(valu))
-          .map(retT => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), retT))
-        Mt.mergeTypes(types)
+        val returns = getReturns(func)
+        Some(new JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
+          Mt.mergeTypes(returns.flatMap(r => callCtx.findExprType(r)))
+        ))
       case arr: JSArrayLiteralExpression =>
         val typeTuple = arr.getExpressions
           .map(el => ctx.findExprType(el)
