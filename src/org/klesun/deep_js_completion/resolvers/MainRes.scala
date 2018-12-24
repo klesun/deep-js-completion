@@ -34,6 +34,23 @@ object MainRes {
 
   def resolveIn(expr: JSExpression, ctx: IExprCtx): Option[JSType] = {
     expr match {
+      case newex: JSNewExpression =>
+        if (Option(newex.getMethodExpression).forall(ref => ref.getText equals "Promise")) {
+          val types = newex.getArguments.lift(0)
+            .flatMap(cbArg => cast[JSFunction](cbArg))
+            .flatMap(f => f.getParameters.lift(0))
+            .flatMap(cbArg => cast[JSParameter](cbArg))
+            .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
+            .flatMap(usage => Option(usage.getParent)
+              .flatMap(cast[JSCallExpression](_))
+              .filter(call => usage eq call.getMethodExpression))
+            .flatMap(call => call.getArguments.lift(0))
+            .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+            .map(valuet => Mt.wrapPromise(valuet))
+          Mt.mergeTypes(types)
+        } else {
+          None
+        }
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
       case indx: JSIndexedPropertyAccessExpression =>
@@ -85,7 +102,7 @@ object MainRes {
         if ("JS:AWAIT_KEYWORD" equals (pref.getOperationSign + "")) {
           Option(pref.getExpression)
             .flatMap(expr => ctx.findExprType(expr))
-            .flatMap(pomiset => Mt.getPromiseValue(pomiset))
+            .flatMap(pomiset => Mt.unwrapPromise(pomiset))
         } else {
           None
         }

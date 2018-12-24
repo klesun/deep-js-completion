@@ -3,20 +3,16 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
-import com.intellij.lang.javascript.dialects.JSDialectSpecificHandlersFactory
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
-import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.{IndexSignatureImpl, PropertySignatureImpl}
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.psi.impl.source.resolve.ResolveCache.PolyVariantResolver
 import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
-import com.intellij.psi.impl.source.resolve.reference.impl.providers.{FileReference, FileReferenceSet}
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
@@ -26,9 +22,43 @@ import org.klesun.lang.Lang
 
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
+import org.klesun.deep_js_completion.resolvers.VarRes._
 
 import scala.collection.{GenTraversable, GenTraversableOnce}
 import scala.collection.mutable.ListBuffer
+
+object VarRes {
+  private def grabClosureCtxs(leafCtx: IFuncCtx): GenTraversableOnce[IFuncCtx] = {
+    var next: Option[IFuncCtx] = Some(leafCtx)
+    var result: GenTraversableOnce[IFuncCtx] = List()
+    while (next.isDefined) {
+      result = next ++ result
+      next = next.get.getClosureCtx()
+    }
+    result
+  }
+
+  private def ensureFunc(clsT: JSType): Option[JSType] = {
+    val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
+      case funcT: JSFunctionTypeImpl => funcT
+      case _ => new JSFunctionTypeImpl(JSTypeSource.EMPTY, List[JSParameterTypeDecorator]().asJava, clsT)
+    }}: JSFunctionTypeImpl)
+    Mt.mergeTypes(funcTs)
+  }
+
+  def findVarUsages(decl: PsiElement, name: String): List[JSReferenceExpression] = {
+    val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
+      .getOrElse(decl.getContainingFile)
+    Lang.findChildren[JSReferenceExpression](scope)
+      .filter(usage => Objects.equals(usage.getReferenceName, name))
+      .filter(usage => !Objects.equals(usage, decl))
+      .filter(usage => Objects.equals(decl, usage.resolve()))
+  }
+
+  private def findRefUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
+    Option(ref.resolve()).toList.flatMap(decl => findVarUsages(decl, ref.getReferenceName))
+  }
+}
 
 /**
  * resolves variable type
@@ -51,18 +81,8 @@ case class VarRes(ctx: IExprCtx) {
       Option(ref.getQualifier)
         .filter(expr => List("then").contains(ref.getReferencedName))
         .flatMap(expr => ctx.findExprType(expr)).toList
-        .flatMap(promiset => Mt.getPromiseValue(promiset))
+        .flatMap(promiset => Mt.unwrapPromise(promiset))
     )
-
-  private def grabClosureCtxs(leafCtx: IFuncCtx): GenTraversableOnce[IFuncCtx] = {
-    var next: Option[IFuncCtx] = Some(leafCtx)
-    var result: GenTraversableOnce[IFuncCtx] = List()
-    while (next.isDefined) {
-      result = next ++ result
-      next = next.get.getClosureCtx()
-    }
-    result
-  }
 
   private def getCtxArgType(func: JSFunction, para: JSParameter): GenTraversableOnce[JSType] = {
     val order = func.getParameters.indexOf(para)
@@ -70,14 +90,6 @@ case class VarRes(ctx: IExprCtx) {
       .filter(_.getClosurePsi().exists(_ equals func))
       .lift(0).toList
       .flatMap(_.getArg(order))
-  }
-
-  private def ensureFunc(clsT: JSType): Option[JSType] = {
-    val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
-      case funcT: JSFunctionTypeImpl => funcT
-      case _ => new JSFunctionTypeImpl(JSTypeSource.EMPTY, List[JSParameterTypeDecorator]().asJava, clsT)
-    }}: JSFunctionTypeImpl)
-    Mt.mergeTypes(funcTs)
   }
 
   private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): Option[JSType] = {
@@ -245,17 +257,6 @@ case class VarRes(ctx: IExprCtx) {
       .take(1).toList.lift(0)
   }
 
-  private def findUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
-    Option(ref.resolve()).toList.flatMap(decl => {
-      val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
-        .getOrElse(decl.getContainingFile)
-      Lang.findChildren[JSReferenceExpression](scope)
-          .filter(usage => Objects.equals(usage.getReferenceName, ref.getReferenceName))
-          .filter(usage => !Objects.equals(usage, ref))
-          .filter(usage => Objects.equals(decl, usage.resolve()))
-    })
-  }
-
   private def resolveFromUsage(usage: JSReferenceExpression): GenTraversableOnce[JSType] = {
     def resolveParent(parent: PsiElement): GenTraversableOnce[JSType] = {
       parent match {
@@ -339,7 +340,7 @@ case class VarRes(ctx: IExprCtx) {
         Mt.getKey(qualT, keyTOpt)
       })
 
-    val fromUsages = findUsages(ref)
+    val fromUsages = findRefUsages(ref)
       .flatMap(usage => resolveFromUsage(usage))
 
     val fromMainDecl = Option(ref.resolve()).toList

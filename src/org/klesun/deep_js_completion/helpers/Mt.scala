@@ -2,7 +2,7 @@ package org.klesun.deep_js_completion.helpers
 
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
-import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType}
+import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import org.klesun.deep_js_completion.contexts.IExprCtx
@@ -87,12 +87,16 @@ object Mt {
     mergeTypes(retTs)
   }
 
-  def getPromiseValue(promiset: JSType): Option[JSType] = {
+  def unwrapPromise(promiset: JSType): Option[JSType] = {
     val promisedt = flattenTypes(promiset)
       .flatMap(cast[JSGenericTypeImpl](_))
       .filter(gene => List("Promise", "Bluebird")
         .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
       .flatMap(gene => gene.getArguments.asScala.lift(0))
     mergeTypes(promisedt)
+  }
+
+  def wrapPromise(value: JSType): JSType = {
+    new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava)
   }
 }

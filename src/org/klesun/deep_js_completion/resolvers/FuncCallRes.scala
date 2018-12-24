@@ -34,8 +34,8 @@ case class FuncCallRes(ctx: IExprCtx) {
     } else if (methName equals "then") {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
           .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
-          .map(value => Mt.getPromiseValue(value).getOrElse(value))
-          .map(value => new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava))
+          .map(value => Mt.unwrapPromise(value).getOrElse(value))
+          .map(value => Mt.wrapPromise(value))
     } else if (methName equals "catch") {
       ctx.findExprType(obj) // Promise .catch(), could actually add the type from callback, but nah for now
     } else {
