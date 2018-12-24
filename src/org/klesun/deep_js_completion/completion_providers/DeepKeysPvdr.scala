@@ -122,6 +122,11 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
 
     result.runRemainingContributors(parameters, otherSourceResult => {
       val lookup = otherSourceResult.getLookupElement
+      // 99.0 (group 94) - inferred type property completion
+      // 5.0 (group 6) - property completion guessed from usage
+      val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
+        .forall(pri => pri.getPriority < 99.0)
+
       var memName = lookup.getLookupString
       if (memName.endsWith("()")) {
         memName = substr(memName, 0, -2)
@@ -129,7 +134,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       var keepBuiltIn = true
       if (nameToLookup.contains(memName)) {
         // built-in already suggests this member
-        if (onlyTyped) {
+        if (onlyTyped && !isGuess) {
           // built-in suggestion is qualitative, keep it, remove ours
           nameToLookup.remove(memName)
         } else {

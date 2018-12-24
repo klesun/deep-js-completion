@@ -25,15 +25,17 @@ class JSDeepFunctionTypeImpl(
 
   override def copyWithNewSource(jsTypeSource: JSTypeSource): JSType = this
 
-  override def isEquivalentToWithSameClass(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = {
+  def isEquivalentToWithSameClass(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = {
     cast[JSDeepFunctionTypeImpl](jsType).exists(that => that.funcPsi equals this.funcPsi)
   }
+
+  override def isEquivalentToImpl(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = isEquivalentToWithSameClass(jsType, processingContext, b)
 
   override def resolvedHashCodeImpl(): Int = {
     Objects.hash(List(funcPsi))
   }
 
-  override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function<Deep>"
+  def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function<Deep>"
 
   def getReturnType(ctx: IExprCtx): GenTraversableOnce[JSType] = {
     returnTypeGetter(ctx.withClosure(funcPsi, closureCtx))
