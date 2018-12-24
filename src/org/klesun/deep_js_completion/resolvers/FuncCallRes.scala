@@ -9,6 +9,7 @@ import com.intellij.util.containers.ContainerUtil
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
@@ -47,7 +48,7 @@ case class FuncCallRes(ctx: IExprCtx) {
     if (List("require").contains(funcName)) {
       args.lift(0)
         .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
-        .flatMap(file => VarRes(ctx).resolveCommonJsFormatDef(file))
+        .flatMap(file => ArgRes(ctx).resolveCommonJsFormatDef(file))
     } else {
       None
     }
