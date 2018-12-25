@@ -18,13 +18,14 @@ import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.MainRes
+import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang.cast
 
 import scala.collection.GenTraversableOnce
 import scala.collection.mutable.ListBuffer
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
+
 import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 
@@ -40,6 +41,8 @@ object ArgRes {
     result
   }
 
+  // for modules resolution - if module is a function - return
+  // this function, otherwise wrap the object in a function
   private def ensureFunc(clsT: JSType): Option[JSType] = {
     val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
       case funcT: JSFunctionTypeImpl => funcT
@@ -68,6 +71,24 @@ case class ArgRes(ctx: IExprCtx) {
           .filter(expr => List("then").contains(ref.getReferencedName))
           .flatMap(expr => ctx.findExprType(expr)).toList
           .flatMap(promiset => Mt.unwrapPromise(promiset))
+        ++
+        Option(ref.resolve())
+          .flatMap(cast[JSDefinitionExpression](_))
+          .flatMap(callerDef => Option(callerDef.getParent))
+          .flatMap(cast[JSAssignmentExpression](_))
+          .flatMap(defi => Option(defi.getROperand))
+          .flatMap(cast[JSFunction](_))
+          .flatMap(callerFunc => {
+            val types = callerFunc.getParameters.lift(0)
+              .flatMap(callerArg => cast[JSParameter](callerArg))
+              .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
+              .flatMap(usage => Option(usage.getParent)
+                .flatMap(cast[JSCallExpression](_))
+                .filter(call => usage eq call.getMethodExpression))
+              .flatMap(call => call.getArguments.lift(0))
+              .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+            Mt.mergeTypes(types)
+          })
     )
 
   private def getCtxArgType(func: JSFunction, para: JSParameter): GenTraversableOnce[JSType] = {
