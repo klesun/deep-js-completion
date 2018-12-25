@@ -54,44 +54,62 @@ object ArgRes {
 
 case class ArgRes(ctx: IExprCtx) {
 
-  private def getInlineFuncArgType(func: JSFunction): GenTraversableOnce[JSType] = Option(func.getParent)
-    .flatMap(cast[JSArgumentList](_))
-    .flatMap(func => Option(func.getParent))
-    .flatMap(cast[JSCallExpression](_))
-    .flatMap(call => Option(call.getMethodExpression))
-    .flatMap(cast[JSReferenceExpressionImpl](_))
-    .toList
-    .flatMap(ref =>
-      Option(ref.getQualifier)
-        .filter(expr => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
-        .flatMap(expr => ctx.findExprType(expr))
-        .flatMap(arrt => Mt.getKey(arrt, None))
-        ++
-        Option(ref.getQualifier)
-          .filter(expr => List("then").contains(ref.getReferencedName))
-          .flatMap(expr => ctx.findExprType(expr)).toList
-          .flatMap(promiset => Mt.unwrapPromise(promiset))
-        ++
-        // completion on arg of anonymous function based on what is passed to it
-        // i should use _deep_ logic instead of ref.resolve() one day...
-        Option(ref.resolve())
-          .flatMap(cast[JSDefinitionExpression](_))
-          .flatMap(callerDef => Option(callerDef.getParent))
-          .flatMap(cast[JSAssignmentExpression](_))
-          .flatMap(defi => Option(defi.getROperand))
-          .flatMap(cast[JSFunction](_))
-          .flatMap(callerFunc => {
-            val types = callerFunc.getParameters.lift(0)
-              .flatMap(callerArg => cast[JSParameter](callerArg))
-              .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
-              .flatMap(usage => Option(usage.getParent)
-                .flatMap(cast[JSCallExpression](_))
-                .filter(call => usage eq call.getMethodExpression))
-              .flatMap(call => call.getArguments.lift(0))
-              .flatMap(value => ctx.subCtxEmpty().findExprType(value))
-            Mt.mergeTypes(types)
-          })
-    )
+  private def getInlineFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
+    Option(func.getParent).toList
+      .flatMap(cast[JSArgumentList](_))
+      .flatMap(argList => Option(argList.getArguments.indexOf(func)).toList
+        .flatMap(inlineFuncArgOrder => Option(true)
+          .flatMap(ok => Option(argList.getParent))
+          .flatMap(cast[JSCallExpression](_))
+          .flatMap(call => Option(call.getMethodExpression))
+          .flatMap(cast[JSReferenceExpressionImpl](_))
+          .toList
+          .flatMap(ref =>
+            Option(ref.getQualifier)
+              .filter(expr => argOrder == 0)
+              .filter(expr => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
+              .flatMap(expr => ctx.findExprType(expr))
+              .flatMap(arrt => Mt.getKey(arrt, None)).toList
+              ++
+              Option(ref.getQualifier)
+                .filter(expr => argOrder == 0)
+                .filter(expr => List("then").contains(ref.getReferencedName))
+                .flatMap(expr => ctx.findExprType(expr)).toList
+                .flatMap(promiset => Mt.unwrapPromise(promiset))
+              ++
+              // completion on arg of anonymous function based on what is passed to it
+              // i should use _deep_ logic instead of ref.resolve() one day...
+              Option(ref.resolve())
+                .flatMap(cast[JSDefinitionExpression](_))
+                .flatMap(callerDef => Option(callerDef.getParent))
+                .flatMap(cast[JSAssignmentExpression](_))
+                .flatMap(defi => Option(defi.getROperand))
+                .flatMap(cast[JSFunction](_)).toList
+                .flatMap(callerFunc => callerFunc.getParameters.lift(inlineFuncArgOrder)
+                  .flatMap(callerArg => cast[JSParameter](callerArg))
+                  .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
+                  .flatMap(usage => Option(usage.getParent)
+                    .flatMap(cast[JSCallExpression](_))
+                    .filter(call => usage eq call.getMethodExpression))
+                  .flatMap(call => call.getArguments.lift(argOrder))
+                  .flatMap(value => ctx.subCtxEmpty().findExprType(value)))
+          )
+        )
+      )
+  }
+
+  // private function completion (based on scanning current
+  // file for usages and taking what is passed to the function)
+  private def getPrivateFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
+    Option(func.getParent).toList
+      .flatMap(cast[JSVariable](_))
+      .flatMap(vari => VarRes.findVarUsages(vari, vari.getName))
+      .flatMap(usage => Option(usage.getParent)
+        .flatMap(cast[JSCallExpression](_))
+        .filter(call => usage eq call.getMethodExpression))
+      .flatMap(call => call.getArguments.lift(argOrder))
+      .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+  }
 
   private def getCtxArgType(func: JSFunction, para: JSParameter): GenTraversableOnce[JSType] = {
     val order = func.getParameters.indexOf(para)
@@ -255,8 +273,9 @@ case class ArgRes(ctx: IExprCtx) {
     val types = Option(para.getDeclaringFunction)
       .toList.flatMap(func => List[JSType]()
       ++ getArgDocExprType(func, para)
-      ++ getInlineFuncArgType(func)
       ++ getCtxArgType(func, para)
+      ++ getInlineFuncArgType(func, func.getParameters.indexOf(para))
+      ++ getPrivateFuncArgType(func, func.getParameters.indexOf(para))
       ++ getKlesunRequiresArgType(func))
     Mt.mergeTypes(types)
   }
