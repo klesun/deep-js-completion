@@ -72,6 +72,8 @@ case class ArgRes(ctx: IExprCtx) {
           .flatMap(expr => ctx.findExprType(expr)).toList
           .flatMap(promiset => Mt.unwrapPromise(promiset))
         ++
+        // completion on arg of anonymous function based on what is passed to it
+        // i should use _deep_ logic instead of ref.resolve() one day...
         Option(ref.resolve())
           .flatMap(cast[JSDefinitionExpression](_))
           .flatMap(callerDef => Option(callerDef.getParent))

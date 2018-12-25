@@ -62,6 +62,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
           .flatMap(cast[PropertySignature](_))
           .toList
         case arrT: JSArrayType =>
+          // JSTypeBaseImpl should already cover that
           val genT = arrT.asGenericType().asRecordType()
           genT.getTypeMembers.asScala
             .flatMap(cast[PropertySignature](_)).toList
@@ -77,6 +78,10 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
           JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(psi.getProject)).asScala
             .toList.flatMap(ifc => ifc.getMembers.asScala)
             .flatMap(cast[PropertySignature](_))
+        case mt: JSTypeBaseImpl =>
+          // when you specify class with jsdoc for example - JSTypeImpl
+          mt.asRecordType().getTypeMembers.asScala
+            .flatMap(cast[PropertySignature](_)).toList
         case _ =>
           /** @debug */
           //println("Unsupported typ " + typ.getClass + " " + typ)

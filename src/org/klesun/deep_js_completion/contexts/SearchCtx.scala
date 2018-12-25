@@ -26,8 +26,8 @@ class SearchCtx(
     }
 
     def findExprType(expr: JSExpression): Option[JSType] = {
-      val funcCtx = new FuncCtx(this)
-      val exprCtx = new ExprCtx(funcCtx, expr, 0)
+      val funcCtx = FuncCtx(this)
+      val exprCtx = ExprCtx(funcCtx, expr, 0)
       findExprType(expr, exprCtx)
     }
 
