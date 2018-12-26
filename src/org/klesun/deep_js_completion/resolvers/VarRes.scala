@@ -31,12 +31,20 @@ import scala.collection.mutable.ListBuffer
 object VarRes {
 
   def findVarUsages(decl: PsiElement, name: String): List[JSReferenceExpression] = {
-    val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
-      .getOrElse(decl.getContainingFile)
-    Lang.findChildren[JSReferenceExpression](scope)
-      .filter(usage => Objects.equals(usage.getReferenceName, name))
-      .filter(usage => !Objects.equals(usage, decl))
-      .filter(usage => Objects.equals(decl, usage.resolve()))
+    if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts"))) {
+      List()
+    } else {
+      val t1 = System.nanoTime
+      val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
+        .getOrElse(decl.getContainingFile)
+      val result = Lang.findChildren[JSReferenceExpression](scope)
+        .filter(usage => Objects.equals(usage.getReferenceName, name))
+        .filter(usage => !Objects.equals(usage, decl))
+        .filter(usage => Objects.equals(decl, usage.resolve()))
+      val duration = (System.nanoTime - t1) / 1e9d
+      //Console.println("zhopa findVarUsages " + duration + " " + decl.getContainingFile.getName + " " + substr(decl.getText, 0, 10))
+      result
+    }
   }
 
   private def findRefUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
