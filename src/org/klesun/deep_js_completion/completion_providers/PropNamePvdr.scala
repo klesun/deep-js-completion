@@ -4,6 +4,7 @@ import java.util
 
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
+import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
@@ -11,83 +12,89 @@ import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
-import com.intellij.openapi.actionSystem.DataConstants
+import com.intellij.openapi.actionSystem.{DataConstants, DataContext}
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.{EverythingGlobalScope, GlobalSearchScope}
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
-import org.klesun.deep_js_completion.completion_providers.DeepKeysPvdr._
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr._
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable._
+import org.klesun.deep_js_completion.completion_providers._
 
-object DeepKeysPvdr {
+import scala.collection.GenTraversableOnce
+
+object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
 
   def getIcon = icon
+
+  private def getMaxDepth(isAutoPopup: Boolean) = {
+    if (isAutoPopup) 25 else 40
+  }
+
+  private def makeLookup(prop: PropertySignature, i: Int) = {
+    val typeStr = Option(prop.getType)
+      .map(t => t.getTypeText(TypeTextFormat.PRESENTABLE))
+      .getOrElse("?")
+
+    val name = prop.getMemberName
+    val source = prop.getMemberSource
+    val sourceElement = Option(source.getSingleElement).getOrElse(name)
+
+    val lookup = LookupElementBuilder.create(sourceElement, name)
+      .bold().withIcon(getIcon)
+      .withTypeText(typeStr, true)
+    PrioritizedLookupElement.withPriority(lookup, 200 - i)
+  }
+
+  private def getProps(typ: JSType, project: Project): List[PropertySignature] = {
+    typ match {
+      case objT: JSRecordType => objT.getTypeMembers.asScala
+        .flatMap(cast[PropertySignature](_))
+        .toList
+      case arrT: JSArrayType =>
+        // JSTypeBaseImpl should already cover that
+        val genT = arrT.asGenericType().asRecordType()
+        genT.getTypeMembers.asScala
+          .flatMap(cast[PropertySignature](_)).toList
+      case arrT: JSTupleTypeImpl =>
+        JSClassResolver.getInstance().findClassesByQName("Array", new EverythingGlobalScope(project)).asScala
+          .flatMap(cast[TypeScriptInterfaceImpl](_))
+          .toList.flatMap(ifc => ifc.getMembers.asScala)
+          .flatMap(cast[PropertySignature](_))
+      case mt: JSUnionOrIntersectionType =>
+        mt.getTypes.asScala.flatMap(t => getProps(t, project)).toList
+      case mt: JSGenericTypeImpl =>
+        val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
+        JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(project)).asScala
+          .toList.flatMap(ifc => ifc.getMembers.asScala)
+          .flatMap(cast[PropertySignature](_))
+      case mt: JSTypeBaseImpl =>
+        // when you specify class with jsdoc for example - JSTypeImpl
+        mt.asRecordType().getTypeMembers.asScala
+          .flatMap(cast[PropertySignature](_)).toList
+      case _ =>
+        /** @debug */
+        //println("Unsupported typ " + typ.getClass + " " + typ)
+        List()
+    }
+  }
 }
 
-class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
+class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDeclarationHandler {
   override def addCompletions(
     parameters: CompletionParameters,
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-    def getMaxDepth(isAutoPopup: Boolean) = {
-        if (isAutoPopup) 25 else 40
-    }
-
-    def makeLookup(prop: PropertySignature, i: Int) = {
-      val typeStr = Option(prop.getType)
-          .map(t => t.getTypeText(TypeTextFormat.PRESENTABLE))
-          .getOrElse("?")
-
-      val name = prop.getMemberName
-      val source = prop.getMemberSource
-      val sourceElement = Option(source.getSingleElement).getOrElse(name)
-
-      val lookup = LookupElementBuilder.create(sourceElement, name)
-        .bold().withIcon(getIcon)
-        .withTypeText(typeStr, true)
-      PrioritizedLookupElement.withPriority(lookup, 200 - i)
-    }
-
-    def getProps(typ: JSType, psi: PsiElement): List[PropertySignature] = {
-      typ match {
-        case objT: JSRecordType => objT.getTypeMembers.asScala
-          .flatMap(cast[PropertySignature](_))
-          .toList
-        case arrT: JSArrayType =>
-          // JSTypeBaseImpl should already cover that
-          val genT = arrT.asGenericType().asRecordType()
-          genT.getTypeMembers.asScala
-            .flatMap(cast[PropertySignature](_)).toList
-        case arrT: JSTupleTypeImpl =>
-          JSClassResolver.getInstance().findClassesByQName("Array", new EverythingGlobalScope(psi.getProject)).asScala
-            .flatMap(cast[TypeScriptInterfaceImpl](_))
-            .toList.flatMap(ifc => ifc.getMembers.asScala)
-            .flatMap(cast[PropertySignature](_))
-        case mt: JSUnionOrIntersectionType =>
-          mt.getTypes.asScala.flatMap(t => getProps(t, psi)).toList
-        case mt: JSGenericTypeImpl =>
-          val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
-          JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(psi.getProject)).asScala
-            .toList.flatMap(ifc => ifc.getMembers.asScala)
-            .flatMap(cast[PropertySignature](_))
-        case mt: JSTypeBaseImpl =>
-          // when you specify class with jsdoc for example - JSTypeImpl
-          mt.asRecordType().getTypeMembers.asScala
-            .flatMap(cast[PropertySignature](_)).toList
-        case _ =>
-          /** @debug */
-          //println("Unsupported typ " + typ.getClass + " " + typ)
-          List()
-      }
-    }
 
     // originalPosition gives you ";" in "smfAdapter.;"
     def findRefExpr(psi: PsiElement): Option[JSReferenceExpression] = {
@@ -106,7 +113,7 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
       .flatMap(findRefExpr(_))
       .flatMap(ref => Option(ref.getQualifier))
       .flatMap(qual => search.findExprType(qual))
-      .toList.flatMap(typ => getProps(typ, nullPsi))
+      .toList.flatMap(typ => getProps(typ, nullPsi.getProject))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
@@ -155,4 +162,23 @@ class DeepKeysPvdr extends CompletionProvider[CompletionParameters] {
     result.addAllElements(nameToLookup.values.asJava)
     result.addAllElements(builtInSuggestions)
   }
+
+  override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
+    val depth = getMaxDepth(false)
+    val search = new SearchCtx(depth)
+
+    Option(caretPsi)
+      .flatMap(leaf => Option(leaf.getParent))
+      .flatMap(cast[JSReferenceExpression](_))
+      .toList.flatMap(ref => Option(ref.getQualifier)
+        .flatMap(qual => search.findExprType(qual))
+        .toList.flatMap(typ => getProps(typ, caretPsi.getProject))
+        .filter(prop => prop.getMemberName.equals(ref.getReferenceName)))
+      // TODO: store PSI per key, not per value: there is a lot of rubbish now
+      .flatMap(p => search.typeToDecl.get(p.getType))
+      .distinct
+      .toArray
+  }
+
+  def getActionText(dataContext: DataContext): String = null
 }

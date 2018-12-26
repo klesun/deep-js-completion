@@ -46,9 +46,10 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
   <depends>JavaScript</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepKeysCbtr"/>
+    <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.PropNameCbtr"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.PathStrGoToDecl"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.DestrPropGoToDecl"/>
+    <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.completion_providers.PropNamePvdr"/>
   </extensions>
 
   <actions>

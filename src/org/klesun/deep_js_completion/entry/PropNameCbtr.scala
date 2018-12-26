@@ -4,15 +4,15 @@ import com.intellij.codeInsight.completion.{CompletionContributor, CompletionTyp
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import org.klesun.deep_js_completion.completion_providers.DeepKeysPvdr
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 
-class DeepKeysCbtr extends CompletionContributor {
+class PropNameCbtr extends CompletionContributor {
   this.extend(
     CompletionType.BASIC,
     PlatformPatterns.psiElement()
         .withSuperParent(0, classOf[LeafPsiElement])
         .withSuperParent(1, classOf[JSReferenceExpression])
         ,
-    new DeepKeysPvdr()
+    new PropNamePvdr()
   )
 }
