@@ -1,31 +1,45 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.12.26.001</version>
+  <version>2018.12.27.001</version>
   <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
-  <p>
-This is a Webstorm plugin for Javascript deep-type-inference-based property completion and annotation.
-  </p>
-  <p>
-As you may know, by default Webstorm suggests any property ever defined in your project when you ask for completion in someVar. no matter in what context.
-  </p>
-  <p>
-You may check the "Only type-based completion" flag in settings, but you will quickly notice that there is no completion in some places that could have it.
-  </p>
-  <p>
-For example, arguments of functions like map, filter, reduce, sort and functions defined by user won't get completion.
-  </p>
-  <p>
-So, that's why I'm writing this plugin - to make it possible to code in js as comfortable as you would in some static-typed language with the help of type inference and doc-comments.
-  </p>
-  <p>
-This plugin will be highly inspired by my other plugin, <a href="https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion">deep-assoc-completion</a> and most features will be borrowed from there
-  </p>
+<div class="post-body"><p>This is a Webstorm plugin for Javascript deep-type-inference-based property completion and annotation.</p>
+<p>As you may know, by default Webstorm suggests <em>any</em> property ever defined in
+your project when you ask for completion in <code>someVar.</code> no matter in what context.</p>
+<p>You may check the “Only type-based completion” flag in settings, but you will
+quickly notice that there is no completion in some places that could have it. </p>
+<p>For example, arguments of functions like <code>map</code>, <code>filter</code>, <code>reduce</code>,
+<code>sort</code> and functions defined by user won’t get completion.</p>
+<p>So, that’s why I’m writing this plugin - to make it possible to code in js as comfortable as you
+would in some static-typed language with the help of type inference and doc-comments.</p>
+<p>This plugin will be highly inspired by my other plugin,
+<a href="https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion">deep-assoc-completion</a>
+and most features will be borrowed from there</p>
+<hr>
+<p><img src="https://user-images.githubusercontent.com/5202330/50491395-c90cd680-0a1a-11e9-9510-fa996c8924ed.png" alt="image"></p>
+<p>Infer property list in a <code>Promise.then</code> inside <code>map</code> from result of a function defined in other module.</p>
+<hr>
+<p><img src="https://user-images.githubusercontent.com/5202330/50492068-28201a80-0a1e-11e9-946f-7525aebd59ca.png" alt=""></p>
+<p>Take args passed to the function into account.</p>
+<hr>
+<p><img src="https://user-images.githubusercontent.com/5202330/50492169-c01e0400-0a1e-11e9-9eff-44d2cfebe09b.png" alt="image"></p>
+<p>Infer anonymous function arg type based on what it is called with inside another function.</p>
+<hr>
+<p><img src="https://user-images.githubusercontent.com/5202330/50492329-a4ffc400-0a1f-11e9-93dd-2cc3a5ea6fa2.png" alt="image"></p>
+<p>Infer function arg type based on usage in current file (great for private helper functions you define to split code).</p>
+<hr>
+<p><img src="https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png" alt="image"></p>
+<p>Reference module or a var in jsdoc comment.</p>
+</div>
+
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>Show string value in completion options when known</li>
+  <li>Briefly parse d.ts func decl arg to return type generic relation. Enough to support completion from Object.values()</li>
+  <li>Add a stupid GoTo implementation</li>
   <li>Optimize: do not scan lenghty built-in d.ts files for var usages</li>
   <li>Provide private func usage based arg completion</li>
   <li>Support completion from jsdoc type. Like `@parm {ITokenInfo}` tokenInfo</li>
@@ -35,6 +49,15 @@ This plugin will be highly inspired by my other plugin, <a href="https://plugins
   <li>Keep passed arguments into account when resolving function return type</li>
   <li>Infer however many keys in an assignment</li>
   <li>Allow referencing vars from top-level scope in docs. Imported modules for example</li>
+  <li>Support parenthesized expressions</li>
+  <li>Resolve functions in other files even when IDEA does not manage</li>
+  <li>Infer type of variable assigned few lines after declaration (For cases when in "if" it is assigned one value, but in "else" another)</li>
+  <li>Support ternary operator</li>
+  <li>Add resolved expression caching (Irreplacable when you resolve a recursive function)</li>
+  <li>Infer return type of Object.assign from passed args</li>
+  <li>Provide completion inside/from Promise.then</li>
+  <li>Provide completion on any class instance, not just Array instances</li>
+  <li>Allow to specify node module in the doc like `@param db = from('./../../../Utils/Db.es6')()` (similar to how it works for requirejs)</li>
   <li>Support await</li>
     ]]>
   </change-notes>
