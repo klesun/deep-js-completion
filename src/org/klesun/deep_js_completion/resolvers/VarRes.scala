@@ -7,6 +7,7 @@ import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
+import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
@@ -24,9 +25,9 @@ import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 
 import scala.collection.{GenTraversable, GenTraversableOnce}
-import scala.collection.mutable.ListBuffer
 
 object VarRes {
 
@@ -102,6 +103,62 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(parent => resolveParent(parent))
   }
 
+  private def parseTypePsi(typePsi: JSTypeDeclaration, generics: Map[String, () => Array[JSType]]): GenTraversableOnce[JSType] = {
+    typePsi match {
+      case arrts: TypeScriptArrayType =>
+        val elts = Option(arrts.getType).toList
+          .flatMap(eltPsi => parseTypePsi(eltPsi, generics))
+        val arrt = new JSArrayTypeImpl(Mt.mergeTypes(elts).orNull, JSTypeSource.EMPTY)
+        Some(arrt)
+      case sints: TypeScriptSingleType =>
+        val fqn = sints.getQualifiedTypeName
+        if (generics.contains(fqn)) {
+          generics(fqn).apply()
+        } else {
+          // TODO: support actual classes
+          None
+        }
+      case _ => None
+    }
+  }
+
+  private def getGenericTypeFromArg(typePsi: JSTypeDeclaration, getArgt: () => GenTraversableOnce[JSType], generic: String): GenTraversableOnce[JSType] = {
+    typePsi match {
+      case union: TypeScriptUnionOrIntersectionType =>
+        union.getTypes.flatMap(subTypePsi =>
+          getGenericTypeFromArg(subTypePsi, getArgt, generic))
+      case obj: TypeScriptObjectType =>
+        val getSubType = () => getArgt().toList.flatMap(t => Mt.getKey(t, None))
+        obj.getIndexSignatures.flatMap(sig => getGenericTypeFromArg(sig.getType, getSubType, generic))
+      case sints: TypeScriptSingleType =>
+        val fqn = sints.getQualifiedTypeName
+        if (generic equals fqn) {
+          getArgt()
+        } else {
+          None
+        }
+      case _ => None
+    }
+  }
+
+  private def resolveDtsFunc(tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
+    val genericPsis = tsFunc.getTypeParameters
+    val args = tsFunc.getParameters
+    val rtPsiOpt = Option(tsFunc.getReturnTypeElement)
+    rtPsiOpt.map(rtPsi => new JSDeepFunctionTypeImpl(tsFunc, ctx.subCtxEmpty().func(), callCtx => {
+      val generics: Map[String, () => Array[JSType]] = genericPsis
+        .flatMap(psi => Option(psi.getName))
+        .map(generic => generic -> (() => {
+          args.zipWithIndex.flatMap({case (argPsi, i) => Option(argPsi.getTypeElement)
+            .flatMap(cast[TypeScriptType](_))
+            .toList.flatMap(tst => getGenericTypeFromArg(
+              tst, () => callCtx.func().getArg(i), generic)
+            )})
+        })).toMap
+      parseTypePsi(rtPsi, generics)
+    }))
+  }
+
   // may be defined in a different file unlike resolveFromUsage()
   private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
     psi match {
@@ -127,6 +184,9 @@ case class VarRes(ctx: IExprCtx) {
         .flatMap(expr => ctx.findExprType(expr))
       case prop: JSDefinitionExpression => Option(prop.getExpression)
         .flatMap(expr => ctx.findExprType(expr))
+      case tsFunc: TypeScriptFunctionSignature => {
+        resolveDtsFunc(tsFunc)
+      }
       case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
         .flatMap(expr => ctx.findExprType(expr))
         .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), rett)))

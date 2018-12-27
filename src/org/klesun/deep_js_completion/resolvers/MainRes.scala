@@ -106,7 +106,10 @@ object MainRes {
         } else {
           None
         }
-      case _ => None
+      case _ => {
+        //Console.println("zhopa unsupported expr " + expr.getClass + " " + expr.getText)
+        None
+      }
     }
   }
 }
