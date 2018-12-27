@@ -16,17 +16,26 @@ This plugin will be highly inspired by my other plugin,
 [deep-assoc-completion](https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion) 
 and most features will be borrowed from there
 
+_______________________
+
 ![image](https://user-images.githubusercontent.com/5202330/50491395-c90cd680-0a1a-11e9-9510-fa996c8924ed.png)
 Infer property list in a `Promise.then` inside `map` from result of a function defined in other module.
+_______________________
 
 ![](https://user-images.githubusercontent.com/5202330/50492068-28201a80-0a1e-11e9-946f-7525aebd59ca.png)
 Take args passed to the function into account.
 
+_______________________
+
 ![image](https://user-images.githubusercontent.com/5202330/50492169-c01e0400-0a1e-11e9-9eff-44d2cfebe09b.png)
 Infer anonymous function arg type based on what it is called with inside another function.
 
+_______________________
+
 ![image](https://user-images.githubusercontent.com/5202330/50492329-a4ffc400-0a1f-11e9-93dd-2cc3a5ea6fa2.png)
 Infer function arg type based on usage in current file (great for private helper functions you define to split code).
+
+_______________________
 
 ![image](https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png)
 Reference module or a var in jsdoc comment.
