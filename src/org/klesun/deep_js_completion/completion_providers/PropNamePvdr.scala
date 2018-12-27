@@ -42,7 +42,12 @@ object PropNamePvdr {
 
   private def makeLookup(prop: PropertySignature, i: Int) = {
     val typeStr = Option(prop.getType)
-      .map(t => t.getTypeText(TypeTextFormat.PRESENTABLE))
+      .map {
+        case lit: JSPrimitiveLiteralType[Any] =>
+          val strVal = lit.getLiteral + ""
+          if (strVal.trim equals "") lit.getTypeText(TypeTextFormat.PRESENTABLE) else "'" + strVal + "'"
+        case t => t.getTypeText(TypeTextFormat.PRESENTABLE)
+      }
       .getOrElse("?")
 
     val name = prop.getMemberName
