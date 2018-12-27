@@ -1,4 +1,6 @@
-This is a Webstorm plugin for Javascript deep-type-inference-based property completion and annotation.
+A Webstorm/IDEA plugin for js object property completion inferred from a complex context.
+
+Jetbrains Repository: [11478-deep-js-completion](https://plugins.jetbrains.com/plugin/11478-deep-js-completion)
 
 As you may know, by default Webstorm suggests _any_ property ever defined in 
 your project when you ask for completion in `someVar.` no matter in what context.

@@ -1,11 +1,12 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.12.27.001</version>
-  <vendor email="safronevev@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
+  <version>2018.12.27.002</version>
+  <vendor email="arturklesun@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
-<div class="post-body"><p>This is a Webstorm plugin for Javascript deep-type-inference-based property completion and annotation.</p>
+<p>A Webstorm/IDEA plugin for js object property completion inferred from a complex context.</p>
+<p>Currently in BETA testing stage</p>
 <p>As you may know, by default Webstorm suggests <em>any</em> property ever defined in
 your project when you ask for completion in <code>someVar.</code> no matter in what context.</p>
 <p>You may check the “Only type-based completion” flag in settings, but you will
@@ -32,7 +33,6 @@ and most features will be borrowed from there</p>
 <hr>
 <p><img src="https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png" alt="image"></p>
 <p>Reference module or a var in jsdoc comment.</p>
-</div>
 
     ]]></description>
 
