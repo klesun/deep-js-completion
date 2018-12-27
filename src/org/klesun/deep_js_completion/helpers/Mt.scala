@@ -1,10 +1,13 @@
 package org.klesun.deep_js_completion.helpers
 
+import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
+import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
+import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 
@@ -12,6 +15,8 @@ import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
+import scala.collection.generic.CanBuildFrom
+import scala.collection.immutable.List
 import scala.util.Try
 
 /**
@@ -20,7 +25,7 @@ import scala.util.Try
  * either be some particular type or array of types
  */
 object Mt {
-  def mergeTypes(types: Iterable[JSType]): Option[JSType] = {
+  def mergeTypes(types: GenTraversableOnce[JSType]): Option[JSType] = {
     if (types.size > 1) {
       val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.asJava)
       Some(mt)
@@ -98,5 +103,10 @@ object Mt {
 
   def wrapPromise(value: JSType): JSType = {
     new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava)
+  }
+
+  def mkProp(name: String, psi: PsiElement, getValue: () => GenTraversableOnce[JSType]): TypeMember = {
+    // TODO: return IndexSignature instead and add it to the type -> PSI mapping
+    new PropertySignatureImpl(name, Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE), false, new EmptyMemberSource)
   }
 }

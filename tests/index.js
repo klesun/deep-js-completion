@@ -39,6 +39,13 @@ running.then(timed => {
     timed.;
 });
 
+let mapping = {};
+mapping.data = 123;
+mapping['map'] = 456;
+let remapping = (() => [mapping][0])();
+remapping.data;
+remapping.map;
+
 (function(){
 
     let ssrLineNumbers = [];

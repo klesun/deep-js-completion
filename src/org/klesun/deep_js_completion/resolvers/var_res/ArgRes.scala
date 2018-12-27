@@ -150,9 +150,8 @@ case class ArgRes(ctx: IExprCtx) {
                 .flatMap(defi => Option(defi.getFirstChild))
                 .flatMap(cast[JSReferenceExpressionImpl](_))
                 .flatMap(ref => Option(ref.getReferencedName))
-                .flatMap(name => ctx.findExprType(value)
-                  .map(valT => new PropertySignatureImpl(name, valT, false, new EmptyMemberSource)))
-                .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
+                .map(name => Mt.mkProp(name, vari, () => ctx.findExprType(value)))
+                .map(prop => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
             } else {
               None
             }

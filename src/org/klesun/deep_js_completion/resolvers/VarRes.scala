@@ -78,8 +78,7 @@ case class VarRes(ctx: IExprCtx) {
           // someVar.someKey = 123
           , () => Mt.mergeTypes(Option(superRef.getReferencedName).toList
             .flatMap(name => Option(superRef.getParent).toList
-              .flatMap(parent => resolveParent(parent))
-              .map(valT => new PropertySignatureImpl(name, valT, false, new EmptyMemberSource))
+              .map(parent => Mt.mkProp(name, superRef, () => resolveParent(parent)))
               .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
         )
         // someVar[i] = value
