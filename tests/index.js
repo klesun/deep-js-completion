@@ -33,7 +33,7 @@ let whenTime = whenRules.then(rules => {
 });
 
 let running = whenTime.then(makeCmdResponse)
-    .then(resp => resp.);
+    .then(resp => resp.data.tabCommands);
 
 running.then(timed => {
     timed.;

@@ -43,11 +43,19 @@ object Mt {
     }
   }
 
-  def getAllLiteralValues(litT: JSType): Option[List[String]] = {
-    val opts = flattenTypes(litT).map {
+  private def getLiteralValueOpts(litT: JSType): List[Option[String]] = {
+    flattenTypes(litT).map {
       case lit: JSPrimitiveLiteralType[_] => Some(lit.getLiteral + "")
       case _ => None
     }
+  }
+
+  def getAnyLiteralValues(litT: JSType): List[String] = {
+    getLiteralValueOpts(litT).flatten
+  }
+
+  def getAllLiteralValues(litT: JSType): Option[List[String]] = {
+    val opts = getLiteralValueOpts(litT)
     all(opts)
   }
 
@@ -73,8 +81,7 @@ object Mt {
         val keyTypes = objT.getTypeMembers.asScala
           .flatMap {
             case mem: PropertySignatureImpl => Option(mem.getType)
-              .filter(t => litValsOpt.forall(vals => vals
-                .contains(mem.getMemberName)))
+              .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
             case idx: IndexSignature =>
               val valt = Option(idx.getMemberType)
               Option(idx.getMemberParameterType)

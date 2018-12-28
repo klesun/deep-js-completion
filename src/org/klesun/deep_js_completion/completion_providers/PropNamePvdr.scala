@@ -21,9 +21,10 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr._
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getProps, _}
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -61,8 +62,8 @@ object PropNamePvdr {
     PrioritizedLookupElement.withPriority(lookup, 200 - i)
   }
 
-  private def getProps(typ: JSType, project: Project): List[PropertySignature] = {
-    val mems: GenTraversableOnce[TypeMember] = typ match {
+  def getMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
+    typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala
       // JSTypeBaseImpl should already cover that
       case arrT: JSArrayType =>
@@ -74,7 +75,7 @@ object PropNamePvdr {
           .toList.flatMap(ifc => ifc.getMembers.asScala)
           .flatMap(cast[TypeMember](_))
       case mt: JSUnionOrIntersectionType =>
-        mt.getTypes.asScala.flatMap(t => getProps(t, project)).toList
+        mt.getTypes.asScala.flatMap(t => getMems(t, project)).toList
       case mt: JSGenericTypeImpl =>
         val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
         JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(project)).asScala
@@ -84,15 +85,19 @@ object PropNamePvdr {
         // when you specify class with jsdoc for example - JSTypeImpl
         mt.asRecordType().getTypeMembers.asScala
       case _ =>
-        /** @debug */
+
+        /** @debug*/
         //println("Unsupported typ " + typ.getClass + " " + typ)
         List()
     }
+  }
+
+  private def getProps(typ: JSType, project: Project): List[PropertySignature] = {
+    val mems = getMems(typ, project)
     mems.toList.flatMap {
       case prop: PropertySignature => Some(prop)
       case idx: IndexSignature => Mt
-        .getAllLiteralValues(idx.getMemberParameterType)
-        .toList.flatten
+        .getAnyLiteralValues(idx.getMemberParameterType)
         .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource))
       case _ => None
     }
@@ -182,10 +187,12 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       .flatMap(cast[JSReferenceExpression](_))
       .toList.flatMap(ref => Option(ref.getQualifier)
         .flatMap(qual => search.findExprType(qual))
-        .toList.flatMap(typ => getProps(typ, caretPsi.getProject))
-        .filter(prop => prop.getMemberName.equals(ref.getReferenceName)))
-      // TODO: store PSI per key, not per value: there is a lot of rubbish now
-      .flatMap(p => search.typeToDecl.get(p.getType))
+        .toList.flatMap(typ => getMems(typ, caretPsi.getProject))
+        // TODO: support GoTo built-in functions like `map` as well
+        .flatMap(cast[DeepIndexSignatureImpl](_))
+        .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
+          .contains(ref.getReferenceName)))
+      .map(p => p.psi)
       .distinct
       .toArray
   }

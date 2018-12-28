@@ -67,9 +67,10 @@ case class VarRes(ctx: IExprCtx) {
             .flatMap(value => ctx.findExprType(value))
             .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
           // someVar.someKey = 123
-          , () => Mt.mergeTypes(Option(superRef.getReferencedName).toList
+          , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
             .flatMap(name => Option(superRef.getParent).toList
-              .map(parent => Mt.mkProp(name, superRef, () => resolveParent(parent)))
+              .flatMap(parent => resolveParent(parent))
+              .map(valt => Mt.mkProp(name, superRef, () => Some(valt)))
               .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
         )
         // someVar[i] = value
