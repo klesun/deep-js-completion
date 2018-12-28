@@ -1,15 +1,14 @@
 package org.klesun.deep_js_completion.helpers
 
-import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
+import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.{IndexSignatureImpl, PropertySignatureImpl}
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
-import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -76,7 +75,7 @@ object Mt {
             case mem: PropertySignatureImpl => Option(mem.getType)
               .filter(t => litValsOpt.forall(vals => vals
                 .contains(mem.getMemberName)))
-            case idx: IndexSignatureImpl =>
+            case idx: IndexSignature =>
               val valt = Option(idx.getMemberType)
               Option(idx.getMemberParameterType)
                 .flatMap(kt => getAllLiteralValues(kt)
@@ -116,8 +115,6 @@ object Mt {
   def mkProp(name: String, psi: PsiElement, getValue: () => GenTraversableOnce[JSType]): TypeMember = {
     val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
     val valt = Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE)
-    new IndexSignatureImpl(keyt, valt, new EmptyMemberSource)
-    // TODO: return IndexSignature instead and add it to the type -> PSI mapping
-    //new PropertySignatureImpl(name, valt, false, new EmptyMemberSource)
+    new DeepIndexSignatureImpl(keyt, valt, psi)
   }
 }

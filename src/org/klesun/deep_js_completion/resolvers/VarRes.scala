@@ -6,15 +6,13 @@ import java.util.Objects
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
-import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
@@ -79,7 +77,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(parent => resolveParent(parent))
           .map(valT => {
             val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
-            new IndexSignatureImpl(keyt, valT, new EmptyMemberSource)
+            new DeepIndexSignatureImpl(keyt, valT, indexing)
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
         // var someVar = null;
