@@ -4,7 +4,7 @@ import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
-import org.klesun.lang.Lang.singleLine
+import org.klesun.lang.Lang._
 
 class SearchCtx(
     val maxDepth: Integer = 20,
@@ -43,6 +43,9 @@ class SearchCtx(
         } else if (expressionsResolved >= 7500) {
             None
         } else if (exprToResult.contains(expr)) {
+            if (exprToResult(expr).isEmpty && debug) {
+                Console.println("!!! circular reference\n" + getStackTrace)
+            }
             exprToResult(expr)
         } else {
             exprToResult.put(expr, None)

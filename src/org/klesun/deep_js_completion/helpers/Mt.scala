@@ -3,19 +3,17 @@ package org.klesun.deep_js_completion.helpers
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
-import com.intellij.lang.javascript.psi.{JSFunctionExpression, JSRecordType, JSType, JSTypeUtils}
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.{IndexSignatureImpl, PropertySignatureImpl}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
+import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
-
-import scala.collection.JavaConverters._
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
-import scala.collection.generic.CanBuildFrom
+import scala.collection.JavaConverters._
 import scala.collection.immutable.List
 import scala.util.Try
 
@@ -47,15 +45,16 @@ object Mt {
   }
 
   def getAllLiteralValues(litT: JSType): Option[List[String]] = {
-    val opts = flattenTypes(litT).map(lit => lit match {
-      case lit: JSPrimitiveLiteralType[Any] => Some(lit.getLiteral + "")
+    val opts = flattenTypes(litT).map {
+      case lit: JSPrimitiveLiteralType[_] => Some(lit.getLiteral + "")
       case _ => None
-    })
+    }
     all(opts)
   }
 
   def getKey(arrT: JSType, keyTOpt: Option[JSType]): Option[JSType] = {
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
+    val litVals = litValsOpt.toList.flatten
     arrT match {
       case tupT: JSTupleTypeImpl =>
         val arrFallback = mergeTypes(tupT.getTypes.asScala.toList)
@@ -73,10 +72,19 @@ object Mt {
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
       case objT: JSRecordType =>
         val keyTypes = objT.getTypeMembers.asScala
-          .flatMap(cast[PropertySignatureImpl](_))
-          .filter(mem => litValsOpt.map(vals => vals
-            .contains(mem.getMemberName)).getOrElse(true))
-          .flatMap(mem => Option(mem.getType))
+          .flatMap {
+            case mem: PropertySignatureImpl => Option(mem.getType)
+              .filter(t => litValsOpt.forall(vals => vals
+                .contains(mem.getMemberName)))
+            case idx: IndexSignatureImpl =>
+              val valt = Option(idx.getMemberType)
+              Option(idx.getMemberParameterType)
+                .flatMap(kt => getAllLiteralValues(kt)
+                  .filter(strvals => strvals.isEmpty || strvals.intersect(litVals).nonEmpty)
+                  .flatMap(strvals => valt))
+                .orElse(valt)
+            case _ => None
+          }
         mergeTypes(keyTypes)
       case _ => None
     }
@@ -106,7 +114,10 @@ object Mt {
   }
 
   def mkProp(name: String, psi: PsiElement, getValue: () => GenTraversableOnce[JSType]): TypeMember = {
+    val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
+    val valt = Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE)
+    new IndexSignatureImpl(keyt, valt, new EmptyMemberSource)
     // TODO: return IndexSignature instead and add it to the type -> PSI mapping
-    new PropertySignatureImpl(name, Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE), false, new EmptyMemberSource)
+    //new PropertySignatureImpl(name, valt, false, new EmptyMemberSource)
   }
 }

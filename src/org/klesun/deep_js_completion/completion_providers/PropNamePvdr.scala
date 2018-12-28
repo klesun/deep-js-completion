@@ -5,29 +5,30 @@ import java.util
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
-import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
+import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
 import com.intellij.lang.javascript.psi.resolve.JSClassResolver
+import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
-import com.intellij.openapi.actionSystem.{DataConstants, DataContext}
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import com.intellij.psi.search.{EverythingGlobalScope, GlobalSearchScope}
+import com.intellij.psi.search.EverythingGlobalScope
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr._
 import org.klesun.deep_js_completion.contexts.SearchCtx
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.Lang._
 
+import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.mutable._
-import org.klesun.deep_js_completion.completion_providers._
-
-import scala.collection.GenTraversableOnce
 
 object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
@@ -43,7 +44,7 @@ object PropNamePvdr {
   private def makeLookup(prop: PropertySignature, i: Int) = {
     val typeStr = Option(prop.getType)
       .map {
-        case lit: JSPrimitiveLiteralType[Any] =>
+        case lit: JSPrimitiveLiteralType[_] =>
           val strVal = lit.getLiteral + ""
           if (strVal.trim equals "") lit.getTypeText(TypeTextFormat.PRESENTABLE) else "'" + strVal + "'"
         case t => t.getTypeText(TypeTextFormat.PRESENTABLE)
@@ -61,35 +62,39 @@ object PropNamePvdr {
   }
 
   private def getProps(typ: JSType, project: Project): List[PropertySignature] = {
-    typ match {
+    val mems: GenTraversableOnce[TypeMember] = typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala
-        .flatMap(cast[PropertySignature](_))
-        .toList
+      // JSTypeBaseImpl should already cover that
       case arrT: JSArrayType =>
-        // JSTypeBaseImpl should already cover that
         val genT = arrT.asGenericType().asRecordType()
         genT.getTypeMembers.asScala
-          .flatMap(cast[PropertySignature](_)).toList
       case arrT: JSTupleTypeImpl =>
         JSClassResolver.getInstance().findClassesByQName("Array", new EverythingGlobalScope(project)).asScala
           .flatMap(cast[TypeScriptInterfaceImpl](_))
           .toList.flatMap(ifc => ifc.getMembers.asScala)
-          .flatMap(cast[PropertySignature](_))
+          .flatMap(cast[TypeMember](_))
       case mt: JSUnionOrIntersectionType =>
         mt.getTypes.asScala.flatMap(t => getProps(t, project)).toList
       case mt: JSGenericTypeImpl =>
         val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
         JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(project)).asScala
           .toList.flatMap(ifc => ifc.getMembers.asScala)
-          .flatMap(cast[PropertySignature](_))
+          .flatMap(cast[TypeMember](_))
       case mt: JSTypeBaseImpl =>
         // when you specify class with jsdoc for example - JSTypeImpl
         mt.asRecordType().getTypeMembers.asScala
-          .flatMap(cast[PropertySignature](_)).toList
       case _ =>
         /** @debug */
         //println("Unsupported typ " + typ.getClass + " " + typ)
         List()
+    }
+    mems.toList.flatMap {
+      case prop: PropertySignature => Some(prop)
+      case idx: IndexSignature => Mt
+        .getAllLiteralValues(idx.getMemberParameterType)
+        .toList.flatten
+        .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource))
+      case _ => None
     }
   }
 }

@@ -4,30 +4,25 @@ import java.util
 import java.util.Objects
 
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
-import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
+import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
-import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.{JSFunctionTypeImpl, JSRecordTypeImpl, JSTypeSource, JSUnknownType}
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
-import com.intellij.lang.javascript.psi._
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang.cast
 
 import scala.collection.GenTraversableOnce
-import scala.collection.mutable.ListBuffer
-import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
-
 import scala.collection.JavaConverters._
-import org.klesun.lang.Lang._
+import scala.collection.mutable.ListBuffer
 
 object ArgRes {
 

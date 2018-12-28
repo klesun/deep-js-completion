@@ -2,10 +2,7 @@ package org.klesun.lang
 
 import com.intellij.psi.PsiElement
 
-import com.intellij.psi.PsiElement
-
 import scala.reflect.{ClassTag, classTag}
-import scala.reflect.runtime.universe._
 
 /** provides some core functions needed for IDEA plugin development */
 object Lang {
@@ -89,4 +86,16 @@ object Lang {
       .++(List(parent).flatMap(cast[T](_)))
       .toList
   }
+
+  import java.io.PrintWriter
+  import java.io.StringWriter
+
+  def getStackTrace(exc: Throwable): String = {
+    val sw = new StringWriter
+    val pw = new PrintWriter(sw)
+    exc.printStackTrace(pw)
+    sw.toString
+  }
+
+  def getStackTrace: String = getStackTrace(new Exception)
 }

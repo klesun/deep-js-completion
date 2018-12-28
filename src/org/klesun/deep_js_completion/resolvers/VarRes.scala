@@ -3,31 +3,23 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
-import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
-import com.intellij.lang.javascript.psi.impl.{JSDefinitionExpressionImpl, JSFunctionImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
-import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.{IndexSignatureImpl, PropertySignatureImpl}
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
-import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.PsiTreeUtil
-import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
-import org.klesun.deep_js_completion.entry.PathStrGoToDecl
+import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.lang.Lang
-
-import scala.collection.JavaConverters._
-import org.klesun.lang.Lang._
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.lang.Lang
+import org.klesun.lang.Lang._
 
-import scala.collection.{GenTraversable, GenTraversableOnce}
+import scala.collection.GenTraversableOnce
+import scala.collection.JavaConverters._
 
 object VarRes {
 
@@ -50,6 +42,7 @@ object VarRes {
 
   private def findRefUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
     Option(ref.resolve()).toList.flatMap(decl => findVarUsages(decl, ref.getReferenceName))
+      .filter(usage => !usage.equals(ref))
   }
 }
 
@@ -84,11 +77,11 @@ case class VarRes(ctx: IExprCtx) {
         // someVar[i] = value
         case indexing: JSIndexedPropertyAccessExpression => Option(indexing.getParent).toList
           .flatMap(parent => resolveParent(parent))
-//          .map(valT => new IndexSignatureImpl(ctx.findExprType(indexing.getIndexExpression).orNull, valT, new EmptyMemberSource))
-//          .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
-          // it would actually be more correct to make it "object with any key", not
-          // an array... and resolving key string value when we can would be nice too
-          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+          .map(valT => {
+            val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
+            new IndexSignatureImpl(keyt, valT, new EmptyMemberSource)
+          })
+          .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
         // var someVar = null;
         // someVar = initializeSomething()
         case usage: JSDefinitionExpression => Option(usage.getParent)

@@ -2,13 +2,9 @@ package org.klesun.deep_js_completion.resolvers
 
 import java.util
 
-import com.intellij.lang.javascript.JSKeywordElementType
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
-import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
