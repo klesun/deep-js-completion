@@ -7,7 +7,7 @@ import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
+import com.intellij.lang.javascript.psi.ecma6.impl.{TypeScriptFunctionSignatureImpl, TypeScriptInterfaceImpl}
 import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
@@ -63,7 +63,7 @@ object PropNamePvdr {
   }
 
   def getMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
-    typ match {
+    val mems = typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala
       // JSTypeBaseImpl should already cover that
       case arrT: JSArrayType =>
@@ -85,10 +85,15 @@ object PropNamePvdr {
         // when you specify class with jsdoc for example - JSTypeImpl
         mt.asRecordType().getTypeMembers.asScala
       case _ =>
-
         /** @debug*/
         //println("Unsupported typ " + typ.getClass + " " + typ)
         List()
+    }
+    mems.map {
+      case sig: TypeScriptFunctionSignatureImpl =>
+        // it implements both PsiElement and TypeMember interfaces at same time
+        Mt.mkProp(sig.getMemberName, sig, () => Option(sig.getType))
+      case rest => rest
     }
   }
 
