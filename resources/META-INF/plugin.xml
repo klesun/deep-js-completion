@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2018.12.27.002</version>
+  <version>2018.12.31.001</version>
   <vendor email="arturklesun@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
 
   <description><![CDATA[
@@ -46,6 +46,7 @@ Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>GoTo the key element, not value</li>
   <li>Show string value in completion options when known</li>
   <li>Briefly parse d.ts func decl arg to return type generic relation. Enough to support completion from Object.values()</li>
   <li>Add a stupid GoTo implementation</li>
