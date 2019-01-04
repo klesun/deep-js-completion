@@ -48,29 +48,6 @@ Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927
   <change-notes><![CDATA[
   <li>Support class with generics type from d.ts func signatures</li>
   <li>Fix: do not treat every index access as _any_ key (mistake in code)</li>
-  <li>GoTo the key element, not value</li>
-  <li>Show string value in completion options when known</li>
-  <li>Briefly parse d.ts func decl arg to return type generic relation. Enough to support completion from Object.values()</li>
-  <li>Add a stupid GoTo implementation</li>
-  <li>Optimize: do not scan lenghty built-in d.ts files for var usages</li>
-  <li>Provide private func usage based arg completion</li>
-  <li>Support completion from jsdoc type. Like `@parm {ITokenInfo}` tokenInfo</li>
-  <li>Provide prop completion on anon func arg based on what is passed to this func later</li>
-  <li>Infer type of `new Promise(resolve => ... resolve(value) ...)`</li>
-  <li>Do not shy to override built-in _guessed_ completion even when only typed completion is on</li>
-  <li>Keep passed arguments into account when resolving function return type</li>
-  <li>Infer however many keys in an assignment</li>
-  <li>Allow referencing vars from top-level scope in docs. Imported modules for example</li>
-  <li>Support parenthesized expressions</li>
-  <li>Resolve functions in other files even when IDEA does not manage</li>
-  <li>Infer type of variable assigned few lines after declaration (For cases when in "if" it is assigned one value, but in "else" another)</li>
-  <li>Support ternary operator</li>
-  <li>Add resolved expression caching (Irreplacable when you resolve a recursive function)</li>
-  <li>Infer return type of Object.assign from passed args</li>
-  <li>Provide completion inside/from Promise.then</li>
-  <li>Provide completion on any class instance, not just Array instances</li>
-  <li>Allow to specify node module in the doc like `@param db = from('./../../../Utils/Db.es6')()` (similar to how it works for requirejs)</li>
-  <li>Support await</li>
     ]]>
   </change-notes>
 
