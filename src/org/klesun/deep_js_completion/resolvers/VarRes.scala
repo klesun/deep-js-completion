@@ -106,8 +106,12 @@ case class VarRes(ctx: IExprCtx) {
         if (generics.contains(fqn)) {
           generics(fqn).apply()
         } else {
-          // TODO: support actual classes
-          None
+          val clsType = JSTypeUtils.createType(sints.getQualifiedTypeName, JSTypeSource.EMPTY)
+          val clsGenerics: java.util.List[JSType] = sints.getTypeArguments.map(
+            gena => Mt.mergeTypes(parseTypePsi(gena, generics))
+              .getOrElse(JSUnknownType.JS_INSTANCE)
+          ).toList.asJava
+          Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
         }
       case _ => None
     }

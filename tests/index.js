@@ -289,3 +289,6 @@ let huj = {
     wrap: () => ({wrap1: 5, wrap2: 6}),
     get: () => ({get1: 5, get2: 6}),
 }.get().; // should not suggest "wrap1" and "wrap2"
+
+// should suggest: "a", "b"
+Promise.resolve(SomeCjsModule().getSimpleObj()).then(a => a.);
