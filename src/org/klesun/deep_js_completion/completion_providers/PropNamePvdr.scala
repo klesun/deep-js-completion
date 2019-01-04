@@ -202,5 +202,5 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       .toArray
   }
 
-  def getActionText(dataContext: DataContext): String = null
+  override def getActionText(dataContext: DataContext): String = null
 }

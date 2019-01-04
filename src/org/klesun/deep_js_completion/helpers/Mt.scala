@@ -83,12 +83,11 @@ object Mt {
             case mem: PropertySignatureImpl => Option(mem.getType)
               .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
             case idx: IndexSignature =>
-              val valt = Option(idx.getMemberType)
-              Option(idx.getMemberParameterType)
-                .flatMap(kt => getAllLiteralValues(kt)
-                  .filter(strvals => strvals.isEmpty || strvals.intersect(litVals).nonEmpty)
-                  .flatMap(strvals => valt))
-                .orElse(valt)
+              val propMatches = getAllLiteralValues(idx.getMemberParameterType) match {
+                case Some(strvals) => strvals.isEmpty || strvals.intersect(litVals).nonEmpty
+                case None => true
+              }
+              if (propMatches) Some(idx.getMemberType) else None
             case _ => None
           }
         mergeTypes(keyTypes)
