@@ -1,8 +1,8 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.04.001</version>
-  <vendor email="arturklesun@gmail.com"  url="http://midiana.lv/entry/deep-js-completion">Klesun</vendor>
+  <version>2019.01.10.001</version>
+  <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
 <p>
@@ -46,8 +46,7 @@ Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Support class with generics type from d.ts func signatures</li>
-  <li>Fix: do not treat every index access as _any_ key (mistake in code)</li>
+  <li>Fix: wrong reduce completion: IntellijIdeaRulezzz screwed PSI tree causing resolution miss the initial value arg - no more IntellijIdeaRulezzz ever; reduce() return value was inferred same as map() return value - lambda return type in an array, this is wrong, reduce() lambda return type should not be wrapped in array</li>
     ]]>
   </change-notes>
 
