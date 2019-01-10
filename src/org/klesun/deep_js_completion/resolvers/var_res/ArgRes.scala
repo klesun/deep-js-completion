@@ -62,7 +62,13 @@ case class ArgRes(ctx: IExprCtx) {
           .flatMap(ref =>
             Option(ref.getQualifier)
               .filter(expr => argOrder == 0)
-              .filter(expr => List("forEach", "map", "filter", "sort", "reduce").contains(ref.getReferencedName))
+              .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
+              .flatMap(expr => ctx.findExprType(expr))
+              .flatMap(arrt => Mt.getKey(arrt, None)).toList
+              ++
+            Option(ref.getQualifier)
+              .filter(expr => argOrder == 1)
+              .filter(expr => List("reduce").contains(ref.getReferencedName))
               .flatMap(expr => ctx.findExprType(expr))
               .flatMap(arrt => Mt.getKey(arrt, None)).toList
               ++

@@ -19,6 +19,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getProps, _}
@@ -115,22 +116,19 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-
-    // originalPosition gives you ";" in "smfAdapter.;"
-    def findRefExpr(psi: PsiElement): Option[JSReferenceExpression] = {
-      psi match {
-        case ref: JSReferenceExpression => Some(ref)
-        case _ => psi.getChildren.flatMap(c => findRefExpr(c)).lift(0)
-      }
-    }
-
-    val nullPsi = parameters.getPosition
+    // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
+    // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
+    //val nullPsi = parameters.getPosition
+    val nullPsi = Option(parameters.getOriginalPosition)
+      .flatMap(leaf => Option(parameters.getOriginalFile)
+        // original PSI points to different elements in `obj.<>prop,`, `obj.prop<>,` and `obj.<>,`, but
+        // in all these cases previous PSI is a leaf of the reference expression we want to resolve
+        .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
+      .orNull
     val depth = getMaxDepth(parameters.isAutoPopup)
     val search = new SearchCtx(depth)
     val startTime = System.nanoTime
     val suggestions = Option(nullPsi)
-      .flatMap(pos => Option(pos.getParent))
-      .flatMap(findRefExpr(_))
       .flatMap(ref => Option(ref.getQualifier))
       .flatMap(qual => search.findExprType(qual))
       .toList.flatMap(typ => getProps(typ, nullPsi.getProject))

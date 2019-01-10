@@ -24,10 +24,16 @@ case class FuncCallRes(ctx: IExprCtx) {
     // Unsupported: reduce, concat, shift, pop
     if (List("filter", "sort", "slice", "splice").contains(methName)) {
       ctx.findExprType(obj)
-    } else if (List("reduce", "map").contains(methName)) {
+    } else if (List("concat").contains(methName)) {
+      val types = (List(obj) ++ args).flatMap(expr => ctx.findExprType(expr))
+      Mt.mergeTypes(types)
+    } else if (List("map").contains(methName)) {
       args.lift(0).flatMap(arg => ctx.findExprType(arg))
         .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
         .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    } else if (List("reduce").contains(methName)) {
+      args.lift(0).flatMap(arg => ctx.findExprType(arg))
+        .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
     } else if ((obj.getText equals "Object") && (methName equals "assign")) {
       // IDEA actually has the built-in function generic return type mapping, but I'm
       // not able to get the info (getReturnType returns AnyType instead of A & B)
