@@ -8,7 +8,7 @@ import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -100,6 +100,7 @@ object Mt {
       .flatMap {
         case func: JSFunctionTypeImpl => Option(func.getReturnType)
         case func: JSDeepFunctionTypeImpl => func.getReturnType(ctx)
+        case func: JSDeepModuleTypeImpl => Some(JSDeepModuleTypeImpl(func.name, EInstType.Called))
         case _ => None
       }
     mergeTypes(retTs)
@@ -115,12 +116,12 @@ object Mt {
   }
 
   def wrapPromise(value: JSType): JSType = {
-    new JSGenericTypeImpl(JSTypeSource.EMPTY, JSTypeUtils.createType("Promise", JSTypeSource.EMPTY), List(value).asJava)
+    Mkt.inst("Promise", List(value)).get
   }
 
-  def mkProp(name: String, psi: PsiElement, getValue: () => GenTraversableOnce[JSType]): TypeMember = {
+  def mkProp(name: String, getValue: () => GenTraversableOnce[JSType], psi: Option[PsiElement] = None): TypeMember = {
     val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
     val valt = Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE)
-    new DeepIndexSignatureImpl(keyt, valt, psi)
+    DeepIndexSignatureImpl(keyt, valt, psi)
   }
 }

@@ -72,7 +72,7 @@ object MainRes {
         val props: util.List[TypeMember] = obje.getProperties.map(p => {
           val getValue = () => Option(p.getValue)
             .flatMap(expr => ctx.findExprType(expr))
-          Mt.mkProp(p.getName, p, () => getValue())
+          Mt.mkProp(p.getName, () => getValue(), Some(p))
         }).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
       case bina: JSBinaryExpression =>

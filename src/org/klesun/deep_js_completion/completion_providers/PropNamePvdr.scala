@@ -49,6 +49,15 @@ object PropNamePvdr {
         case lit: JSPrimitiveLiteralType[_] =>
           val strVal = lit.getLiteral + ""
           if (strVal.trim equals "") lit.getTypeText(TypeTextFormat.PRESENTABLE) else "'" + strVal + "'"
+        // convert IndexSignature back to PropertySignature when possible for nicer value preview
+        case rect: JSRecordType =>
+          new JSRecordTypeImpl(JSTypeSource.EMPTY, rect.getTypeMembers.asScala.map {
+            case idx: IndexSignature => idx.getMemberParameterType match {
+              case idxLit: JSStringLiteralTypeImpl => new PropertySignatureImpl(idxLit.getLiteral, idx.getMemberType, false, new EmptyMemberSource)
+              case other => idx
+            }
+            case mem => mem
+          }.asJava).getTypeText(TypeTextFormat.PRESENTABLE)
         case t => t.getTypeText(TypeTextFormat.PRESENTABLE)
       }
       .getOrElse("?")
@@ -93,7 +102,7 @@ object PropNamePvdr {
     mems.map {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
-        Mt.mkProp(sig.getMemberName, sig, () => Option(sig.getType))
+        Mt.mkProp(sig.getMemberName, () => Option(sig.getType), Some(sig))
       case rest => rest
     }
   }
@@ -191,11 +200,10 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       .toList.flatMap(ref => Option(ref.getQualifier)
         .flatMap(qual => search.findExprType(qual))
         .toList.flatMap(typ => getMems(typ, caretPsi.getProject))
-        // TODO: support GoTo built-in functions like `map` as well
         .flatMap(cast[DeepIndexSignatureImpl](_))
         .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
           .contains(ref.getReferenceName)))
-      .map(p => p.psi)
+      .flatMap(p => p.psi)
       .distinct
       .toArray
   }

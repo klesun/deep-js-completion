@@ -70,7 +70,7 @@ case class VarRes(ctx: IExprCtx) {
           , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
             .flatMap(name => Option(superRef.getParent).toList
               .flatMap(parent => resolveParent(parent))
-              .map(valt => Mt.mkProp(name, superRef, () => Some(valt)))
+              .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
               .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
         )
         // someVar[i] = value
@@ -78,7 +78,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(parent => resolveParent(parent))
           .map(valT => {
             val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
-            new DeepIndexSignatureImpl(keyt, valT, indexing)
+            new DeepIndexSignatureImpl(keyt, valT, Some(indexing))
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
         // var someVar = null;

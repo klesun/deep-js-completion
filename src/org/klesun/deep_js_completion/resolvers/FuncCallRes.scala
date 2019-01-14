@@ -10,6 +10,7 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
+import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang._
 
 import scala.collection.JavaConverters._
@@ -52,9 +53,13 @@ case class FuncCallRes(ctx: IExprCtx) {
 
   def resolveBuiltInFuncCall(funcName: String, args: List[JSExpression]): Option[JSType] = {
     if (List("require").contains(funcName)) {
-      args.lift(0)
-        .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
-        .flatMap(file => ArgRes(ctx).resolveCommonJsFormatDef(file))
+      val types = args.lift(0).toList.flatMap(arg => {
+        PathStrGoToDecl.getReferencedFile(arg)
+          .flatMap(file => ArgRes(ctx).resolveCommonJsFormatDef(file)) ++
+        cast[JSLiteralExpression](arg)
+          .map(lit => JSDeepModuleTypeImpl(lit.getValue + "", EInstType.Required))
+      })
+      Mt.mergeTypes(types)
     } else {
       None
     }
