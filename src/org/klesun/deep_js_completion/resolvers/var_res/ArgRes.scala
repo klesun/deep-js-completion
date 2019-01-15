@@ -174,8 +174,8 @@ case class ArgRes(ctx: IExprCtx) {
               .flatMap(arrt => Mt.getKey(arrt, None)).toList
               ++
             Option(ref.getQualifier)
-              .filter(expr => (inlineFuncArgOrder == 0 && ("use" equals ref.getReferencedName)) ||
-                              (inlineFuncArgOrder == 1 && List("get", "post").contains(ref.getReferencedName)))
+              // func arg order does not matter, it may be 0 or 1, maybe something else as well
+              .filter(expr => List("use", "get", "post").contains(ref.getReferencedName))
               .flatMap(expr => ctx.findExprType(expr)).toList
               .flatMap(t => Mt.flattenTypes(t))
               .flatMap(cast[JSDeepModuleTypeImpl](_))
@@ -232,7 +232,7 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(value => ctx.subCtxEmpty().findExprType(value))
   }
 
-  private def getCtxArgType(func: JSFunction, para: JSParameter): GenTraversableOnce[JSType] = {
+  private def getCtxArgType(func: JSFunction, para: JSParameterListElement): GenTraversableOnce[JSType] = {
     val order = func.getParameters.indexOf(para)
     grabClosureCtxs(ctx.func()).toList
       .filter(_.getClosurePsi().exists(_ equals func))
@@ -378,7 +378,7 @@ case class ArgRes(ctx: IExprCtx) {
         }))
   }
 
-  private def getArgDocExprType(func: JSFunction, para: JSParameter): List[JSType] = {
+  private def getArgDocExprType(func: JSFunction, para: JSParameterListElement): List[JSType] = {
     Option(JSDocumentationUtils.findDocComment(para))
       .flatMap(cast[JSDocCommentImpl](_)).toList
       .flatMap(tag => tag.getTags)
@@ -389,7 +389,7 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(expr => parseDocExpr(para, expr))
   }
 
-  def resolve(para: JSParameter): Option[JSType] = {
+  def resolve(para: JSParameterListElement): Option[JSType] = {
     val types = Option(para.getDeclaringFunction)
       .toList.flatMap(func => List[JSType]()
       ++ getArgDocExprType(func, para)

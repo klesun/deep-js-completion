@@ -3,9 +3,11 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
+import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
+import com.intellij.lang.javascript.psi.impl.{JSDestructuringParameterImpl, JSVariableBaseImpl}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
@@ -151,35 +153,43 @@ case class VarRes(ctx: IExprCtx) {
     }))
   }
 
+  private def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
+    Option(dest.getInitializer)
+      .flatMap(expr => ctx.findExprType(expr)) ++
+    Option(dest.getParent).flatMap {
+      case prop: JSDestructuringShorthandedProperty =>
+        val types = Option(prop.getParent)
+          .flatMap(cast[JSDestructuringObject](_))
+          .flatMap(obj => Option(obj.getParent)).toList
+          .flatMap {
+            // let doStuff = ({a, b}) => {...};
+            case para: JSDestructuringParameterImpl => ArgRes(ctx).resolve(para)
+            // let {a, b} = getObj();
+            case obj: JSDestructuringElement => Option(obj.getInitializer)
+                .flatMap(qual => ctx.findExprType(qual)).toList
+            case _ => None
+          }
+          .flatMap(qualT => {
+            val keyTOpt = Option(dest.getName)
+              .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+            Mt.getKey(qualT, keyTOpt)
+          })
+        Mt.mergeTypes(types)
+      case varst: JSVarStatement =>
+        Option(varst.getParent)
+          .flatMap(cast[JSForInStatement](_))
+          .flatMap(st => Option(st.getCollectionExpression))
+          .flatMap(arrexpr => ctx.findExprType(arrexpr))
+          .flatMap(arrt => Mt.getKey(arrt, None))
+      case _ => None
+    }
+  }
+
   // may be defined in a different file unlike resolveAssignment()
   private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
     psi match {
-      case para: JSParameter => ArgRes(ctx).resolve(para)
-      case dest: JSVariable => first(() => None
-        , () => Option(dest.getInitializer)
-          .flatMap(expr => ctx.findExprType(expr))
-        , () => Option(dest.getParent).flatMap {
-          case prop: JSDestructuringShorthandedProperty =>
-            Option(prop.getParent)
-              .flatMap(cast[JSDestructuringObject](_))
-              .flatMap(obj => Option(obj.getParent))
-              .flatMap(cast[JSDestructuringElement](_))
-              .flatMap(obj => Option(obj.getInitializer))
-              .flatMap(qual => ctx.findExprType(qual))
-              .flatMap(qualT => {
-                val keyTOpt = Option(dest.getName)
-                  .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-                Mt.getKey(qualT, keyTOpt)
-              })
-          case varst: JSVarStatement =>
-            Option(varst.getParent)
-              .flatMap(cast[JSForInStatement](_))
-              .flatMap(st => Option(st.getCollectionExpression))
-              .flatMap(arrexpr => ctx.findExprType(arrexpr))
-              .flatMap(arrt => Mt.getKey(arrt, None))
-          case _ => None
-        }
-      )
+      case para: JSParameter => ArgRes(ctx).resolve(para) ++ resolveMainDeclVar(para)
+      case dest: JSVariable => resolveMainDeclVar(dest)
       case prop: JSProperty => Option(prop.getValue)
         .flatMap(expr => ctx.findExprType(expr))
       case prop: JSDefinitionExpression => Option(prop.getExpression)
