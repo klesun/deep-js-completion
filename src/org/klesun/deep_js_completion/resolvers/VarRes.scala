@@ -158,19 +158,27 @@ case class VarRes(ctx: IExprCtx) {
       case dest: JSVariable => first(() => None
         , () => Option(dest.getInitializer)
           .flatMap(expr => ctx.findExprType(expr))
-        , () => Option(dest.getParent)
-          .flatMap(cast[JSDestructuringShorthandedProperty](_))
-          .flatMap(prop => Option(prop.getParent))
-          .flatMap(cast[JSDestructuringObject](_))
-          .flatMap(obj => Option(obj.getParent))
-          .flatMap(cast[JSDestructuringElement](_))
-          .flatMap(obj => Option(obj.getInitializer))
-          .flatMap(qual => ctx.findExprType(qual))
-          .flatMap(qualT => {
-            val keyTOpt = Option(dest.getName)
-              .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            Mt.getKey(qualT, keyTOpt)
-          })
+        , () => Option(dest.getParent).flatMap {
+          case prop: JSDestructuringShorthandedProperty =>
+            Option(prop.getParent)
+              .flatMap(cast[JSDestructuringObject](_))
+              .flatMap(obj => Option(obj.getParent))
+              .flatMap(cast[JSDestructuringElement](_))
+              .flatMap(obj => Option(obj.getInitializer))
+              .flatMap(qual => ctx.findExprType(qual))
+              .flatMap(qualT => {
+                val keyTOpt = Option(dest.getName)
+                  .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+                Mt.getKey(qualT, keyTOpt)
+              })
+          case varst: JSVarStatement =>
+            Option(varst.getParent)
+              .flatMap(cast[JSForInStatement](_))
+              .flatMap(st => Option(st.getCollectionExpression))
+              .flatMap(arrexpr => ctx.findExprType(arrexpr))
+              .flatMap(arrt => Mt.getKey(arrt, None))
+          case _ => None
+        }
       )
       case prop: JSProperty => Option(prop.getValue)
         .flatMap(expr => ctx.findExprType(expr))
