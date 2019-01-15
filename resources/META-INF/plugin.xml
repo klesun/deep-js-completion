@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.14.001</version>
+  <version>2019.01.15.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -46,6 +46,9 @@ Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>Add `for (el in arr)` support</li>
+  <li>Fix: do not miss TS Property member type when taking a key from oject type</li>
+  <li>Fix: distinct between key assignment to a reference and a reference being used as a key</li>
   <li>Provide lambda req, res arg completion in express app().get/post</li>
     ]]>
   </change-notes>
