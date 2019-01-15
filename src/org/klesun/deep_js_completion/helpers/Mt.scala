@@ -1,6 +1,6 @@
 package org.klesun.deep_js_completion.helpers
 
-import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, TypeMember}
+import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
@@ -59,10 +59,27 @@ object Mt {
     all(opts)
   }
 
+  private def getRecordKey(objT: JSRecordType, litVals: List[String]): GenTraversableOnce[JSType] = {
+    objT.getTypeMembers.asScala
+      .flatMap {
+        case mem: PropertySignature => Option(mem.getType)
+          .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
+        case idx: IndexSignature =>
+          val propMatches = getAllLiteralValues(idx.getMemberParameterType) match {
+            case Some(strvals) => strvals.isEmpty || strvals.intersect(litVals).nonEmpty
+            case None => true
+          }
+          if (propMatches) Some(idx.getMemberType) else None
+        case other => {
+          None
+        }
+      }
+  }
+
   def getKey(arrT: JSType, keyTOpt: Option[JSType]): Option[JSType] = {
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
     val litVals = litValsOpt.toList.flatten
-    arrT match {
+    val elts = Mt.flattenTypes(arrT).flatMap {
       case tupT: JSTupleTypeImpl =>
         val arrFallback = mergeTypes(tupT.getTypes.asScala.toList)
         val tupResultOpt = litValsOpt.map(litVals => {
@@ -72,27 +89,14 @@ object Mt {
           mergeTypes(types).getOrElse(new JSUndefinedType(JSTypeSource.EMPTY))
         })
         tupResultOpt.orElse(arrFallback)
-      case mt: JSContextualUnionTypeImpl =>
-        val keyTypes = mt.getTypes.asScala
-          .flatMap(arrT => getKey(arrT, keyTOpt)).toList
-        mergeTypes(keyTypes)
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
-      case objT: JSRecordType =>
-        val keyTypes = objT.getTypeMembers.asScala
-          .flatMap {
-            case mem: PropertySignatureImpl => Option(mem.getType)
-              .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
-            case idx: IndexSignature =>
-              val propMatches = getAllLiteralValues(idx.getMemberParameterType) match {
-                case Some(strvals) => strvals.isEmpty || strvals.intersect(litVals).nonEmpty
-                case None => true
-              }
-              if (propMatches) Some(idx.getMemberType) else None
-            case _ => None
-          }
-        mergeTypes(keyTypes)
-      case _ => None
+      case objT: JSRecordType => getRecordKey(objT, litVals)
+      case typedef: JSTypeBaseImpl => getRecordKey(typedef.asRecordType(), litVals)
+      case other => {
+        None
+      }
     }
+    Mt.mergeTypes(elts)
   }
 
   def getReturnType(funcT: JSType, ctx: IExprCtx): Option[JSType] = {

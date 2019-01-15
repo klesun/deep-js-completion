@@ -57,7 +57,7 @@ class SearchCtx(
             }
             if (debug) {
                 /** @debug */
-                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
+                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350) + " ||| in " + expr.getParent.getText)
                 if (resolved.isEmpty) {
                     /** @debug */
                     println(indent + "built-in of " + result)

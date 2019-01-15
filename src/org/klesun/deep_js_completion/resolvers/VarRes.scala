@@ -33,7 +33,6 @@ object VarRes {
         .filter(usage => !Objects.equals(usage, decl))
         .filter(usage => Objects.equals(decl, usage.resolve()))
       val duration = (System.nanoTime - t1) / 1e9d
-      //Console.println("zhopa findVarUsages " + duration + " " + decl.getContainingFile.getName + " " + substr(decl.getText, 0, 10))
       result
     }
   }
@@ -54,7 +53,7 @@ case class VarRes(ctx: IExprCtx) {
       .take(1).toList.lift(0)
   }
 
-  private def resolveAssignment(usage: JSExpression): GenTraversableOnce[JSType] = {
+  private def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
     Option(usage.getParent).toList.flatMap {
       case superRef: JSReferenceExpression => first(() => None
         // someVar.push(value)
@@ -67,7 +66,7 @@ case class VarRes(ctx: IExprCtx) {
           .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
         // someVar.someKey = 123
         , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
-          .flatMap(name => resolveAssignment(superRef).toList
+          .flatMap(name => resolveAssignmentTo(superRef).toList
             .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
             .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
       )
@@ -75,7 +74,7 @@ case class VarRes(ctx: IExprCtx) {
       case indexing: JSIndexedPropertyAccessExpression =>
         Option(indexing.getQualifier)
           .filter(qual => usage equals qual).toList
-          .flatMap(qual => resolveAssignment(indexing))
+          .flatMap(qual => resolveAssignmentTo(indexing))
           .map(valT => {
             val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
             DeepIndexSignatureImpl(keyt, valT, Some(indexing))
@@ -195,11 +194,12 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(qualT => {
         val keyTOpt = Option(ref.getReferenceName)
           .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-        Mt.getKey(qualT, keyTOpt)
+        val result = Mt.getKey(qualT, keyTOpt)
+        result
       })
 
     val fromUsages = findRefUsages(ref)
-      .flatMap(usage => resolveAssignment(usage))
+      .flatMap(usage => resolveAssignmentTo(usage))
 
     val fromMainDecl = Option(ref.resolve()).toList
       .flatMap(psi => resolveFromMainDecl(psi))

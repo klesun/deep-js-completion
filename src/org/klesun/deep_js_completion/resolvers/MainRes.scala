@@ -102,7 +102,6 @@ object MainRes {
           None
         }
       case _ => {
-        //Console.println("zhopa unsupported expr " + expr.getClass + " " + expr.getText)
         None
       }
     }
