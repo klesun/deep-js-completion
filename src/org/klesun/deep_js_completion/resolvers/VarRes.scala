@@ -54,44 +54,42 @@ case class VarRes(ctx: IExprCtx) {
       .take(1).toList.lift(0)
   }
 
-  private def resolveFromUsage(usage: JSReferenceExpression): GenTraversableOnce[JSType] = {
-    def resolveParent(parent: PsiElement): GenTraversableOnce[JSType] = {
-      parent match {
-        case superRef: JSReferenceExpression => first(() => None
-          // someVar.push(value)
-          , () => Option(superRef.getReferenceName)
-            .filter(refName => List("push", "unshift").contains(refName))
-            .flatMap(refName => Option(superRef.getParent))
-            .flatMap(cast[JSCallExpression](_))
-            .flatMap(call => call.getArguments.lift(0))
-            .flatMap(value => ctx.findExprType(value))
-            .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
-          // someVar.someKey = 123
-          , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
-            .flatMap(name => Option(superRef.getParent).toList
-              .flatMap(parent => resolveParent(parent))
-              .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
-              .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
-        )
-        // someVar[i] = value
-        case indexing: JSIndexedPropertyAccessExpression => Option(indexing.getParent).toList
-          .flatMap(parent => resolveParent(parent))
+  private def resolveAssignment(usage: JSExpression): GenTraversableOnce[JSType] = {
+    Option(usage.getParent).toList.flatMap {
+      case superRef: JSReferenceExpression => first(() => None
+        // someVar.push(value)
+        , () => Option(superRef.getReferenceName)
+          .filter(refName => List("push", "unshift").contains(refName))
+          .flatMap(refName => Option(superRef.getParent))
+          .flatMap(cast[JSCallExpression](_))
+          .flatMap(call => call.getArguments.lift(0))
+          .flatMap(value => ctx.findExprType(value))
+          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+        // someVar.someKey = 123
+        , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
+          .flatMap(name => resolveAssignment(superRef).toList
+            .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
+            .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
+      )
+      // someVar[i] = value
+      case indexing: JSIndexedPropertyAccessExpression =>
+        Option(indexing.getQualifier)
+          .filter(qual => usage equals qual).toList
+          .flatMap(qual => resolveAssignment(indexing))
           .map(valT => {
             val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
-            new DeepIndexSignatureImpl(keyt, valT, Some(indexing))
+            DeepIndexSignatureImpl(keyt, valT, Some(indexing))
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
-        // var someVar = null;
-        // someVar = initializeSomething()
-        case usage: JSDefinitionExpression => Option(usage.getParent)
+      // var someVar = null;
+      // someVar = initializeSomething()
+      case usage: JSDefinitionExpression =>
+        Option(usage.getParent)
           .flatMap(cast[JSAssignmentExpression](_))
           .flatMap(defi => Option(defi.getROperand))
           .flatMap(expr => ctx.findExprType(expr))
-        case _ => List[JSType]()
-      }
-    }
-    Option(usage.getParent).toList
-      .flatMap(parent => resolveParent(parent))
+      case _ => List[JSType]()
+    }: GenTraversableOnce[JSType]
   }
 
   private def parseTypePsi(typePsi: JSTypeDeclaration, generics: Map[String, () => Array[JSType]]): GenTraversableOnce[JSType] = {
@@ -154,7 +152,7 @@ case class VarRes(ctx: IExprCtx) {
     }))
   }
 
-  // may be defined in a different file unlike resolveFromUsage()
+  // may be defined in a different file unlike resolveAssignment()
   private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
     psi match {
       case para: JSParameter => ArgRes(ctx).resolve(para)
@@ -201,7 +199,7 @@ case class VarRes(ctx: IExprCtx) {
       })
 
     val fromUsages = findRefUsages(ref)
-      .flatMap(usage => resolveFromUsage(usage))
+      .flatMap(usage => resolveAssignment(usage))
 
     val fromMainDecl = Option(ref.resolve()).toList
       .flatMap(psi => resolveFromMainDecl(psi))
