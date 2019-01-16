@@ -70,10 +70,10 @@ object MainRes {
           .toList.asJava
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true, -1))
       case obje: JSObjectLiteralExpression =>
-        val props: util.List[TypeMember] = obje.getProperties.map(p => {
+        val props: util.List[TypeMember] = obje.getProperties.flatMap(p => {
           val getValue = () => Option(p.getValue)
             .flatMap(expr => ctx.findExprType(expr))
-          Mt.mkProp(p.getName, () => getValue(), Some(p))
+          Option(p.getName).map(n => Mt.mkProp(n, () => getValue(), Some(p)))
         }).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
       case bina: JSBinaryExpression =>
