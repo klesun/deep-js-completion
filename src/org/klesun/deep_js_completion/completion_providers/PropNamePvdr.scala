@@ -139,6 +139,11 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     val startTime = System.nanoTime
     val suggestions = Option(nullPsi)
       .flatMap(ref => Option(ref.getQualifier))
+      .filter(qual => {
+        // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
+        val qualEnd = qual.getTextOffset + qual.getTextLength
+        qualEnd < parameters.getOriginalPosition.getTextOffset
+      })
       .flatMap(qual => search.findExprType(qual))
       .toList.flatMap(typ => getProps(typ, nullPsi.getProject))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
