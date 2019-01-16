@@ -39,14 +39,14 @@ case class JSDeepFunctionTypeImpl(
 
   def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function"
 
-  override def toString(): String = {
-    val funcCtx = FuncCtx(new SearchCtx())
-    val exprCtx = ExprCtx(funcCtx, new FakePsiElement with JSExpression {
-      override def getParent: PsiElement = null
-      override def replace(jsExpression: JSExpression): JSExpression = ???
-    }, 0)
-    "() => " + getReturnType(exprCtx)
-  }
+//  override def toString(): String = {
+//    val funcCtx = FuncCtx(new SearchCtx())
+//    val exprCtx = ExprCtx(funcCtx, new FakePsiElement with JSExpression {
+//      override def getParent: PsiElement = null
+//      override def replace(jsExpression: JSExpression): JSExpression = ???
+//    }, 0)
+//    "() => " + getReturnType(exprCtx)
+//  }
 
   def getReturnType(ctx: IExprCtx): GenTraversableOnce[JSType] = {
     returnTypeGetter(ctx.withClosure(funcPsi, closureCtx))

@@ -2,6 +2,7 @@ package org.klesun.lang
 
 import com.intellij.psi.PsiElement
 
+import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 /** provides some core functions needed for IDEA plugin development */
@@ -79,6 +80,19 @@ object Lang {
     }
     matching
   }
+
+//  def findChildrenImpl[T <: PsiElement : ClassTag](parent: PsiElement, occurrences: mutable.HashSet[PsiElement]): List[T] = {
+//    occurrences.add(parent)
+//    parent.getChildren
+//      .filter(c => !occurrences.contains(c))
+//      .flatMap(c => findChildrenImpl[T](c, occurrences))
+//      .++(List(parent).flatMap(cast[T](_)))
+//      .toList
+//  }
+//
+//  def findChildren[T <: PsiElement : ClassTag](parent: PsiElement): List[T] = {
+//    findChildrenImpl(parent, new mutable.HashSet[PsiElement]())
+//  }
 
   def findChildren[T <: PsiElement : ClassTag](parent: PsiElement): List[T] = {
     parent.getChildren

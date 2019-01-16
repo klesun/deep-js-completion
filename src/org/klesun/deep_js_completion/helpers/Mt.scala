@@ -9,6 +9,7 @@ import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
+import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -24,7 +25,7 @@ import scala.util.Try
 object Mt {
   def mergeTypes(types: GenTraversableOnce[JSType]): Option[JSType] = {
     if (types.size > 1) {
-      val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.asJava)
+      val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.distinct.asJava)
       Some(mt)
     } else {
       types.toList.lift(0)
@@ -60,13 +61,21 @@ object Mt {
   }
 
   private def getRecordKey(objT: JSRecordType, litVals: List[String]): GenTraversableOnce[JSType] = {
+    val isNamed = (keyName: String) => !("" equals keyName) && !keyName.matches("\\d.*")
     objT.getTypeMembers.asScala
       .flatMap {
         case mem: PropertySignature => Option(mem.getType)
           .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
+          .filter(t => {
+            val isEs5PromiseThen = (mem.getMemberName equals "then") &&
+              (t + "").endsWith("): Promise<TResult1|TResult2>")
+            // es2015 d.ts has some weird return type - Promise<TResult1 | TResult2>,
+            // it results in irrelevant options, so I'm overriding it here
+            !isEs5PromiseThen
+          })
         case idx: IndexSignature =>
           val propMatches = getAllLiteralValues(idx.getMemberParameterType) match {
-            case Some(strvals) => strvals.isEmpty || strvals.intersect(litVals).nonEmpty
+            case Some(strvals) => !litVals.exists(isNamed) || !strvals.exists(isNamed) || strvals.intersect(litVals).nonEmpty
             case None => true
           }
           if (propMatches) Some(idx.getMemberType) else None
@@ -93,6 +102,7 @@ object Mt {
       case objT: JSRecordType => getRecordKey(objT, litVals)
       case typedef: JSTypeBaseImpl => getRecordKey(typedef.asRecordType(), litVals)
       case other => {
+        //Console.println("Unsupported key qualifier type - " + other.getClass + " " + other)
         None
       }
     }

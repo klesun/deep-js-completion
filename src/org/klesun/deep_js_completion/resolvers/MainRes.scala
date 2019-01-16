@@ -55,7 +55,8 @@ object MainRes {
           .flatMap(arrT => {
             val keyTOpt = Option(indx.getIndexExpression)
               .flatMap(qua => ctx.findExprType(qua))
-            Mt.getKey(arrT, keyTOpt)
+            val result = Mt.getKey(arrT, keyTOpt)
+            result
           })
       case func: JSFunctionExpression =>
         val returns = getReturns(func)

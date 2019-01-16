@@ -44,24 +44,27 @@ class SearchCtx(
             None
         } else if (exprToResult.contains(expr)) {
             if (exprToResult(expr).isEmpty && debug) {
-                Console.println("!!! circular reference\n" + getStackTrace)
+                //Console.println("!!! circular reference\n" + getStackTrace)
             }
             exprToResult(expr)
         } else {
             exprToResult.put(expr, None)
             val resolved = MainRes.resolveIn(expr, exprCtx)
-            val result = Mt.mergeTypes(resolved ++ getWsType(expr))
+            if (debug) {
+                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
+            }
+            val result = if (resolved.nonEmpty) {
+                resolved
+            } else {
+                val builtIn = getWsType(expr)
+                if (debug) {
+                    println(indent + "built-in of " + builtIn)
+                }
+                Mt.mergeTypes(resolved ++ builtIn)
+            }
             if (result.isDefined) {
                 exprToResult.put(expr, result)
                 typeToDecl.put(result.get, expr)
-            }
-            if (debug) {
-                /** @debug */
-                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350) + " ||| in " + expr.getParent.getText)
-                if (resolved.isEmpty) {
-                    /** @debug */
-                    println(indent + "built-in of " + result)
-                }
             }
             result
         }

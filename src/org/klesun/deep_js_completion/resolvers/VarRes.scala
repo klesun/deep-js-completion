@@ -9,7 +9,7 @@ import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.impl.{JSDestructuringParameterImpl, JSVariableBaseImpl}
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.psi.PsiElement
+import com.intellij.psi.{PsiElement, ResolveResult}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
@@ -195,7 +195,15 @@ case class VarRes(ctx: IExprCtx) {
       case prop: JSDefinitionExpression => Option(prop.getExpression)
         .flatMap(expr => ctx.findExprType(expr))
       case tsFunc: TypeScriptFunctionSignature => {
-        resolveDtsFunc(tsFunc)
+        if (("then" equals tsFunc.getName) &&
+            List("lib.es2015.promise.d.ts", "lib.es5.d.ts").contains(tsFunc.getContainingFile.getName)
+        ) {
+          // es2015 d.ts has some weird return type - Promise<TResult1 | TResult2>,
+          // it results in irrelevant options, so I'm overriding it here
+          None
+        } else {
+          resolveDtsFunc(tsFunc)
+        }
       }
       case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
         .flatMap(expr => ctx.findExprType(expr))
@@ -204,6 +212,13 @@ case class VarRes(ctx: IExprCtx) {
         //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
         None
     }
+  }
+
+  private def getDeclarations(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
+    // it would be nice to always use es2018 instead of es2015 somehow
+    val psis = ref.multiResolve(false).flatMap(r => Option(r.getElement))
+      .toList
+    psis
   }
 
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
@@ -219,7 +234,7 @@ case class VarRes(ctx: IExprCtx) {
     val fromUsages = findRefUsages(ref)
       .flatMap(usage => resolveAssignmentTo(usage))
 
-    val fromMainDecl = Option(ref.resolve()).toList
+    val fromMainDecl = getDeclarations(ref).toList
       .flatMap(psi => resolveFromMainDecl(psi))
 
     Mt.mergeTypes(deepRef ++ fromUsages ++ fromMainDecl)
