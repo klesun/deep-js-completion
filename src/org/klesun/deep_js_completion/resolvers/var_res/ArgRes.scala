@@ -290,7 +290,7 @@ case class ArgRes(ctx: IExprCtx) {
     Mt.mergeTypes(types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty())))
   }
 
-  private def getKlesunRequiresArgType(func: JSFunction): Option[JSType] = Option(func.getParent)
+  private def getKlesunRequiresArgType(func: JSFunction): GenTraversableOnce[JSType] = Option(func.getParent)
     .flatMap(cast[JSAssignmentExpression](_))
     .flatMap(assi => Option(assi.getDefinitionExpression))
     .flatMap(defi => Option(defi.getExpression))
@@ -300,7 +300,7 @@ case class ArgRes(ctx: IExprCtx) {
     .flatMap(cast[JSCallExpression](_))
     .filter(call => Option(call.getMethodExpression)
       .map(e => e.getText).getOrElse("").equals("klesun.requires"))
-    .flatMap(call => call.getArguments.toList.lift(0))
+    .flatMap(call => call.getArguments.toList.lift(0)).toList
     .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))

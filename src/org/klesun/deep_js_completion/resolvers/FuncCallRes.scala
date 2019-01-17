@@ -54,8 +54,8 @@ case class FuncCallRes(ctx: IExprCtx) {
   def resolveBuiltInFuncCall(funcName: String, args: List[JSExpression]): Option[JSType] = {
     if (List("require").contains(funcName)) {
       val types = args.lift(0).toList.flatMap(arg => {
-        PathStrGoToDecl.getReferencedFile(arg)
-          .flatMap(file => ArgRes(ctx).resolveCommonJsFormatDef(file)) ++
+        PathStrGoToDecl.getReferencedFile(arg).toList
+          .flatMap(file => ArgRes(ctx.subCtxEmpty()).resolveCommonJsFormatDef(file)) ++
         cast[JSLiteralExpression](arg)
           .map(lit => JSDeepModuleTypeImpl(lit.getValue + "", EInstType.Required))
       })
