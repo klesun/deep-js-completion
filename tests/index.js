@@ -104,6 +104,20 @@ remapping.map;
         };
     }, 100);
 
+    /**
+     * @param obj1 = {a: 5, b: 6}
+     * @param obj2 = {
+     *     c: 7,
+     *     d: 8,
+     * }
+     */
+    let doStuff = (obj1, obj2) => {
+        // should suggest: a, b
+        obj1.;
+        // should suggest: c, d
+        obj2.c;
+    };
+
     let collectSmfNotes = function(smf) {
         let notes = [];
         notes.push({zalupa:123});
@@ -283,7 +297,6 @@ remapping.map;
         ssrLineNumbers[0].isOnlySsr;
     };
 })();
-
 
 let huj = {
     wrap: () => ({wrap1: 5, wrap2: 6}),

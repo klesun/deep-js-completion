@@ -3,15 +3,16 @@ package org.klesun.deep_js_completion.resolvers.var_res
 import java.util
 import java.util.Objects
 
+import com.intellij.lang.javascript.JavascriptLanguage
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
+import com.intellij.lang.javascript.psi.impl.{JSExpressionStatementImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.{PsiElement, PsiFile, PsiWhiteSpace}
+import com.intellij.psi.{PsiElement, PsiFile, PsiFileFactory, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
@@ -375,6 +376,16 @@ case class ArgRes(ctx: IExprCtx) {
               ++ resolveRequireJsFormatDef(file)
             ).lift(0)
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
+        }))
+      .orElse("""^\s*=\s*([\s\S]+)$""".r.findFirstMatchIn(expr)
+        .flatMap(found => {
+          val expr = found.group(1)
+          val psiFile = PsiFileFactory.getInstance(caretPsi.getProject)
+            .createFileFromText(JavascriptLanguage.INSTANCE, "(" + expr + ")")
+          Option(psiFile.getFirstChild)
+            .flatMap(cast[JSExpressionStatementImpl](_))
+            .flatMap(st => Option(st.getExpression))
+            .flatMap(expr => ctx.subCtxEmpty().findExprType(expr))
         }))
   }
 
