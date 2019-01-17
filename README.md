@@ -46,3 +46,9 @@ _______________________
 ![image](https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png)
 
 Reference module or a var in jsdoc comment.
+_______________________
+
+![image](https://user-images.githubusercontent.com/5202330/51289122-f257cb80-19f6-11e9-93dc-349430fa6a40.png)
+
+Use any valid js expression after the `=` to describe the type, including function calls, property access, Promise `await` and so on...
+In the `require('ModuleName.js')` you can just type the name of the file, without full path, if there is just one file with such name in your project.

@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.15.001</version>
+  <version>2019.01.17.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -14,7 +14,8 @@ Currently in BETA testing stage
 <p>
 As you may know, by default Webstorm suggests <em>any</em> property ever defined in
 your project when you ask for completion in <code>someVar.</code> no matter in what context.</p>
-<p>You may check the “Only type-based completion” flag in settings, but you will
+<p>
+You may check the “Only type-based completion” flag in settings, but you will
 quickly notice that there is no completion in some places that could have it.
 </p>
 <p>
@@ -28,28 +29,36 @@ would in some static-typed language with the help of type inference and doc-comm
 Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion">deep-assoc-completion</a>, most features work same way
 </p>
 <hr>
-<p><img src="https://user-images.githubusercontent.com/5202330/50491395-c90cd680-0a1a-11e9-9510-fa996c8924ed.png" alt="image"></p>
+<img src="https://user-images.githubusercontent.com/5202330/50491395-c90cd680-0a1a-11e9-9510-fa996c8924ed.png" alt="image">
 <p>Infer property list in a <code>Promise.then</code> inside <code>map</code> from result of a function defined in other module.</p>
 <hr>
-<p><img src="https://user-images.githubusercontent.com/5202330/50492068-28201a80-0a1e-11e9-946f-7525aebd59ca.png" alt=""></p>
+<img src="https://user-images.githubusercontent.com/5202330/50492068-28201a80-0a1e-11e9-946f-7525aebd59ca.png" alt="">
 <p>Take args passed to the function into account.</p>
 <hr>
-<p><img src="https://user-images.githubusercontent.com/5202330/50492169-c01e0400-0a1e-11e9-9eff-44d2cfebe09b.png" alt="image"></p>
+<img src="https://user-images.githubusercontent.com/5202330/50492169-c01e0400-0a1e-11e9-9eff-44d2cfebe09b.png" alt="image">
 <p>Infer anonymous function arg type based on what it is called with inside another function.</p>
 <hr>
-<p><img src="https://user-images.githubusercontent.com/5202330/50492329-a4ffc400-0a1f-11e9-93dd-2cc3a5ea6fa2.png" alt="image"></p>
+<img src="https://user-images.githubusercontent.com/5202330/50492329-a4ffc400-0a1f-11e9-93dd-2cc3a5ea6fa2.png" alt="image">
 <p>Infer function arg type based on usage in current file (great for private helper functions you define to split code).</p>
 <hr>
-<p><img src="https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png" alt="image"></p>
+<img src="https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png" alt="image">
 <p>Reference module or a var in jsdoc comment.</p>
+<hr>
+<img src="https://user-images.githubusercontent.com/5202330/51289122-f257cb80-19f6-11e9-93dc-349430fa6a40.png" alt="image">
+<p>
+Use any valid js expression after the <code>=</code> to describe the type, including function calls, property access, Promise <code>await</code> and so on...
+In the <code>require('ModuleName.js')</code> you can just type the name of the file, without full path, if there is just one file with such name in your project.
+</p>
 
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Add `for (el in arr)` support</li>
-  <li>Fix: do not miss TS Property member type when taking a key from oject type</li>
-  <li>Fix: distinct between key assignment to a reference and a reference being used as a key</li>
-  <li>Provide lambda req, res arg completion in express app().get/post</li>
+  <li>Resolve `require("SomeCls.js")` by just file name in the docs</li>
+  <li>Support any valid js expression in `@param arg = Any.valid().expr[0]`</li>
+  <li>Fix: stop mistakenly suggest completion when caret is _inside_ a qualifier (In a Promise().then chain for example)</li>
+  <li>Fix: stop mistakenly suggest completion when caret is _inside_ a qualifier (In a Promise().then chain for example)</li>
+  <li>Ignore Promise().then d.ts signature from es2015. For some reason it specifies the type before then() as one of possible return values - this caused a lot of confusing irrelevant completion options</li>
+  <li>Support destructuring in function arguments</li>
     ]]>
   </change-notes>
 
