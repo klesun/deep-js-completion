@@ -26,7 +26,11 @@ case class ExprCtx(
   }
 
   override def findExprType(expr: JSExpression): Option[JSType] = {
-    funcCtx.getSearch.findExprType(expr, subExpr(expr, funcCtx))
+    if (expr == null) {
+      None
+    } else {
+      funcCtx.getSearch.findExprType(expr, subExpr(expr, funcCtx))
+    }
   }
 
   override def func(): IFuncCtx = funcCtx

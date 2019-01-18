@@ -77,7 +77,7 @@ object MainRes {
         }).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
       case bina: JSBinaryExpression =>
-        val types = List(bina.getLOperand, bina.getROperand)
+        val types = (Option(bina.getLOperand) ++ Option(bina.getROperand))
           .flatMap(op => ctx.findExprType(op))
         Mt.mergeTypes(types)
       case lit: JSLiteralExpressionImpl =>
@@ -93,7 +93,8 @@ object MainRes {
         Mt.mergeTypes(List(tern.getThen, tern.getElse)
           .flatMap(expr => ctx.findExprType(expr)))
       case par: JSParenthesizedExpression =>
-        ctx.findExprType(par.getInnerExpression)
+        Option(par.getInnerExpression)
+          .flatMap(inner => ctx.findExprType(inner))
       case pref: JSPrefixExpression =>
         if ("JS:AWAIT_KEYWORD" equals (pref.getOperationSign + "")) {
           Option(pref.getExpression)
