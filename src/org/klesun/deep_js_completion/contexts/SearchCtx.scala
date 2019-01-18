@@ -1,7 +1,7 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.{JSExpression, JSType}
+import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.Lang._
@@ -20,9 +20,23 @@ class SearchCtx(
     val exprToResult = scala.collection.mutable.Map[JSExpression, Option[JSType]]()
 
     private def getWsType(expr: JSExpression) = {
-        // TODO: seems that it should be called differently . getExpressionType() looses array element/object key types
-        Option(JSTypeEvaluator.getExpressionType(expr))
-          .flatMap(res => Option(res.getType))
+        val isProp = cast[JSReferenceExpression](expr)
+          .exists(ref => ref.getQualifier != null)
+        val isMeth = cast[JSCallExpression](expr)
+          .flatMap(call => Option(call.getMethodExpression))
+          .flatMap(cast[JSReferenceExpression](_))
+          .exists(ref => ref.getQualifier != null)
+
+        if (isProp || isMeth) {
+            // no point resolving object member access: firstly, it searches all members with same name in project if qualifier
+            // could not be resolved - that's bad, and secondly, we already resolved the object itself by the moment nevertheless
+            None
+        } else {
+            // would be nice to find a better function - that would
+            // try _guessing_ declaration by just member name
+            Option(JSTypeEvaluator.getExpressionType(expr))
+              .flatMap(res => Option(res.getType))
+        }
     }
 
     def findExprType(expr: JSExpression): Option[JSType] = {

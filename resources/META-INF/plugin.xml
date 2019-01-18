@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.17.001</version>
+  <version>2019.01.18.002</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -53,6 +53,8 @@ In the <code>require('ModuleName.js')</code> you can just type the name of the f
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>Fix: do not use built-in resolution that gives you any random prop in the project with same name</li>
+  <li>Fix: add null checks to parenthesized expression and ternary operator</li>
   <li>Resolve `require("SomeCls.js")` by just file name in the docs</li>
   <li>Support any valid js expression in `@param arg = Any.valid().expr[0]`</li>
   <li>Fix: stop mistakenly suggest completion when caret is _inside_ a qualifier (In a Promise().then chain for example)</li>

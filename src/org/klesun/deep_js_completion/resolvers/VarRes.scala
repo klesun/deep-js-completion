@@ -215,8 +215,14 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   private def getDeclarations(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
+    val isProp = ref.getQualifier != null
     // it would be nice to always use es2018 instead of es2015 somehow
     val psis = ref.multiResolve(false).flatMap(r => Option(r.getElement))
+      .filter(decl => {
+        val isDts = Option(decl.getContainingFile).exists(f => f.getName endsWith ".d.ts")
+        // skip definitions that are actually just random props in project with same name
+        !isProp || isDts
+      })
       .toList
     psis
   }
