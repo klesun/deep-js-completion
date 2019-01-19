@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.18.002</version>
+  <version>2019.01.19.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -49,10 +49,15 @@ Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927
 Use any valid js expression after the <code>=</code> to describe the type, including function calls, property access, Promise <code>await</code> and so on...
 In the <code>require('ModuleName.js')</code> you can just type the name of the file, without full path, if there is just one file with such name in your project.
 </p>
-
+<hr/>
+<img src="https://user-images.githubusercontent.com/5202330/51420104-7640bd80-1b87-11e9-9f61-98ada29dae32.png" alt="image">
+<p>
+Reference unexposed vars defined in a file using magical <code>at('FileName.js').varName</code> expression in js doc.
+</p>
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>Support `@param session = at('GdsSessions.es6').makeSessionRecord()` where you sepcify a var named `makeSessionRecord` defined in `GdsSessions.es6`</li>
   <li>Fix: do not use built-in resolution that gives you any random prop in the project with same name</li>
   <li>Fix: add null checks to parenthesized expression and ternary operator</li>
   <li>Resolve `require("SomeCls.js")` by just file name in the docs</li>

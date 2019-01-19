@@ -52,3 +52,8 @@ _______________________
 
 Use any valid js expression after the `=` to describe the type, including function calls, property access, Promise `await` and so on...
 In the `require('ModuleName.js')` you can just type the name of the file, without full path, if there is just one file with such name in your project.
+_______________________
+
+![image](https://user-images.githubusercontent.com/5202330/51420104-7640bd80-1b87-11e9-9f61-98ada29dae32.png)
+
+Reference unexposed vars defined in a file using magical `at('FileName.js').varName` expression in js doc.
