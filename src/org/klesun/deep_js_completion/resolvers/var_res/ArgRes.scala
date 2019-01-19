@@ -365,7 +365,7 @@ case class ArgRes(ctx: IExprCtx) {
           findVarDecl(caretPsi, varName)
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
         }))
-      .orElse("""^\s*=\s*from\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+      .orElse("""^\s*=\s*require\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
         .flatMap(found => {
           val path = found.group(1)
           val isFuncCall = !found.group(2).equals("")

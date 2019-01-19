@@ -3,14 +3,18 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
+import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.impl.{JSDestructuringParameterImpl, JSVariableBaseImpl}
+import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.psi.{PsiElement, ResolveResult}
+import com.intellij.lang.javascript.psi.util.JSTreeUtil.JSScopeNamesUsages
+import com.intellij.psi.{PsiElement, PsiFile, ResolveResult}
 import org.klesun.deep_js_completion.contexts.IExprCtx
+import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
@@ -23,7 +27,13 @@ import scala.collection.JavaConverters._
 
 object VarRes {
 
+  def findVarAt(file: PsiFile, name: String): GenTraversableOnce[JSVariable] = {
+    JSScopeNamesCache.findNamedElementsInStubScope(name, file).asScala
+      .flatMap(cast[JSVariable](_))
+  }
+
   def findVarUsages(decl: PsiElement, name: String): List[JSReferenceExpression] = {
+    // maybe this could be used instead: JSScopeNamesUsages
     if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts"))) {
       List()
     } else {
@@ -227,22 +237,37 @@ case class VarRes(ctx: IExprCtx) {
     psis
   }
 
+  // an imaginary at('Module.js') function used in docs to
+  // specify any var defined in the file with the following name
+  private def assertAtModuleEpxr(qual: JSExpression): GenTraversableOnce[PsiFile] = {
+    cast[JSCallExpression](qual)
+      .filter(call => Option(call.getMethodExpression).exists(meth => meth.getText equals "at"))
+      .flatMap(call => call.getArguments.lift(0)).toList
+      .flatMap(PathStrGoToDecl.getReferencedFile)
+  }
+
   def resolve(ref: JSReferenceExpression): Option[JSType] = {
-    val deepRef = Option(ref.getQualifier)
-      .flatMap(qual => ctx.findExprType(qual))
-      .flatMap(qualT => {
-        val keyTOpt = Option(ref.getReferenceName)
-          .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-        val result = Mt.getKey(qualT, keyTOpt)
-        result
-      })
-
-    val fromUsages = findRefUsages(ref)
-      .flatMap(usage => resolveAssignmentTo(usage))
-
-    val fromMainDecl = getDeclarations(ref).toList
-      .flatMap(psi => resolveFromMainDecl(psi))
-
-    Mt.mergeTypes(deepRef ++ fromUsages ++ fromMainDecl)
+    Mt.mergeTypes(
+      Option(ref.getQualifier)
+        .flatMap(qual => ctx.findExprType(qual))
+        .flatMap(qualT => {
+          val keyTOpt = Option(ref.getReferenceName)
+            .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+          val result = Mt.getKey(qualT, keyTOpt)
+          result
+        })
+      ++
+      Option(ref.getReferenceName).toList
+        .flatMap(varName => Option(ref.getQualifier).toList
+          .flatMap(assertAtModuleEpxr)
+          .flatMap(file => findVarAt(file, varName))
+          .flatMap(vari => resolveMainDeclVar(vari)))
+      ++
+      findRefUsages(ref)
+        .flatMap(usage => resolveAssignmentTo(usage))
+      ++
+      getDeclarations(ref).toList
+        .flatMap(psi => resolveFromMainDecl(psi))
+    )
   }
 }
