@@ -3,16 +3,13 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
-import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor
-import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.impl.{JSDestructuringParameterImpl, JSVariableBaseImpl}
+import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.util.JSTreeUtil.JSScopeNamesUsages
-import com.intellij.psi.{PsiElement, PsiFile, ResolveResult}
+import com.intellij.psi.{PsiElement, PsiFile}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
@@ -163,6 +160,17 @@ case class VarRes(ctx: IExprCtx) {
     }))
   }
 
+  private def resolveDestructEl(el: PsiElement): GenTraversableOnce[JSType] = {
+    el match {
+      // let doStuff = ({a, b}) => {...};
+      case para: JSDestructuringParameterImpl => ArgRes(ctx).resolve(para)
+      // let {a, b} = getObj();
+      case obj: JSDestructuringElement => Option(obj.getInitializer)
+        .flatMap(qual => ctx.findExprType(qual)).toList
+      case _ => None
+    }
+  }
+
   private def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
     Option(dest.getInitializer)
       .flatMap(expr => ctx.findExprType(expr)) ++
@@ -171,17 +179,20 @@ case class VarRes(ctx: IExprCtx) {
         val types = Option(prop.getParent)
           .flatMap(cast[JSDestructuringObject](_))
           .flatMap(obj => Option(obj.getParent)).toList
-          .flatMap {
-            // let doStuff = ({a, b}) => {...};
-            case para: JSDestructuringParameterImpl => ArgRes(ctx).resolve(para)
-            // let {a, b} = getObj();
-            case obj: JSDestructuringElement => Option(obj.getInitializer)
-                .flatMap(qual => ctx.findExprType(qual)).toList
-            case _ => None
-          }
+          .flatMap(resolveDestructEl)
           .flatMap(qualT => {
             val keyTOpt = Option(dest.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+            Mt.getKey(qualT, keyTOpt)
+          })
+        Mt.mergeTypes(types)
+      case arr: JSDestructuringArray =>
+        val types = Option(arr.getParent).toList
+          .flatMap(el => resolveDestructEl(el))
+          .flatMap(qualT => {
+            val keyTOpt = Option(arr.getElements.indexOf(dest))
+              .filter(idx => idx > -1)
+              .map(idx => new JSStringLiteralTypeImpl(idx + "", true, JSTypeSource.EMPTY))
             Mt.getKey(qualT, keyTOpt)
           })
         Mt.mergeTypes(types)
@@ -227,13 +238,12 @@ case class VarRes(ctx: IExprCtx) {
   private def getDeclarations(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
     val isProp = ref.getQualifier != null
     // it would be nice to always use es2018 instead of es2015 somehow
-    val psis = ref.multiResolve(false).flatMap(r => Option(r.getElement))
+    val psis = Option(ref.resolve()).toList
       .filter(decl => {
         val isDts = Option(decl.getContainingFile).exists(f => f.getName endsWith ".d.ts")
         // skip definitions that are actually just random props in project with same name
         !isProp || isDts
       })
-      .toList
     psis
   }
 
