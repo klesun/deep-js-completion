@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.19.001</version>
+  <version>2019.01.21.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,15 +57,9 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Support `@param session = at('GdsSessions.es6').makeSessionRecord()` where you sepcify a var named `makeSessionRecord` defined in `GdsSessions.es6`</li>
-  <li>Fix: do not use built-in resolution that gives you any random prop in the project with same name</li>
-  <li>Fix: add null checks to parenthesized expression and ternary operator</li>
-  <li>Resolve `require("SomeCls.js")` by just file name in the docs</li>
-  <li>Support any valid js expression in `@param arg = Any.valid().expr[0]`</li>
-  <li>Fix: stop mistakenly suggest completion when caret is _inside_ a qualifier (In a Promise().then chain for example)</li>
-  <li>Fix: stop mistakenly suggest completion when caret is _inside_ a qualifier (In a Promise().then chain for example)</li>
-  <li>Ignore Promise().then d.ts signature from es2015. For some reason it specifies the type before then() as one of possible return values - this caused a lot of confusing irrelevant completion options</li>
-  <li>Support destructuring in function arguments</li>
+  <li>Support array destructuring in `for (let [k,v] of kvPairs) {...}`</li>
+  <li>Support return type generics in a tuple</li>
+  <li>Support array destructuring of func arg</li>
     ]]>
   </change-notes>
 
