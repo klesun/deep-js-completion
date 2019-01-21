@@ -3,6 +3,8 @@ package org.klesun.deep_js_completion.contexts
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSTypeEvaluator}
 import com.intellij.lang.javascript.psi.{JSExpression, JSType}
+import com.intellij.openapi.project.Project
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.Lang._
@@ -13,6 +15,7 @@ import scala.collection.JavaConverters._
 class SearchCtx(
     val maxDepth: Integer = 20,
     val debug: Boolean = false,
+    val project: Option[Project],
 ) {
 
     // for performance measurement
@@ -49,6 +52,13 @@ class SearchCtx(
       findExprType(expr, exprCtx)
     }
 
+    private def hasTypeInfo(resolved: Option[JSType]): Boolean = {
+        resolved.toList.flatMap(t =>
+            project.toList.flatMap(project =>
+                PropNamePvdr.getProps(t, project))
+        ).nonEmpty
+    }
+
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): Option[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
         if (debug) {
@@ -71,7 +81,7 @@ class SearchCtx(
             if (debug) {
                 println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
             }
-            val result = if (resolved.nonEmpty) {
+            val result = if (hasTypeInfo(resolved)) {
                 resolved
             } else {
                 val builtIn = getWsType(expr)

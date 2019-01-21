@@ -16,7 +16,7 @@ import org.klesun.lang.Lang._
 class DestrPropGoToDecl extends GotoDeclarationHandler {
   /** @param caretPsi nullable */
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
-    val search = new SearchCtx(40)
+    val search = new SearchCtx(40, project=Option(editor.getProject))
     Option(caretPsi)
       .flatMap(psi => Option(psi.getParent))
       .flatMap(cast[JSVariable](_))

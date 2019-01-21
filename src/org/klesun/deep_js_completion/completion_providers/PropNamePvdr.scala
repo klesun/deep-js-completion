@@ -106,7 +106,7 @@ object PropNamePvdr {
     Mt.flattenTypes(typ).flatMap(t => getFlatMems(t, project))
   }
 
-  private def getProps(typ: JSType, project: Project): List[PropertySignature] = {
+  def getProps(typ: JSType, project: Project): List[PropertySignature] = {
     val mems = getMems(typ, project)
     mems.toList.flatMap {
       case prop: PropertySignature => Some(prop)
@@ -134,7 +134,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
       .orNull
     val depth = getMaxDepth(parameters.isAutoPopup)
-    val search = new SearchCtx(depth)
+    val search = new SearchCtx(depth, project=Option(parameters.getEditor.getProject))
     val startTime = System.nanoTime
     val suggestions = Option(nullPsi)
       .flatMap(ref => Option(ref.getQualifier))
@@ -196,7 +196,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
 
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
     val depth = getMaxDepth(false)
-    val search = new SearchCtx(depth)
+    val search = new SearchCtx(depth, project=Option(editor.getProject))
 
     Option(caretPsi)
       .flatMap(leaf => Option(leaf.getParent))
