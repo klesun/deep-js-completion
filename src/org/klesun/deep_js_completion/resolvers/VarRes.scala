@@ -101,13 +101,26 @@ case class VarRes(ctx: IExprCtx) {
     }: GenTraversableOnce[JSType]
   }
 
+  private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
+    Option(varst.getParent)
+      .flatMap(cast[JSForInStatement](_))
+      .filter(st => st.isForEach)
+      .flatMap(st => Option(st.getCollectionExpression))
+      .flatMap(arrexpr => ctx.findExprType(arrexpr))
+      .flatMap(arrt => Mt.getKey(arrt, None))
+  }
+
   private def resolveDestructEl(el: PsiElement): GenTraversableOnce[JSType] = {
     el match {
       // let doStuff = ({a, b}) => {...};
       case para: JSDestructuringParameterImpl => ArgRes(ctx).resolve(para)
       // let {a, b} = getObj();
-      case obj: JSDestructuringElement => Option(obj.getInitializer)
-        .flatMap(qual => ctx.findExprType(qual)).toList
+      case obj: JSDestructuringElement =>
+        Option(obj.getInitializer)
+          .flatMap(qual => ctx.findExprType(qual)).toList ++
+        Option(obj.getParent).toList
+          .flatMap(cast[JSVarStatement](_))
+          .flatMap(st => resolveVarSt(st))
       case _ => None
     }
   }
@@ -115,7 +128,7 @@ case class VarRes(ctx: IExprCtx) {
   private def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
     Option(dest.getInitializer)
       .flatMap(expr => ctx.findExprType(expr)) ++
-    Option(dest.getParent).flatMap {
+    Option(dest.getParent).toList.flatMap {
       case prop: JSDestructuringShorthandedProperty =>
         val types = Option(prop.getParent)
           .flatMap(cast[JSDestructuringObject](_))
@@ -137,12 +150,7 @@ case class VarRes(ctx: IExprCtx) {
             Mt.getKey(qualT, keyTOpt)
           })
         Mt.mergeTypes(types)
-      case varst: JSVarStatement =>
-        Option(varst.getParent)
-          .flatMap(cast[JSForInStatement](_))
-          .flatMap(st => Option(st.getCollectionExpression))
-          .flatMap(arrexpr => ctx.findExprType(arrexpr))
-          .flatMap(arrt => Mt.getKey(arrt, None))
+      case varst: JSVarStatement => resolveVarSt(varst)
       case _ => None
     }
   }
