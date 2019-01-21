@@ -36,6 +36,7 @@ object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
+  val DEEP_PRIO = 200
 
   def getIcon = icon
 
@@ -69,7 +70,7 @@ object PropNamePvdr {
     val lookup = LookupElementBuilder.create(sourceElement, name)
       .bold().withIcon(getIcon)
       .withTypeText(typeStr, true)
-    PrioritizedLookupElement.withPriority(lookup, 200 - i)
+    PrioritizedLookupElement.withPriority(lookup, DEEP_PRIO - i)
   }
 
   def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
@@ -164,7 +165,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     val onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
 
     result.runRemainingContributors(parameters, otherSourceResult => {
-      val lookup = otherSourceResult.getLookupElement
+      var lookup = otherSourceResult.getLookupElement
       // 99.0 (group 94) - inferred type property completion
       // 5.0 (group 6) - property completion guessed from usage
       val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
@@ -186,6 +187,13 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         }
       }
       if (keepBuiltIn) {
+        val protos = List("constructor", "hasOwnProperty", "isPrototypeOf",
+          "propertyIsEnumerable", "toLocaleString", "toString", "valueOf")
+        lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
+          .filter(prio => protos.contains(prio.getLookupString))
+          .map(prio => prio.getDelegate)
+          .map(dele => PrioritizedLookupElement.withPriority(dele, DEEP_PRIO - 198))
+          .getOrElse(lookup)
         builtInSuggestions.add(lookup)
       }
     })
