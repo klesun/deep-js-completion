@@ -14,7 +14,8 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
-import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
+import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.{getGenericTypeFromArg, parseTypePsi}
+import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
@@ -100,66 +101,6 @@ case class VarRes(ctx: IExprCtx) {
     }: GenTraversableOnce[JSType]
   }
 
-  private def parseTypePsi(typePsi: JSTypeDeclaration, generics: Map[String, () => Array[JSType]]): GenTraversableOnce[JSType] = {
-    typePsi match {
-      case arrts: TypeScriptArrayType =>
-        val elts = Option(arrts.getType).toList
-          .flatMap(eltPsi => parseTypePsi(eltPsi, generics))
-        val arrt = new JSArrayTypeImpl(Mt.mergeTypes(elts).orNull, JSTypeSource.EMPTY)
-        Some(arrt)
-      case sints: TypeScriptSingleType =>
-        val fqn = sints.getQualifiedTypeName
-        if (generics.contains(fqn)) {
-          generics(fqn).apply()
-        } else {
-          val clsType = JSTypeUtils.createType(sints.getQualifiedTypeName, JSTypeSource.EMPTY)
-          val clsGenerics: java.util.List[JSType] = sints.getTypeArguments.map(
-            gena => Mt.mergeTypes(parseTypePsi(gena, generics))
-              .getOrElse(JSUnknownType.JS_INSTANCE)
-          ).toList.asJava
-          Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
-        }
-      case _ => None
-    }
-  }
-
-  private def getGenericTypeFromArg(typePsi: JSTypeDeclaration, getArgt: () => GenTraversableOnce[JSType], generic: String): GenTraversableOnce[JSType] = {
-    typePsi match {
-      case union: TypeScriptUnionOrIntersectionType =>
-        union.getTypes.flatMap(subTypePsi =>
-          getGenericTypeFromArg(subTypePsi, getArgt, generic))
-      case obj: TypeScriptObjectType =>
-        val getSubType = () => getArgt().toList.flatMap(t => Mt.getKey(t, None))
-        obj.getIndexSignatures.flatMap(sig => getGenericTypeFromArg(sig.getType, getSubType, generic))
-      case sints: TypeScriptSingleType =>
-        val fqn = sints.getQualifiedTypeName
-        if (generic equals fqn) {
-          getArgt()
-        } else {
-          None
-        }
-      case _ => None
-    }
-  }
-
-  private def resolveDtsFunc(tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
-    val genericPsis = tsFunc.getTypeParameters
-    val args = tsFunc.getParameters
-    val rtPsiOpt = Option(tsFunc.getReturnTypeElement)
-    rtPsiOpt.map(rtPsi => new JSDeepFunctionTypeImpl(tsFunc, ctx.subCtxEmpty().func(), callCtx => {
-      val generics: Map[String, () => Array[JSType]] = genericPsis
-        .flatMap(psi => Option(psi.getName))
-        .map(generic => generic -> (() => {
-          args.zipWithIndex.flatMap({case (argPsi, i) => Option(argPsi.getTypeElement)
-            .flatMap(cast[TypeScriptType](_))
-            .toList.flatMap(tst => getGenericTypeFromArg(
-              tst, () => callCtx.func().getArg(i), generic)
-            )})
-        })).toMap
-      parseTypePsi(rtPsi, generics)
-    }))
-  }
-
   private def resolveDestructEl(el: PsiElement): GenTraversableOnce[JSType] = {
     el match {
       // let doStuff = ({a, b}) => {...};
@@ -223,7 +164,7 @@ case class VarRes(ctx: IExprCtx) {
           // it results in irrelevant options, so I'm overriding it here
           None
         } else {
-          resolveDtsFunc(tsFunc)
+          GenericRes(ctx).resolveFunc(tsFunc)
         }
       }
       case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)

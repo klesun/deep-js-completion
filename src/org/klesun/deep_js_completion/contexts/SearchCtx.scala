@@ -1,10 +1,14 @@
 package org.klesun.deep_js_completion.contexts
 
-import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSTypeEvaluator}
+import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.Lang._
+
+import scala.collection.{GenTraversable, GenTraversableOnce}
+import scala.collection.JavaConverters._
 
 class SearchCtx(
     val maxDepth: Integer = 20,

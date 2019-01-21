@@ -2,11 +2,16 @@ package org.klesun.deep_js_completion.helpers
 
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
+import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import com.intellij.psi.search.EverythingGlobalScope
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.getMems
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang
@@ -40,6 +45,8 @@ object Mt {
       case mt: JSCompositeTypeImpl => {
         mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
       }
+      case mt: JSUnionOrIntersectionType =>
+        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
       case _ => List(t)
     }
   }
@@ -118,6 +125,19 @@ object Mt {
         case _ => None
       }
     mergeTypes(retTs)
+  }
+
+  def asGeneric(objt: JSType, project: Project): GenTraversableOnce[JSGenericTypeImpl] = {
+    Mt.flattenTypes(objt)
+      .flatMap {
+        case gen: JSGenericTypeImpl => Some(gen)
+        case arr: JSArrayType => Option(arr.asGenericType())
+        case tupt: JSTupleTypeImpl =>
+          val elt = Mt.mergeTypes(tupt.getTypes.asScala).getOrElse(JSUnknownType.JS_INSTANCE)
+          val fqnType = JSTypeUtils.createType("Array", JSTypeSource.EMPTY)
+          Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, fqnType, List(elt).asJava))
+        case _ => None
+      }
   }
 
   def unwrapPromise(promiset: JSType): Option[JSType] = {

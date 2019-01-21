@@ -72,25 +72,19 @@ object PropNamePvdr {
     PrioritizedLookupElement.withPriority(lookup, 200 - i)
   }
 
-  def getMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
-    val mems = typ match {
-      case objT: JSRecordType => objT.getTypeMembers.asScala
-      // JSTypeBaseImpl should already cover that
-      case arrT: JSArrayType =>
-        val genT = arrT.asGenericType().asRecordType()
-        genT.getTypeMembers.asScala
-      case arrT: JSTupleTypeImpl =>
-        JSClassResolver.getInstance().findClassesByQName("Array", new EverythingGlobalScope(project)).asScala
-          .flatMap(cast[TypeScriptInterfaceImpl](_))
-          .toList.flatMap(ifc => ifc.getMembers.asScala)
-          .flatMap(cast[TypeMember](_))
-      case mt: JSUnionOrIntersectionType =>
-        mt.getTypes.asScala.flatMap(t => getMems(t, project)).toList
-      case mt: JSGenericTypeImpl =>
+  def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
+    val genMems = Mt.asGeneric(typ, project).toList
+      .flatMap(mt => {
         val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
-        JSClassResolver.getInstance().findClassesByQName(fqn, new EverythingGlobalScope(project)).asScala
+        val scope = new EverythingGlobalScope(project)
+        val tsMems = JSClassResolver.getInstance().findClassesByQName(fqn, scope).asScala
           .toList.flatMap(ifc => ifc.getMembers.asScala)
           .flatMap(cast[TypeMember](_))
+        // I suspect just asRecordType() would be enough
+        mt.asRecordType().getTypeMembers.asScala ++ tsMems
+      })
+    var mems = typ match {
+      case objT: JSRecordType => objT.getTypeMembers.asScala
       case mt: JSTypeBaseImpl =>
         // when you specify class with jsdoc for example - JSTypeImpl
         mt.asRecordType().getTypeMembers.asScala
@@ -99,12 +93,17 @@ object PropNamePvdr {
         //println("Unsupported typ " + typ.getClass + " " + typ)
         List()
     }
+    mems = mems ++ genMems
     mems.map {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
         Mt.mkProp(sig.getMemberName, () => Option(sig.getType), Some(sig))
       case rest => rest
     }
+  }
+
+  def getMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
+    Mt.flattenTypes(typ).flatMap(t => getFlatMems(t, project))
   }
 
   private def getProps(typ: JSType, project: Project): List[PropertySignature] = {

@@ -7,6 +7,8 @@ import com.intellij.lang.javascript.JavascriptLanguage
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.impl.{JSExpressionStatementImpl, JSReferenceExpressionImpl}
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureImpl
+import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
@@ -22,9 +24,10 @@ import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang.cast
 
-import scala.collection.GenTraversableOnce
+import scala.collection.{GenTraversable, GenTraversableOnce}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import org.klesun.lang.Lang._
 
 object ArgRes {
 
@@ -147,6 +150,28 @@ object ArgRes {
     ))
     extension ++ Mkt.inst("http.ServerResponse")
   }
+
+  private def resolveTsFuncArgArg(objt: Option[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, inlineFuncArgOrder: Int, argOrder: Int): GenTraversableOnce[JSType] = {
+    new GenericRes(ctx).resolveFuncArg(objt, ctx, inlineFuncArgOrder, tsFuncDecl)
+      .toList.flatMap(cast[JSFunctionTypeImpl](_))
+      .flatMap(funct => funct.getParameters.asScala.lift(argOrder))
+      .flatMap(arg => Option(arg.getType))
+  }
+
+  private def resolvePrivateFuncUsages(inlineFuncArgOrder: Int, callerDef: JSDefinitionExpression, ctx: IExprCtx, argOrder: Int): GenTraversableOnce[JSType] = {
+    Option(callerDef.getParent)
+      .flatMap(cast[JSAssignmentExpression](_))
+      .flatMap(defi => Option(defi.getROperand))
+      .flatMap(cast[JSFunction](_)).toList
+      .flatMap(callerFunc => callerFunc.getParameters.lift(inlineFuncArgOrder)
+        .flatMap(callerArg => cast[JSParameter](callerArg))
+        .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
+        .flatMap(usage => Option(usage.getParent)
+          .flatMap(cast[JSCallExpression](_))
+          .filter(call => usage eq call.getMethodExpression))
+        .flatMap(call => call.getArguments.lift(argOrder))
+        .flatMap(value => ctx.subCtxEmpty().findExprType(value)))
+  }
 }
 
 case class ArgRes(ctx: IExprCtx) {
@@ -157,64 +182,71 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(argList => Option(argList.getArguments.indexOf(func)).toList
         .flatMap(inlineFuncArgOrder => Option(true)
           .flatMap(ok => Option(argList.getParent))
-          .flatMap(cast[JSCallExpression](_))
-          .flatMap(call => Option(call.getMethodExpression))
-          .flatMap(cast[JSReferenceExpressionImpl](_))
-          .toList
-          .flatMap(ref =>
-            Option(ref.getQualifier)
-              .filter(expr => argOrder == 0)
-              .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
-              .flatMap(expr => ctx.findExprType(expr))
-              .flatMap(arrt => Mt.getKey(arrt, None)).toList
-              ++
-            Option(ref.getQualifier)
-              .filter(expr => argOrder == 1)
-              .filter(expr => List("reduce").contains(ref.getReferencedName))
-              .flatMap(expr => ctx.findExprType(expr))
-              .flatMap(arrt => Mt.getKey(arrt, None)).toList
-              ++
-            Option(ref.getQualifier)
-              // func arg order does not matter, it may be 0 or 1, maybe something else as well
-              .filter(expr => List("use", "get", "post").contains(ref.getReferencedName))
-              .flatMap(expr => ctx.findExprType(expr)).toList
-              .flatMap(t => Mt.flattenTypes(t))
-              .flatMap(cast[JSDeepModuleTypeImpl](_))
-              .filter(modt => ("express" equals modt.name) && (modt.instType equals EInstType.Called))
-              .flatMap(arrt => {
-                if (argOrder == 0) {
-                  // request obj
-                  makeExpressRqType()
-                } else if (argOrder == 1) {
-                  // response obj
-                  makeExpressRsType()
-                } else {
-                  None
+          .flatMap(cast[JSCallExpression](_)).toList
+          .flatMap(call => Option(call.getMethodExpression).toList
+
+            .flatMap(cast[JSReferenceExpressionImpl](_))
+            .flatMap(ref => {
+              val objt = Option(ref.getQualifier)
+                .flatMap(obj => ctx.findExprType(obj))
+              val outerCallCtx = ctx.subCtxDirect(call)
+
+              // completion on arg of anonymous function based on what is passed to it
+              // i should use _deep_ logic instead of ref.resolve() one day...
+              (Option(ref.resolve()).toList
+                .flatMap {
+                  // TODO: test and uncomment
+                  //case tsFuncDecl: TypeScriptFunctionSignatureImpl => {
+                  //  resolveTsFuncArgArg(objt, tsFuncDecl, outerCallCtx, inlineFuncArgOrder, argOrder)
+                  //}
+                  case callerDef: JSDefinitionExpression =>
+                    resolvePrivateFuncUsages(inlineFuncArgOrder, callerDef, ctx.subCtxEmpty(), argOrder)
+                  case _ => None
                 }
-              }: GenTraversableOnce[JSType])
+
+              // following built-in functions are hardcoded and probably
+              // are not needed once generic parsing works properly...
+              // should check and remove each of them one by one from here
+
               ++
               Option(ref.getQualifier)
                 .filter(expr => argOrder == 0)
-                .filter(expr => List("then").contains(ref.getReferencedName))
+                .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
+                .flatMap(expr => ctx.findExprType(expr))
+                .flatMap(arrt => Mt.getKey(arrt, None)).toList
+                ++
+              Option(ref.getQualifier)
+                .filter(expr => argOrder == 1)
+                .filter(expr => List("reduce").contains(ref.getReferencedName))
+                .flatMap(expr => ctx.findExprType(expr))
+                .flatMap(arrt => Mt.getKey(arrt, None)).toList
+                ++
+              Option(ref.getQualifier)
+                // func arg order does not matter, it may be 0 or 1, maybe something else as well
+                .filter(expr => List("use", "get", "post").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr)).toList
-                .flatMap(promiset => Mt.unwrapPromise(promiset))
-              ++
-              // completion on arg of anonymous function based on what is passed to it
-              // i should use _deep_ logic instead of ref.resolve() one day...
-              Option(ref.resolve())
-                .flatMap(cast[JSDefinitionExpression](_))
-                .flatMap(callerDef => Option(callerDef.getParent))
-                .flatMap(cast[JSAssignmentExpression](_))
-                .flatMap(defi => Option(defi.getROperand))
-                .flatMap(cast[JSFunction](_)).toList
-                .flatMap(callerFunc => callerFunc.getParameters.lift(inlineFuncArgOrder)
-                  .flatMap(callerArg => cast[JSParameter](callerArg))
-                  .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
-                  .flatMap(usage => Option(usage.getParent)
-                    .flatMap(cast[JSCallExpression](_))
-                    .filter(call => usage eq call.getMethodExpression))
-                  .flatMap(call => call.getArguments.lift(argOrder))
-                  .flatMap(value => ctx.subCtxEmpty().findExprType(value)))
+                .flatMap(t => Mt.flattenTypes(t))
+                .flatMap(cast[JSDeepModuleTypeImpl](_))
+                .filter(modt => ("express" equals modt.name) && (modt.instType equals EInstType.Called))
+                .flatMap(arrt => {
+                  if (argOrder == 0) {
+                    // request obj
+                    makeExpressRqType()
+                  } else if (argOrder == 1) {
+                    // response obj
+                    makeExpressRsType()
+                  } else {
+                    None
+                  }
+                }: GenTraversableOnce[JSType])
+                ++
+                Option(ref.getQualifier)
+                  .filter(expr => argOrder == 0)
+                  .filter(expr => List("then").contains(ref.getReferencedName))
+                  .flatMap(expr => ctx.findExprType(expr)).toList
+                  .flatMap(promiset => Mt.unwrapPromise(promiset))
+              )
+            })
           )
         )
       )
