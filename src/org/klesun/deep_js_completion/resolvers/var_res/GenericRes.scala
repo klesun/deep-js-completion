@@ -23,6 +23,13 @@ object GenericRes {
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
         val arrt = new JSArrayTypeImpl(Mt.mergeTypes(elts).orNull, JSTypeSource.EMPTY)
         Some(arrt)
+      case arrts: TypeScriptTupleType =>
+        val els = arrts.getElements
+          .map(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
+          .map(oneElTypes => Mt.mergeTypes(oneElTypes).getOrElse(JSUnknownType.JS_INSTANCE))
+
+        val tupt = new JSTupleTypeImpl(JSTypeSource.EMPTY, els.toList.asJava, true, -1)
+        Some(tupt)
       case functs: TypeScriptFunctionType =>
         val rettypes = parseTypePsi(functs.getReturnTypeElement, generics)
         val rett = Mt.mergeTypes(rettypes).getOrElse(JSUnknownType.JS_INSTANCE)
