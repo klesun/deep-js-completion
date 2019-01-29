@@ -6,9 +6,8 @@ import java.util.Objects
 import com.intellij.lang.javascript.JavascriptLanguage
 import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.impl.{JSExpressionStatementImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureImpl
-import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
+import com.intellij.lang.javascript.psi.impl.{JSExpressionStatementImpl, JSReferenceExpressionImpl}
 import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
@@ -24,10 +23,9 @@ import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang.cast
 
-import scala.collection.{GenTraversable, GenTraversableOnce}
+import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import org.klesun.lang.Lang._
 
 object ArgRes {
 
@@ -337,7 +335,7 @@ case class ArgRes(ctx: IExprCtx) {
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
 
-  private def getDocTagComment(docTag: JSDocTag) = {
+  def getDocTagComment(docTag: JSDocTag) = {
     var next = docTag.getNextSibling
     val tokens = new ListBuffer[PsiElement]
     while (next != null && (
@@ -347,9 +345,11 @@ case class ArgRes(ctx: IExprCtx) {
       tokens.append(next)
       next = next.getNextSibling
     }
-    tokens.map(t => t.getText).mkString("")
+    val expr = tokens.map(t => t.getText).mkString("")
       .replaceAll("""\n\s*\* """, "\n")
       .replaceAll("""\*\/$""", "")
+      .replaceAll(""".*?=\s*""", "= ")
+    expr
   }
 
   private def findVarDecl(caretPsi: PsiElement, varName: String): Option[JSType] = {
@@ -388,7 +388,7 @@ case class ArgRes(ctx: IExprCtx) {
     Mt.mergeTypes(types)
   }
 
-  private def parseDocExpr(caretPsi: PsiElement, expr: String): Iterable[JSType] = {
+  def parseDocExpr(caretPsi: PsiElement, expr: String): Iterable[JSType] = {
     Option(null)
       .orElse("""^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
         .flatMap(found => {

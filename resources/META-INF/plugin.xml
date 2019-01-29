@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.21.001</version>
+  <version>2019.01.30.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -24,32 +24,32 @@ For example, arguments of functions like <code>map</code>, <code>filter</code>, 
 </p>
 <p>
 So, that’s why I’m writing this plugin - to make it possible to code in js as comfortable as you
-would in some static-typed language with the help of type inference and doc-comments.</p>
+would in some static-typed language with the help of type inference and doc-comments (<a href="https://github.com/klesun/deep-js-completion/issues/10">format</a>).</p>
 <p>
 Based on my other PHP plugin, <a href="https://plugins.jetbrains.com/plugin/9927-deep-assoc-completion">deep-assoc-completion</a>, most features work same way
 </p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/50491395-c90cd680-0a1a-11e9-9510-fa996c8924ed.png" alt="image">
 <p>Infer property list in a <code>Promise.then</code> inside <code>map</code> from result of a function defined in other module.</p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/50492068-28201a80-0a1e-11e9-946f-7525aebd59ca.png" alt="">
 <p>Take args passed to the function into account.</p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/50492169-c01e0400-0a1e-11e9-9eff-44d2cfebe09b.png" alt="image">
 <p>Infer anonymous function arg type based on what it is called with inside another function.</p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/50492329-a4ffc400-0a1f-11e9-93dd-2cc3a5ea6fa2.png" alt="image">
 <p>Infer function arg type based on usage in current file (great for private helper functions you define to split code).</p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/50492452-5acb1280-0a20-11e9-93f7-75ff4308daa1.png" alt="image">
 <p>Reference module or a var in jsdoc comment.</p>
-<hr>
+<br/><hr>
 <img src="https://user-images.githubusercontent.com/5202330/51289122-f257cb80-19f6-11e9-93dc-349430fa6a40.png" alt="image">
 <p>
 Use any valid js expression after the <code>=</code> to describe the type, including function calls, property access, Promise <code>await</code> and so on...
 In the <code>require('ModuleName.js')</code> you can just type the name of the file, without full path, if there is just one file with such name in your project.
 </p>
-<hr/>
+<br/><hr/>
 <img src="https://user-images.githubusercontent.com/5202330/51420104-7640bd80-1b87-11e9-9f61-98ada29dae32.png" alt="image">
 <p>
 Reference unexposed vars defined in a file using magical <code>at('FileName.js').varName</code> expression in js doc.
@@ -57,9 +57,8 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Support array destructuring in `for (let [k,v] of kvPairs) {...}`</li>
-  <li>Support return type generics in a tuple</li>
-  <li>Support array destructuring of func arg</li>
+  <li>Allow specifying var type with an `=` in jsdoc comment above declaration with either `@type varName = somOtherVar` or `@var varName = someOtherVar`</li>
+  <li>Provide completion from `Promise.all` and any other `.d.ts` func having `Iterable<T>` in args</li>
     ]]>
   </change-notes>
 

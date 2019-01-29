@@ -7,6 +7,7 @@ import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
+import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.{PsiElement, PsiFile}
@@ -14,9 +15,8 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
-import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.{getGenericTypeFromArg, parseTypePsi}
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
@@ -102,6 +102,10 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
+    varst.getChildren.flatMap(cast[JSDocComment](_))
+      .flatMap(doc => doc.getTags)
+      .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag))
+      .flatMap(txt => ArgRes(ctx.subCtxEmpty()).parseDocExpr(varst, txt)) ++
     Option(varst.getParent)
       .flatMap(cast[JSForInStatement](_))
       .filter(st => st.isForEach)
