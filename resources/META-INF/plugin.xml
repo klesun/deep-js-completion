@@ -57,7 +57,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Allow specifying var type with an `=` in jsdoc comment above declaration with either `@type varName = somOtherVar` or `@var varName = someOtherVar`</li>
+  <li>Allow specifying var type with an `=` in jsdoc comment above declaration with either `@type varName = somOtherVar` or `@var varName = someOtherVar` (not just the @param)</li>
   <li>Provide completion from `Promise.all` and any other `.d.ts` func having `Iterable<T>` in args</li>
     ]]>
   </change-notes>

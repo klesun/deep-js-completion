@@ -25,9 +25,15 @@ import scala.collection.JavaConverters._
 
 object VarRes {
 
-  def findVarAt(file: PsiFile, name: String): GenTraversableOnce[JSVariable] = {
-    JSScopeNamesCache.findNamedElementsInStubScope(name, file).asScala
-      .flatMap(cast[JSVariable](_))
+  def findVarAt(file: PsiElement, name: String): GenTraversableOnce[JSVariable] = {
+    val els = JSScopeNamesCache.findNamedElementsInStubScope(name, file).asScala
+    cast[JSElement](file).toList.flatMap(file => {
+      val hap = JSScopeNamesCache.getOrCreateNamesForScope(file)
+      els.flatMap(cast[JSVariable](_)) ++ hap.getValues
+        .flatMap(cast[JSVariable](_))
+        .flatMap(ref => Option(ref.getInitializer))
+        .flatMap(v => findVarAt(v, name))
+    })
   }
 
   def findVarUsages(decl: PsiElement, name: String): List[JSReferenceExpression] = {
