@@ -1,17 +1,16 @@
 package org.klesun.deep_js_completion.resolvers.var_res
 
-import com.intellij.lang.javascript.psi.{JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.{getGenericTypeFromArg, parseTypePsi, resolveTypeExpr}
+import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.resolveTypeExpr
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.Lang.cast
 
-import scala.collection.{GenTraversableOnce, mutable}
+import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 
 object GenericRes {
@@ -32,7 +31,7 @@ object GenericRes {
         Some(tupt)
       case functs: TypeScriptFunctionType =>
         val rettypes = parseTypePsi(functs.getReturnTypeElement, generics)
-        val rett = Mt.mergeTypes(rettypes).getOrElse(JSUnknownType.JS_INSTANCE)
+        val rett: JSType = Mt.mergeTypes(rettypes).getOrElse(JSUnknownType.JS_INSTANCE)
         val argtypes = functs.getParameters.map(arg => {
           val argtypes = Option(arg.getTypeElement)
             .flatMap(cast[TypeScriptType](_)).toList
@@ -40,7 +39,10 @@ object GenericRes {
           val argt = Mt.mergeTypes(argtypes).getOrElse(JSUnknownType.JS_INSTANCE)
           new JSParameterTypeDecoratorImpl(argt, arg.isOptional, arg.isRest, true)
         })
-        val funct = new JSFunctionTypeImpl(JSTypeSource.EMPTY, argtypes.toList.asJava, rett)
+        val src: JSTypeSource = JSTypeSource.EMPTY
+        val argts: java.util.List[JSParameterTypeDecorator] = argtypes.toList
+          .map(a => a.asInstanceOf[JSParameterTypeDecorator]).asJava
+        val funct = new JSFunctionTypeImpl(src, argts, rett)
         Some(funct)
       case sints: TypeScriptSingleType =>
         val fqn = sints.getQualifiedTypeName
@@ -71,6 +73,10 @@ object GenericRes {
         val fqn = sints.getQualifiedTypeName
         if (generic equals fqn) {
           getArgt()
+        } else if ("Iterable" equals fqn) {
+          val getSubType = () => getArgt().toList.flatMap(t => Mt.getKey(t, None))
+          sints.getTypeArguments.headOption.toList
+            .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
         } else {
           None
         }
