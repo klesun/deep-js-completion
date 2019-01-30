@@ -60,8 +60,14 @@ object MainRes {
           })
       case func: JSFunctionExpression =>
         val returns = getReturns(func)
-        Some(new JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
-          Mt.mergeTypes(returns.flatMap(r => callCtx.findExprType(r)))
+        Some(JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
+          Mt.mergeTypes(returns.flatMap(r => {
+            val isAsync = func.getText.startsWith("async ")
+            val rett = callCtx.findExprType(r)
+            if (!isAsync) rett else {
+              rett.toList.map(t => Mt.wrapPromise(t))
+            }
+          }))
         ))
       case arr: JSArrayLiteralExpression =>
         val typeTuple = arr.getExpressions
