@@ -411,13 +411,15 @@ case class ArgRes(ctx: IExprCtx) {
         }))
       .orElse("""^\s*=\s*([\s\S]+)$""".r.findFirstMatchIn(expr)
         .flatMap(found => {
-          val expr = found.group(1)
+          // making it async, because IDEA does not recognize await keyword otherwise if any
+          val expr = "(async () => (" + found.group(1) + "))()"
           val psiFile = PsiFileFactory.getInstance(caretPsi.getProject)
-            .createFileFromText(JavascriptLanguage.INSTANCE, "(" + expr + ")")
+            .createFileFromText(JavascriptLanguage.INSTANCE, expr)
           Option(psiFile.getFirstChild)
             .flatMap(cast[JSExpressionStatementImpl](_))
             .flatMap(st => Option(st.getExpression))
             .flatMap(expr => ctx.subCtxEmpty().findExprType(expr))
+            .map(promiset => Mt.unwrapPromise(promiset).getOrElse(promiset)) // since we wrapped it in async
         }))
   }
 
