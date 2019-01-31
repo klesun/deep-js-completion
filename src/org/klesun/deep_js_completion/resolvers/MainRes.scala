@@ -12,7 +12,7 @@ import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
+import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -51,7 +51,9 @@ object MainRes {
         } else {
           Option(newex.getMethodExpression)
             .flatMap(exp => ctx.findExprType(exp)).toList
-            .flatMap(t => Mt.getNewInst(t, ctx.subCtxDirect(newex)))
+            .flatMap(Mt.flattenTypes)
+            .flatMap(cast[JSDeepClassType](_))
+            .flatMap(clst => clst.getNewInstType(ctx.subCtxDirect(newex)))
         }
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)

@@ -6,17 +6,19 @@ import java.util.Objects
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.{PsiElement, PsiFile}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
-import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
@@ -193,6 +195,8 @@ case class VarRes(ctx: IExprCtx) {
         }
       }
       case func: JSFunction => resolveFunc(func)
+      case cls: JSClass[StubElement[_]] => cast[JSClass[StubElement[_]]](cls)
+        .map(cls => JSDeepClassType(cls, ctx.subCtxEmpty()))
       case _ =>
         //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
         None

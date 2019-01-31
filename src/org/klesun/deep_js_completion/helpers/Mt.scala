@@ -130,19 +130,6 @@ object Mt {
     mergeTypes(retTs)
   }
 
-  def getNewInst(clst: JSType, newCtx: IExprCtx): GenTraversableOnce[JSType] = {
-    Mt.flattenTypes(clst)
-      .flatMap {
-        case named: JSLocalNamedType =>
-          Option(named.getLocalScope).toList
-            .flatMap(scope => JSScopeNamesCache.findNamedElementsInStubScope(named.getQualifiedName.getName, scope).asScala)
-            .flatMap(cast[JSClass[StubElement[_]]](_))
-            .flatMap(cls => JSDeepClassType(cls, newCtx.subCtxEmpty()).getNewInstType(newCtx))
-        case module: JSDeepModuleTypeImpl => None
-        case _ => None
-      }
-  }
-
   def asGeneric(objt: JSType, project: Project): GenTraversableOnce[JSGenericTypeImpl] = {
     Mt.flattenTypes(objt)
       .flatMap {
