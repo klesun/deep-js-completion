@@ -4,14 +4,18 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
+import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList
+import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
+import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang._
 
+import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -29,7 +33,7 @@ object MainRes {
   }
 
   def resolveIn(expr: JSExpression, ctx: IExprCtx): Option[JSType] = {
-    expr match {
+    val result: GenTraversableOnce[JSType] = expr match {
       case newex: JSNewExpression =>
         if (Option(newex.getMethodExpression).forall(ref => ref.getText equals "Promise")) {
           val types = newex.getArguments.lift(0)
@@ -45,7 +49,9 @@ object MainRes {
             .map(valuet => Mt.wrapPromise(valuet))
           Mt.mergeTypes(types)
         } else {
-          None
+          Option(newex.getMethodExpression)
+            .flatMap(exp => ctx.findExprType(exp)).toList
+            .flatMap(t => Mt.getNewInst(t, ctx.subCtxDirect(newex)))
         }
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
@@ -62,7 +68,8 @@ object MainRes {
         val returns = getReturns(func)
         Some(JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
           Mt.mergeTypes(returns.flatMap(r => {
-            val isAsync = func.getText.startsWith("async ")
+            val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
+              .exists(lst => lst.hasModifier(ModifierType.ASYNC))
             val rett = callCtx.findExprType(r)
             if (!isAsync) rett else {
               rett.toList.map(t => Mt.wrapPromise(t))
@@ -113,5 +120,6 @@ object MainRes {
         None
       }
     }
+    Mt.mergeTypes(result)
   }
 }

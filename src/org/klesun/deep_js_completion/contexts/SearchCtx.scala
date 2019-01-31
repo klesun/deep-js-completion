@@ -23,7 +23,7 @@ class SearchCtx(
 
     // for very basic GoTo
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
-    // caching - to not re-resolve same expression 100500 times
+    // caching - to not re-resolve same expression 100500 times, also prevents many recursion cases
     val exprToResult = scala.collection.mutable.Map[JSExpression, Option[JSType]]()
 
     private def getWsType(expr: JSExpression) = {
@@ -86,7 +86,7 @@ class SearchCtx(
             } else {
                 val builtIn = getWsType(expr)
                 if (debug) {
-                    println(indent + "built-in of " + builtIn)
+                    println(indent + "built-in of " + builtIn.map(t => t + " " + t.getClass))
                 }
                 Mt.mergeTypes(resolved ++ builtIn)
             }

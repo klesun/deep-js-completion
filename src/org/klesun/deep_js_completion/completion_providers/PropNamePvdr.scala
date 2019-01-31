@@ -86,7 +86,7 @@ object PropNamePvdr {
       })
     var mems = typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala
-      case mt: JSTypeBaseImpl =>
+      case mt: JSType =>
         // when you specify class with jsdoc for example - JSTypeImpl
         mt.asRecordType().getTypeMembers.asScala
       case _ =>

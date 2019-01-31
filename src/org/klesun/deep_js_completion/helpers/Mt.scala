@@ -3,17 +3,20 @@ package org.klesun.deep_js_completion.helpers
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
-import com.intellij.lang.javascript.psi.resolve.JSClassResolver
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.resolve.{JSClassResolver, JSScopeNamesCache, JSTypeEvaluator}
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
-import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
+import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils, JSVariable}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
+import com.intellij.psi.stubs.StubElement
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.getMems
 import org.klesun.deep_js_completion.contexts.IExprCtx
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl}
+import org.klesun.deep_js_completion.resolvers.VarRes
+import org.klesun.deep_js_completion.structures._
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
@@ -107,7 +110,7 @@ object Mt {
         tupResultOpt.orElse(arrFallback)
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
       case objT: JSRecordType => getRecordKey(objT, litVals)
-      case typedef: JSTypeBaseImpl => getRecordKey(typedef.asRecordType(), litVals)
+      case typedef: JSType => getRecordKey(typedef.asRecordType(), litVals)
       case other => {
         //Console.println("Unsupported key qualifier type - " + other.getClass + " " + other)
         None
@@ -125,6 +128,19 @@ object Mt {
         case _ => None
       }
     mergeTypes(retTs)
+  }
+
+  def getNewInst(clst: JSType, newCtx: IExprCtx): GenTraversableOnce[JSType] = {
+    Mt.flattenTypes(clst)
+      .flatMap {
+        case named: JSLocalNamedType =>
+          Option(named.getLocalScope).toList
+            .flatMap(scope => JSScopeNamesCache.findNamedElementsInStubScope(named.getQualifiedName.getName, scope).asScala)
+            .flatMap(cast[JSClass[StubElement[_]]](_))
+            .flatMap(cls => JSDeepClassType(cls, newCtx.subCtxEmpty()).getNewInstType(newCtx))
+        case module: JSDeepModuleTypeImpl => None
+        case _ => None
+      }
   }
 
   def asGeneric(objt: JSType, project: Project): GenTraversableOnce[JSGenericTypeImpl] = {

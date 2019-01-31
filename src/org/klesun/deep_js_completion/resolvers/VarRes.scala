@@ -135,7 +135,7 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
-  private def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
+  def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
     Option(dest.getInitializer)
       .flatMap(expr => ctx.findExprType(expr)) ++
     Option(dest.getParent).toList.flatMap {
@@ -165,6 +165,13 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
+  def resolveFunc(func: JSFunction): GenTraversableOnce[JSType] = {
+    Mt.mergeTypes(MainRes.getReturns(func)
+      .flatMap(expr => ctx.findExprType(expr))
+      .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
+        new util.ArrayList[JSParameterTypeDecorator](), rett)))
+  }
+
   // may be defined in a different file unlike resolveAssignment()
   private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
     psi match {
@@ -185,9 +192,7 @@ case class VarRes(ctx: IExprCtx) {
           GenericRes(ctx).resolveFunc(tsFunc)
         }
       }
-      case func: JSFunction => Mt.mergeTypes(MainRes.getReturns(func)
-        .flatMap(expr => ctx.findExprType(expr))
-        .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList[JSParameterTypeDecorator](), rett)))
+      case func: JSFunction => resolveFunc(func)
       case _ =>
         //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
         None
