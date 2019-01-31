@@ -59,6 +59,55 @@ class SearchCtx(
         ).nonEmpty
     }
 
+    private def getExprChain(ctxArg: ExprCtx): List[JSExpression] = {
+        var ctx = ctxArg
+        var chain: List[JSExpression] = List()
+        while (ctx != null) {
+            if (!chain.lastOption.contains(ctx.expr)) {
+                chain = List(ctx.expr) ++ chain
+            }
+            ctx = ctx.parent.orNull
+        }
+        chain
+    }
+
+    private def endsWith[T](superList: List[T], subList: List[T]): Boolean = {
+        var endsWith = true
+        var i = 0
+        while (i < subList.length && endsWith) {
+            if (i >= superList.length) {
+                endsWith = false
+            } else {
+                val left = superList(superList.size - i - 1)
+                val right = subList(subList.size - i - 1)
+                if (!left.equals(right)) {
+                    endsWith = false
+                }
+            }
+            i += 1
+        }
+        endsWith
+    }
+
+    private def isRecursion(ctx: ExprCtx) = {
+        // imagine sequence: a b c d e f g e f g
+        //                           ^_____^_____
+        // from my experience this assumption is right -  I
+        // treat any case where end repeats pre-end as recursion
+        var isRecursion = false
+        val psiTrace = getExprChain(ctx)
+        var i = 0
+        while (i < psiTrace.length / 2 && !isRecursion) {
+            val start = psiTrace.length - i * 2 - 2
+            val subList = psiTrace.slice(start, start + i + 1)
+            if (endsWith(psiTrace, subList)) {
+                isRecursion = true
+            }
+            i += 1
+        }
+        isRecursion
+    }
+
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): Option[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
         if (debug) {
@@ -69,6 +118,8 @@ class SearchCtx(
         if (exprCtx.depth > maxDepth) {
             None
         } else if (expressionsResolved >= 7500) {
+            None
+        } else if (isRecursion(exprCtx)) {
             None
         } else if (exprToResult.contains(expr)) {
             if (exprToResult(expr).isEmpty && debug) {
