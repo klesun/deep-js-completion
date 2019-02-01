@@ -81,7 +81,9 @@ class SearchCtx(
             if (debug) {
                 println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
             }
-            val result = if (hasTypeInfo(resolved)) {
+            // no point getting built-in type here, IDEA will show it itself
+            val isAtCaret = exprCtx.parent.isEmpty
+            val result = if (hasTypeInfo(resolved) || isAtCaret) {
                 resolved
             } else {
                 val builtIn = getWsType(expr)

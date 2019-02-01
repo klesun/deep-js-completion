@@ -167,8 +167,16 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
+  private def shouldTypedefBeIgnored(tsFunc: JSFunction): Boolean = {
+    // es2015 d.ts has some weird return type - Promise<TResult1 | TResult2>,
+    // it results in irrelevant options, so I'm overriding it here
+    ("then" equals tsFunc.getName) &&
+      List("lib.es2015.promise.d.ts", "lib.es5.d.ts").contains(tsFunc.getContainingFile.getName)
+  }
+
   def resolveFunc(func: JSFunction): GenTraversableOnce[JSType] = {
     Mt.mergeTypes(MainRes.getReturns(func)
+      .filter(ret => !shouldTypedefBeIgnored(func))
       .flatMap(expr => ctx.findExprType(expr))
       .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
         new util.ArrayList[JSParameterTypeDecorator](), rett)))
@@ -184,11 +192,7 @@ case class VarRes(ctx: IExprCtx) {
       case prop: JSDefinitionExpression => Option(prop.getExpression)
         .flatMap(expr => ctx.findExprType(expr))
       case tsFunc: TypeScriptFunctionSignature => {
-        if (("then" equals tsFunc.getName) &&
-            List("lib.es2015.promise.d.ts", "lib.es5.d.ts").contains(tsFunc.getContainingFile.getName)
-        ) {
-          // es2015 d.ts has some weird return type - Promise<TResult1 | TResult2>,
-          // it results in irrelevant options, so I'm overriding it here
+        if (shouldTypedefBeIgnored(tsFunc)) {
           None
         } else {
           GenericRes(ctx).resolveFunc(tsFunc)

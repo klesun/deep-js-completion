@@ -1,5 +1,7 @@
 package org.klesun.deep_js_completion.helpers
 
+import java.util
+
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
@@ -139,6 +141,9 @@ object Mt {
           val elt = Mt.mergeTypes(tupt.getTypes.asScala).getOrElse(JSUnknownType.JS_INSTANCE)
           val fqnType = JSTypeUtils.createType("Array", JSTypeSource.EMPTY)
           Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, fqnType, List(elt).asJava))
+        case funct: JSDeepFunctionTypeImpl =>
+          val fqnType = JSTypeUtils.createType("Function", JSTypeSource.EMPTY)
+          Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, fqnType, new util.ArrayList[JSType]()))
         case _ => None
       }
   }
