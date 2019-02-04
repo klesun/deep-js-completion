@@ -5,11 +5,9 @@ import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunct
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.EArgPsiType.EArgPsiType
 import org.klesun.deep_js_completion.helpers.Mt
-
-import scala.collection.GenTraversableOnce
 import org.klesun.lang.Lang._
 
-import scala.collection.JavaConverters._
+import scala.collection.GenTraversableOnce
 
 object EArgPsiType extends Enumeration {
   type EArgPsiType = Value
@@ -31,7 +29,7 @@ case class FuncCtx(
   def subCtxDirect(funcCall: JSCallExpression, findExprType: Function[JSExpression, GenTraversableOnce[JSType]]): FuncCtx = {
     val psiArgs = funcCall.getArguments
     val argGetters = psiArgs.map(psi => () =>
-        Mt.mergeTypes(cast[JSExpression](psi).toList
+        Mt.mergeTypes(cast[JSExpression](psi).itr
           .flatMap(arg => findExprType.apply(arg))
         ).getOrElse(JSAnyType.get(JSTypeSource.EMPTY))
     ).toList
@@ -42,7 +40,7 @@ case class FuncCtx(
     new FuncCtx(search, Some(this), None, List(), EArgPsiType.NONE)
   }
 
-  def findExprType(expr: JSExpression): Option[JSType] = {
+  def findExprType(expr: JSExpression): GenTraversableOnce[JSType] = {
     val exprCtx = new ExprCtx(this, expr, 0)
     search.findExprType(expr, exprCtx)
   }

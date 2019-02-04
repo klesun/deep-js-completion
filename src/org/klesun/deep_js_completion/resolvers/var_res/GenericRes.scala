@@ -11,6 +11,7 @@ import org.klesun.lang.Lang.cast
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
+import org.klesun.lang.Lang._
 
 
 object GenericRes {
@@ -18,7 +19,7 @@ object GenericRes {
   private def parseTypePsi(typePsi: JSTypeDeclaration, generics: Map[String, () => Array[JSType]]): GenTraversableOnce[JSType] = {
     typePsi match {
       case arrts: TypeScriptArrayType =>
-        val elts = Option(arrts.getType).toList
+        val elts = nit(arrts.getType)
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
         val arrt = new JSArrayTypeImpl(Mt.mergeTypes(elts).orNull, JSTypeSource.EMPTY)
         Some(arrt)
@@ -34,7 +35,7 @@ object GenericRes {
         val rett: JSType = Mt.mergeTypes(rettypes).getOrElse(JSUnknownType.JS_INSTANCE)
         val argtypes = functs.getParameters.map(arg => {
           val argtypes = Option(arg.getTypeElement)
-            .flatMap(cast[TypeScriptType](_)).toList
+            .flatMap(cast[TypeScriptType](_)).itr
             .flatMap(argts => parseTypePsi(argts, generics))
           val argt = Mt.mergeTypes(argtypes).getOrElse(JSUnknownType.JS_INSTANCE)
           new JSParameterTypeDecoratorImpl(argt, arg.isOptional, arg.isRest, true)
@@ -67,15 +68,15 @@ object GenericRes {
         union.getTypes.flatMap(subTypePsi =>
           GenericRes.getGenericTypeFromArg(subTypePsi, getArgt, generic))
       case obj: TypeScriptObjectType =>
-        val getSubType = () => getArgt().toList.flatMap(t => Mt.getKey(t, None))
+        val getSubType = () => getArgt().itr.flatMap(t => Mt.getKey(t, None))
         obj.getIndexSignatures.flatMap(sig => GenericRes.getGenericTypeFromArg(sig.getType, getSubType, generic))
       case sints: TypeScriptSingleType =>
         val fqn = sints.getQualifiedTypeName
         if (generic equals fqn) {
           getArgt()
         } else if ("Iterable" equals fqn) {
-          val getSubType = () => getArgt().toList.flatMap(t => Mt.getKey(t, None))
-          sints.getTypeArguments.headOption.toList
+          val getSubType = () => getArgt().itr.flatMap(t => Mt.getKey(t, None))
+          sints.getTypeArguments.headOption.itr
             .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
         } else {
           None
@@ -93,7 +94,7 @@ object GenericRes {
     val methGenericPsis = tsFunc.getTypeParameters
     val ifcGenericPsis = Option(tsFunc.getParent)
       .flatMap(objPsi => Option(objPsi.getParent))
-      .flatMap(cast[TypeScriptInterface](_)).toList
+      .flatMap(cast[TypeScriptInterface](_)).itr
       .flatMap(ifc => ifc.getTypeParameters)
 
     val args = tsFunc.getParameters
@@ -103,18 +104,18 @@ object GenericRes {
         args.zipWithIndex.flatMap({case (argPsi, i) => Option(argPsi.getTypeElement)
           .flatMap(cast[TypeScriptType](_))
           .filter(argTypeDef => !argTypeDef.equals(caretTypeExpr))
-          .toList.flatMap(tst => getGenericTypeFromArg(
+          .itr.flatMap(tst => getGenericTypeFromArg(
             tst, () => callCtx.func().getArg(i), generic)
           )})
       })).toMap
 
     val genericsMut = collection.mutable.Map(genericsIm.toSeq: _*)
 
-    val ifcGenerics: List[(String, () => Array[JSType])] = thist
-      .toList.flatMap(thist => ifcGenericPsis.zipWithIndex
+    val ifcGenerics: It[(String, () => Array[JSType])] = thist
+      .itr.flatMap(thist => ifcGenericPsis.zipWithIndex
         .flatMap({case (psi, order) => Option(psi.getName)
           .map(generic => (generic, () => {
-            Mt.asGeneric(thist, tsFunc.getProject).toList
+            Mt.asGeneric(thist, tsFunc.getProject).itr
               .flatMap(gt => gt.getArguments.asScala.lift(order))
               .toArray
           }))
@@ -125,7 +126,7 @@ object GenericRes {
       val (generic, getType) = t
       val old: () => Array[JSType] = genericsMut.getOrElse(generic, () => Array[JSType]())
       genericsMut.remove(generic)
-      genericsMut.put(generic, () => (getType().toList ++ old()).toArray)
+      genericsMut.put(generic, () => (getType().itr ++ old()).toArray)
     })
 
     parseTypePsi(caretTypeExpr, genericsMut.toMap)
@@ -141,7 +142,7 @@ case class GenericRes(ctx: IExprCtx) {
   def resolveFuncArg(thist: Option[JSType], ctx: IExprCtx, argOrder: Int, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
     val result = tsFunc.getParameters.lift(argOrder)
       .flatMap(argPsi => Option(argPsi.getTypeElement))
-      .flatMap(cast[TypeScriptType](_)).toList
+      .flatMap(cast[TypeScriptType](_)).itr
       .flatMap(caretTypeDef => resolveTypeExpr(thist, ctx, caretTypeDef, tsFunc))
     result
   }

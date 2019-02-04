@@ -2,6 +2,8 @@ package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
 
+import scala.collection.GenTraversableOnce
+
 case class ExprCtx(
   funcCtx: FuncCtx,
   expr: JSExpression,
@@ -10,7 +12,7 @@ case class ExprCtx(
 ) extends IExprCtx {
 
   def subExpr(expr: JSExpression, funcCtx: FuncCtx): ExprCtx = {
-      new ExprCtx(funcCtx, expr, depth + 1, Some(this))
+      ExprCtx(funcCtx, expr, depth + 1, Some(this))
   }
 
   def subCtxDirect(funcCall: JSCallExpression): ExprCtx = {
@@ -25,12 +27,16 @@ case class ExprCtx(
     subExpr(expr, funcCtx.withClosure(funcPsi, closureCtx))
   }
 
-  override def findExprType(expr: JSExpression): Option[JSType] = {
+  override def findExprType(expr: JSExpression): GenTraversableOnce[JSType] = {
     if (expr == null) {
       None
     } else {
       funcCtx.getSearch.findExprType(expr, subExpr(expr, funcCtx))
     }
+  }
+
+  override def toString(): String = {
+    "ctx: " + expr.getText
   }
 
   override def func(): IFuncCtx = funcCtx

@@ -1,16 +1,47 @@
 package org.klesun.deep_js_completion.contexts
 
+import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
-import com.intellij.lang.javascript.psi.resolve.{JSResolveUtil, JSTypeEvaluator}
-import com.intellij.lang.javascript.psi.{JSExpression, JSType}
 import com.intellij.openapi.project.Project
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
-import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.Lang._
 
-import scala.collection.{GenTraversable, GenTraversableOnce}
-import scala.collection.JavaConverters._
+import scala.collection.GenTraversableOnce
+
+object SearchCtx {
+    /**
+     * make sure nobody will start iterating over this
+     * src before first iteration finished, since it
+     * could cause an infinite recursion otherwise
+     */
+//    private def noRec[T](ble: Iterable[T]): Iterable[T] = {
+//        var isNexting = false
+//        new Iterable[T] {
+//            override def iterator: Iterator[T] = {
+//                val source = ble.iterator
+//                new Iterator[T] {
+//                    override def hasNext: Boolean = {
+//                        if (isNexting) {
+//                            false
+//                        } else {
+//                            isNexting = true
+//                            val has = source.hasNext
+//                            isNexting = false
+//                            has
+//                        }
+//                    }
+//                    override def next(): T = {
+//                        isNexting = true
+//                        val next = source.next()
+//                        isNexting = false
+//                        next
+//                    }
+//                }
+//            }
+//        }
+//    }
+}
 
 class SearchCtx(
     val maxDepth: Integer = 20,
@@ -24,7 +55,7 @@ class SearchCtx(
     // for very basic GoTo
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
     // caching - to not re-resolve same expression 100500 times, also prevents many recursion cases
-    val exprToResult = scala.collection.mutable.Map[JSExpression, Option[JSType]]()
+    val exprToResult = scala.collection.mutable.Map[JSExpression, MemIt[JSType]]()
 
     private def getWsType(expr: JSExpression) = {
         val isProp = cast[JSReferenceExpression](expr)
@@ -46,57 +77,51 @@ class SearchCtx(
         }
     }
 
-    def findExprType(expr: JSExpression): Option[JSType] = {
+    def findExprType(expr: JSExpression): GenTraversableOnce[JSType] = {
       val funcCtx = FuncCtx(this)
       val exprCtx = ExprCtx(funcCtx, expr, 0)
       findExprType(expr, exprCtx)
     }
 
-    private def hasTypeInfo(resolved: Option[JSType]): Boolean = {
-        resolved.toList.flatMap(t =>
-            project.toList.flatMap(project =>
-                PropNamePvdr.getProps(t, project))
-        ).nonEmpty
+    private def hasTypeInfo(t: JSType): Boolean = {
+        project.itr.flatMap(project =>
+            PropNamePvdr.getProps(t, project)).nonEmpty
     }
 
-    def findExprType(expr: JSExpression, exprCtx: ExprCtx): Option[JSType] = {
+    def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
         if (debug) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
         expressionsResolved += 1
-        if (exprCtx.depth > maxDepth) {
+        if (exprToResult.contains(expr)) {
+            exprToResult(expr).itr()
+        } else if (exprCtx.depth > maxDepth) {
             None
         } else if (expressionsResolved >= 7500) {
             None
-        } else if (exprToResult.contains(expr)) {
-            if (exprToResult(expr).isEmpty && debug) {
-                //Console.println("!!! circular reference\n" + getStackTrace)
-            }
-            exprToResult(expr)
         } else {
-            exprToResult.put(expr, None)
-            val resolved = MainRes.resolveIn(expr, exprCtx)
+            exprToResult.put(expr, Iterator.empty.mem())
+            var gotTypeInfo = false
+            val resolved = MainRes.resolveIn(expr, exprCtx).itr
+              .filter(t => {
+                  gotTypeInfo = hasTypeInfo(t)
+                  true
+              })
             if (debug) {
-                println(indent + "resolution: " + resolved + " ||| " + singleLine(expr.getText, 350))
+                println(indent + "resolution: " + resolved.map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
             }
             // no point getting built-in type here, IDEA will show it itself
             val isAtCaret = exprCtx.parent.isEmpty
-            val result = if (hasTypeInfo(resolved) || isAtCaret) {
-                resolved
-            } else {
-                val builtIn = getWsType(expr)
-                if (debug) {
-                    println(indent + "built-in of " + builtIn.map(t => t + " " + t.getClass))
-                }
-                Mt.mergeTypes(resolved ++ builtIn)
-            }
-            if (result.isDefined) {
-                exprToResult.put(expr, result)
-                typeToDecl.put(result.get, expr)
-            }
-            result
+            val builtIn = getWsType(expr).filter(t => !isAtCaret && !gotTypeInfo)
+            var result = frs(resolved, builtIn)
+            val mit = result.mem()
+
+            exprToResult.put(expr, mit)
+            val cachedTit = mit.itr()
+            cachedTit.map(t => typeToDecl.put(t, expr))
+            cachedTit
         }
     }
 }

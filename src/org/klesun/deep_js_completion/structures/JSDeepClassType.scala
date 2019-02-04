@@ -1,23 +1,21 @@
 package org.klesun.deep_js_completion.structures
 
-import java.util.Objects
-
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
-import com.intellij.lang.javascript.psi.{JSRecordType, JSRecursiveTypeTransformer, JSResolvedTypeId, JSType}
 import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
 import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
-import com.intellij.lang.javascript.psi.types.{JSRecordTypeImpl, JSRecursiveTypeVisitor, JSTypeBaseImpl, JSTypeSource}
+import com.intellij.lang.javascript.psi.types.{JSRecordTypeImpl, JSRecursiveTypeVisitor, JSTypeSource}
+import com.intellij.lang.javascript.psi.{JSRecordType, JSRecursiveTypeTransformer, JSResolvedTypeId, JSType}
 import com.intellij.psi.PsiElement
 import com.intellij.psi.stubs.StubElement
 import com.intellij.util
 import com.intellij.util.ProcessingContext
-import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
-import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
+import org.klesun.deep_js_completion.contexts.IExprCtx
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes
 import org.klesun.lang.Lang._
 
-import scala.collection.JavaConverters._
 import scala.collection.GenTraversableOnce
+import scala.collection.JavaConverters._
 
 /**
  * could not find anything like this in built-ins surprisingly
@@ -50,7 +48,7 @@ case class JSDeepClassType(
     val declCtx = newCtx.subCtxEmpty()
 
     val props: GenTraversableOnce[TypeMember] = List() ++
-      clsPsi.getFields.map(f => Mt.mkProp(f.getName, () => Option(f.getInitializer).toList
+      clsPsi.getFields.map(f => Mt.mkProp(f.getName, () => Option(f.getInitializer).itr
         .flatMap(expr => declCtx.findExprType(expr)), Some(f))) ++
       getMethods(declCtx, false)
 

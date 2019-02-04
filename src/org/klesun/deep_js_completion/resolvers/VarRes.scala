@@ -29,7 +29,7 @@ object VarRes {
 
   def findVarAt(file: PsiElement, name: String): GenTraversableOnce[JSVariable] = {
     val els = JSScopeNamesCache.findNamedElementsInStubScope(name, file).asScala
-    cast[JSElement](file).toList.flatMap(file => {
+    cast[JSElement](file).itr.flatMap(file => {
       val hap = JSScopeNamesCache.getOrCreateNamesForScope(file)
       els.flatMap(cast[JSVariable](_)) ++ hap.getValues
         .flatMap(cast[JSVariable](_))
@@ -38,7 +38,7 @@ object VarRes {
     })
   }
 
-  def findVarUsages(decl: PsiElement, name: String): List[JSReferenceExpression] = {
+  def findVarUsages(decl: PsiElement, name: String): GenTraversableOnce[JSReferenceExpression] = {
     // maybe this could be used instead: JSScopeNamesUsages
     if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts"))) {
       List()
@@ -55,8 +55,8 @@ object VarRes {
     }
   }
 
-  private def findRefUsages(ref: JSReferenceExpression): List[JSReferenceExpression] = {
-    Option(ref.resolve()).toList.flatMap(decl => findVarUsages(decl, ref.getReferenceName))
+  private def findRefUsages(ref: JSReferenceExpression): GenTraversableOnce[JSReferenceExpression] = {
+    Option(ref.resolve()).itr.flatMap(decl => findVarUsages(decl, ref.getReferenceName))
       .filter(usage => !usage.equals(ref))
   }
 }
@@ -66,16 +66,11 @@ object VarRes {
  */
 case class VarRes(ctx: IExprCtx) {
 
-  private def first[T](suppliers: (() => Option[T])*): Option[T] = {
-    suppliers.iterator.flatMap(s => s())
-      .take(1).toList.lift(0)
-  }
-
   private def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
-    Option(usage.getParent).toList.flatMap {
-      case superRef: JSReferenceExpression => first(() => None
+    nit(usage.getParent).flatMap {
+      case superRef: JSReferenceExpression => frs(Iterator.empty
         // someVar.push(value)
-        , () => Option(superRef.getReferenceName)
+        , nit(superRef.getReferenceName)
           .filter(refName => List("push", "unshift").contains(refName))
           .flatMap(refName => Option(superRef.getParent))
           .flatMap(cast[JSCallExpression](_))
@@ -83,30 +78,30 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(value => ctx.findExprType(value))
           .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
         // someVar.someKey = 123
-        , () => Mt.mergeTypes(Option(superRef.getReferenceName).toList
-          .flatMap(name => resolveAssignmentTo(superRef).toList
+        , nit(superRef.getReferenceName)
+          .flatMap(name => resolveAssignmentTo(superRef).itr()
             .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
-            .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))))
+            .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)))
       )
       // someVar[i] = value
       case indexing: JSIndexedPropertyAccessExpression =>
         Option(indexing.getQualifier)
-          .filter(qual => usage equals qual).toList
+          .filter(qual => usage equals qual).itr
           .flatMap(qual => resolveAssignmentTo(indexing))
           .map(valT => {
-            val keyt = ctx.findExprType(indexing.getIndexExpression).orNull
+            val keyt = Mt.mergeTypes(ctx.findExprType(indexing.getIndexExpression)).orNull
             DeepIndexSignatureImpl(keyt, valT, Some(indexing))
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
       // var someVar = null;
       // someVar = initializeSomething()
       case usage: JSDefinitionExpression =>
-        Option(usage.getParent)
+        nit(usage.getParent)
           .flatMap(cast[JSAssignmentExpression](_))
           .flatMap(defi => Option(defi.getROperand))
           .flatMap(expr => ctx.findExprType(expr))
       case _ => List[JSType]()
-    }: GenTraversableOnce[JSType]
+    }
   }
 
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
@@ -114,7 +109,7 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(doc => doc.getTags)
       .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag))
       .flatMap(txt => ArgRes(ctx.subCtxEmpty()).parseDocExpr(varst, txt)) ++
-    Option(varst.getParent)
+    nit(varst.getParent)
       .flatMap(cast[JSForInStatement](_))
       .filter(st => st.isForEach)
       .flatMap(st => Option(st.getCollectionExpression))
@@ -128,9 +123,9 @@ case class VarRes(ctx: IExprCtx) {
       case para: JSDestructuringParameterImpl => ArgRes(ctx).resolve(para)
       // let {a, b} = getObj();
       case obj: JSDestructuringElement =>
-        Option(obj.getInitializer)
-          .flatMap(qual => ctx.findExprType(qual)).toList ++
-        Option(obj.getParent).toList
+        nit(obj.getInitializer)
+          .flatMap(qual => ctx.findExprType(qual)) ++
+        nit(obj.getParent).itr
           .flatMap(cast[JSVarStatement](_))
           .flatMap(st => resolveVarSt(st))
       case _ => None
@@ -138,22 +133,22 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
-    Option(dest.getInitializer)
+    nit(dest.getInitializer)
       .flatMap(expr => ctx.findExprType(expr)) ++
-    Option(dest.getParent).toList.flatMap {
+    nit(dest.getParent).itr.flatMap {
       case prop: JSDestructuringShorthandedProperty =>
         val types = Option(prop.getParent)
           .flatMap(cast[JSDestructuringObject](_))
-          .flatMap(obj => Option(obj.getParent)).toList
+          .flatMap(obj => Option(obj.getParent)).itr
           .flatMap(resolveDestructEl)
           .flatMap(qualT => {
             val keyTOpt = Option(dest.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
             Mt.getKey(qualT, keyTOpt)
           })
-        Mt.mergeTypes(types)
+        types
       case arr: JSDestructuringArray =>
-        val types = Option(arr.getParent).toList
+        val types = Option(arr.getParent).itr
           .flatMap(el => resolveDestructEl(el))
           .flatMap(qualT => {
             val keyTOpt = Option(arr.getElements.indexOf(dest))
@@ -161,7 +156,7 @@ case class VarRes(ctx: IExprCtx) {
               .map(idx => new JSStringLiteralTypeImpl(idx + "", true, JSTypeSource.EMPTY))
             Mt.getKey(qualT, keyTOpt)
           })
-        Mt.mergeTypes(types)
+        types
       case varst: JSVarStatement => resolveVarSt(varst)
       case _ => None
     }
@@ -175,11 +170,11 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   def resolveFunc(func: JSFunction): GenTraversableOnce[JSType] = {
-    Mt.mergeTypes(MainRes.getReturns(func)
+    MainRes.getReturns(func)
       .filter(ret => !shouldTypedefBeIgnored(func))
       .flatMap(expr => ctx.findExprType(expr))
       .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
-        new util.ArrayList[JSParameterTypeDecorator](), rett)))
+        new util.ArrayList[JSParameterTypeDecorator](), rett))
   }
 
   // may be defined in a different file unlike resolveAssignment()
@@ -187,9 +182,9 @@ case class VarRes(ctx: IExprCtx) {
     psi match {
       case para: JSParameter => ArgRes(ctx).resolve(para) ++ resolveMainDeclVar(para)
       case dest: JSVariable => resolveMainDeclVar(dest)
-      case prop: JSProperty => Option(prop.getValue)
+      case prop: JSProperty => nit(prop.getValue)
         .flatMap(expr => ctx.findExprType(expr))
-      case prop: JSDefinitionExpression => Option(prop.getExpression)
+      case prop: JSDefinitionExpression => nit(prop.getExpression)
         .flatMap(expr => ctx.findExprType(expr))
       case tsFunc: TypeScriptFunctionSignature => {
         if (shouldTypedefBeIgnored(tsFunc)) {
@@ -199,8 +194,12 @@ case class VarRes(ctx: IExprCtx) {
         }
       }
       case func: JSFunction => resolveFunc(func)
-      case cls: JSClass[StubElement[_]] => cast[JSClass[StubElement[_]]](cls)
-        .map(cls => JSDeepClassType(cls, ctx.subCtxEmpty()))
+      case cls: JSClass[StubElement[_]] =>
+        cast[JSClass[StubElement[_]]](cls)
+          .map(cls => {
+            val clst = JSDeepClassType(cls, ctx.subCtxEmpty())
+            clst
+          })
       case _ =>
         //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
         None
@@ -210,7 +209,7 @@ case class VarRes(ctx: IExprCtx) {
   private def getDeclarations(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
     val isProp = ref.getQualifier != null
     // it would be nice to always use es2018 instead of es2015 somehow
-    val psis = Option(ref.resolve()).toList
+    val psis = Option(ref.resolve()).itr
       .filter(decl => {
         val isDts = Option(decl.getContainingFile).exists(f => f.getName endsWith ".d.ts")
         // skip definitions that are actually just random props in project with same name
@@ -224,13 +223,13 @@ case class VarRes(ctx: IExprCtx) {
   private def assertAtModuleEpxr(qual: JSExpression): GenTraversableOnce[PsiFile] = {
     cast[JSCallExpression](qual)
       .filter(call => Option(call.getMethodExpression).exists(meth => meth.getText equals "at"))
-      .flatMap(call => call.getArguments.lift(0)).toList
+      .flatMap(call => call.getArguments.lift(0)).itr
       .flatMap(PathStrGoToDecl.getReferencedFile)
   }
 
-  def resolve(ref: JSReferenceExpression): Option[JSType] = {
-    Mt.mergeTypes(
-      Option(ref.getQualifier)
+  def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {
+    (
+      nit(ref.getQualifier)
         .flatMap(qual => ctx.findExprType(qual))
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
@@ -239,16 +238,16 @@ case class VarRes(ctx: IExprCtx) {
           result
         })
       ++
-      Option(ref.getReferenceName).toList
-        .flatMap(varName => Option(ref.getQualifier).toList
+      Option(ref.getReferenceName).itr()
+        .flatMap(varName => Option(ref.getQualifier).itr()
           .flatMap(assertAtModuleEpxr)
           .flatMap(file => findVarAt(file, varName))
           .flatMap(vari => resolveMainDeclVar(vari)))
       ++
-      findRefUsages(ref)
+      findRefUsages(ref).itr()
         .flatMap(usage => resolveAssignmentTo(usage))
       ++
-      getDeclarations(ref).toList
+      getDeclarations(ref).itr()
         .flatMap(psi => resolveFromMainDecl(psi))
     )
   }

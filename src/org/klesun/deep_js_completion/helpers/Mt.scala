@@ -4,22 +4,13 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptInterfaceImpl
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
-import com.intellij.lang.javascript.psi.resolve.{JSClassResolver, JSScopeNamesCache, JSTypeEvaluator}
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
-import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils, JSVariable}
+import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import com.intellij.psi.search.EverythingGlobalScope
-import com.intellij.psi.stubs.StubElement
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.getMems
 import org.klesun.deep_js_completion.contexts.IExprCtx
-import org.klesun.deep_js_completion.resolvers.VarRes
 import org.klesun.deep_js_completion.structures._
-import org.klesun.lang.Lang
 import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
@@ -33,51 +24,54 @@ import scala.util.Try
  * either be some particular type or array of types
  */
 object Mt {
-  def mergeTypes(types: GenTraversableOnce[JSType]): Option[JSType] = {
+  def mergeTypes(tit: GenTraversableOnce[JSType]): Option[JSType] = {
+    val types = tit.toList
     if (types.size > 1) {
       val mt = new JSContextualUnionTypeImpl(JSTypeSource.EMPTY, types.toList.distinct.asJava)
       Some(mt)
     } else {
-      types.toList.lift(0)
+      types.lift(0)
     }
   }
 
-  def flattenTypes(t: JSType): List[JSType] = {
-    t match {
+  def flattenTypes(t: JSType): It[JSType] = {
+    ({t match {
       case mt: JSContextualUnionTypeImpl => {
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
+        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
       }
       case mt: JSCompositeTypeImpl => {
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
+        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
       }
       case mt: JSUnionOrIntersectionType =>
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt)).toList
-      case _ => List(t)
-    }
+        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
+      case mt: JSDeepMultiType =>
+        mt.mit.itr()
+      case _ => Some(t)
+    }}: GenTraversableOnce[JSType]).itr()
   }
 
-  private def getLiteralValueOpts(litT: JSType): List[Option[String]] = {
-    flattenTypes(litT).map {
+  private def getLiteralValueOpts(litT: JSType): Iterable[Option[String]] = {
+    flattenTypes(litT).itr().map {
       case lit: JSPrimitiveLiteralType[_] => Some(lit.getLiteral + "")
       case _ => None
-    }
+    }.toIterable
   }
 
-  def getAnyLiteralValues(litT: JSType): List[String] = {
+  def getAnyLiteralValues(litT: JSType): Iterable[String] = {
     getLiteralValueOpts(litT).flatten
   }
 
-  def getAllLiteralValues(litT: JSType): Option[List[String]] = {
+  def getAllLiteralValues(litT: JSType): Option[Iterable[String]] = {
     val opts = getLiteralValueOpts(litT)
     all(opts)
   }
 
-  private def getRecordKey(objT: JSRecordType, litVals: List[String]): GenTraversableOnce[JSType] = {
+  private def getRecordKey(objT: JSRecordType, litVals: Iterable[String]): GenTraversableOnce[JSType] = {
     val isNamed = (keyName: String) => !("" equals keyName) && !keyName.matches("\\d.*")
     objT.getTypeMembers.asScala
       .flatMap {
         case mem: PropertySignature => Option(mem.getType)
-          .filter(t => litVals.isEmpty || litVals.contains(mem.getMemberName))
+          .filter(t => litVals.isEmpty || litVals.exists(lit => lit equals mem.getMemberName))
           .filter(t => {
             val isEs5PromiseThen = (mem.getMemberName equals "then") &&
               (t + "").endsWith("): Promise<TResult1|TResult2>")
@@ -87,7 +81,9 @@ object Mt {
           })
         case idx: IndexSignature =>
           val propMatches = getAllLiteralValues(idx.getMemberParameterType) match {
-            case Some(strvals) => !litVals.exists(isNamed) || !strvals.exists(isNamed) || strvals.intersect(litVals).nonEmpty
+            case Some(strvals) => !litVals.exists(isNamed) ||
+              !strvals.exists(isNamed) ||
+              strvals.toList.intersect(litVals.toList).nonEmpty
             case None => true
           }
           if (propMatches) Some(idx.getMemberType) else None
@@ -97,12 +93,16 @@ object Mt {
       }
   }
 
-  def getKey(arrT: JSType, keyTOpt: Option[JSType]): Option[JSType] = {
+  def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType]): GenTraversableOnce[JSType] = {
+    // TODO: it seems I broke something here. result.headerData. suggests me just 'passengerList'
+    // TODO: should optimize to stop right after first
+    //  "unknown" key type, like it's done in deep-assoc
+    val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
-    val litVals = litValsOpt.toList.flatten
+    val litVals = litValsOpt.toIterable.flatten
     val elts = Mt.flattenTypes(arrT).flatMap {
       case tupT: JSTupleTypeImpl =>
-        val arrFallback = mergeTypes(tupT.getTypes.asScala.toList)
+        val arrFallback = mergeTypes(tupT.getTypes.asScala.itr)
         val tupResultOpt = litValsOpt.map(litVals => {
           val types = litVals
             .flatMap(litVal => Try(litVal.toDouble.toInt).toOption)
@@ -118,10 +118,10 @@ object Mt {
         None
       }
     }
-    Mt.mergeTypes(elts)
+    elts
   }
 
-  def getReturnType(funcT: JSType, ctx: IExprCtx): Option[JSType] = {
+  def getReturnType(funcT: JSType, ctx: IExprCtx): GenTraversableOnce[JSType] = {
     val retTs = flattenTypes(funcT)
       .flatMap {
         case func: JSFunctionTypeImpl => Option(func.getReturnType)
@@ -129,7 +129,7 @@ object Mt {
         case func: JSDeepModuleTypeImpl => Some(JSDeepModuleTypeImpl(func.name, EInstType.Called))
         case _ => None
       }
-    mergeTypes(retTs)
+    retTs
   }
 
   def asGeneric(objt: JSType, project: Project): GenTraversableOnce[JSGenericTypeImpl] = {
@@ -163,7 +163,7 @@ object Mt {
 
   def mkProp(name: String, getValue: () => GenTraversableOnce[JSType], psi: Option[PsiElement] = None): TypeMember = {
     val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
-    val valt = Mt.mergeTypes(getValue()).getOrElse(JSUnknownType.JS_INSTANCE)
+    val valt = JSDeepMultiType(getValue().mem())
     DeepIndexSignatureImpl(keyt, valt, psi)
   }
 }

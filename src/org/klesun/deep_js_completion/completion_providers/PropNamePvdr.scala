@@ -28,7 +28,7 @@ import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
 import org.klesun.lang.Lang._
 
-import scala.collection.GenTraversableOnce
+import scala.collection.{GenIterable, GenTraversableOnce, mutable}
 import scala.collection.JavaConverters._
 import scala.collection.mutable._
 
@@ -74,12 +74,12 @@ object PropNamePvdr {
   }
 
   def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
-    val genMems = Mt.asGeneric(typ, project).toList
+    val genMems = Mt.asGeneric(typ, project).itr
       .flatMap(mt => {
         val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
         val scope = new EverythingGlobalScope(project)
         val tsMems = JSClassResolver.getInstance().findClassesByQName(fqn, scope).asScala
-          .toList.flatMap(ifc => ifc.getMembers.asScala)
+          .itr.flatMap(ifc => ifc.getMembers.asScala)
           .flatMap(cast[TypeMember](_))
         // I suspect just asRecordType() would be enough
         mt.asRecordType().getTypeMembers.asScala ++ tsMems
@@ -107,9 +107,9 @@ object PropNamePvdr {
     Mt.flattenTypes(typ).flatMap(t => getFlatMems(t, project))
   }
 
-  def getProps(typ: JSType, project: Project): List[PropertySignature] = {
+  def getProps(typ: JSType, project: Project): It[PropertySignature] = {
     val mems = getMems(typ, project)
-    mems.toList.flatMap {
+    mems.itr().flatMap {
       case prop: PropertySignature => Some(prop)
       case idx: IndexSignature => Mt
         .getAnyLiteralValues(idx.getMemberParameterType)
@@ -125,6 +125,12 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
+
+    //val numList = List(1,2,3,4,5)
+    //val nums = numList.mem().itr().map(n => Console.println("guzno num " + n))
+    //Console.println("zhopa created iterator")
+    //nums.foreach(a => Console.println("guzno iterated value"))
+
     // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
     // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
     //val nullPsi = parameters.getPosition
@@ -134,59 +140,19 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         // in all these cases previous PSI is a leaf of the reference expression we want to resolve
         .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
       .orNull
-    val depth = getMaxDepth(parameters.isAutoPopup)
-    val search = new SearchCtx(depth, project=Option(parameters.getEditor.getProject))
-    val startTime = System.nanoTime
-    val suggestions = Option(nullPsi)
-      .flatMap(ref => Option(ref.getQualifier))
-      .filter(qual => {
-        // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
-        val qualEnd = qual.getTextOffset + qual.getTextLength
-        qualEnd < parameters.getOriginalPosition.getTextOffset
-      })
-      .flatMap(qual => search.findExprType(qual))
-      .toList.flatMap(typ => getProps(typ, nullPsi.getProject))
-      .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
-      .zipWithIndex
-      .map({case (e,i) => makeLookup(e,i)})
-
-    val elapsed = System.nanoTime - startTime
-    result.addLookupAdvertisement("Resolved in " + (elapsed / 1000000000.0) + " seconds")
-
-    // test
-    // test
-    // test
-    // test
-
-    val nameToLookup = ListMap(suggestions.map(t => t.getLookupString -> t) : _*)
-    val builtInSuggestions = new util.ArrayList[LookupElement]
     val project = if (nullPsi != null) nullPsi.getProject else null
     val jsConfig = if (project != null) JSRootConfiguration.getInstance(project) else null
     val onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
 
-    result.runRemainingContributors(parameters, otherSourceResult => {
-      var lookup = otherSourceResult.getLookupElement
-      // 99.0 (group 94) - inferred type property completion
-      // 5.0 (group 6) - property completion guessed from usage
-      val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
-        .forall(pri => pri.getPriority < 99.0)
+    def getBuiltIns(): util.ArrayList[(Boolean, LookupElement)] = {
+      val builtInSuggestions = new util.ArrayList[(Boolean, LookupElement)]
+      result.runRemainingContributors(parameters, otherSourceResult => {
+        var lookup = otherSourceResult.getLookupElement
+        // 99.0 (group 94) - inferred type property completion
+        // 5.0 (group 6) - property completion guessed from usage
+        val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
+          .forall(pri => pri.getPriority < 99.0)
 
-      var memName = lookup.getLookupString
-      if (memName.endsWith("()")) {
-        memName = substr(memName, 0, -2)
-      }
-      var keepBuiltIn = true
-      if (nameToLookup.contains(memName)) {
-        // built-in already suggests this member
-        if (onlyTyped && !isGuess) {
-          // built-in suggestion is qualitative, keep it, remove ours
-          nameToLookup.remove(memName)
-        } else {
-          // built-in suggestion is mixed with rubbish - remove it, keep ours
-          keepBuiltIn = false
-        }
-      }
-      if (keepBuiltIn) {
         val protos = List("constructor", "hasOwnProperty", "isPrototypeOf",
           "propertyIsEnumerable", "toLocaleString", "toString", "valueOf")
         lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
@@ -194,29 +160,97 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
           .map(prio => prio.getDelegate)
           .map(dele => PrioritizedLookupElement.withPriority(dele, DEEP_PRIO - 198))
           .getOrElse(lookup)
-        builtInSuggestions.add(lookup)
-      }
-    })
+        builtInSuggestions.add((isGuess || !onlyTyped, lookup))
+      })
+      builtInSuggestions
+    }
 
-    result.addAllElements(nameToLookup.values.asJava)
-    result.addAllElements(builtInSuggestions)
+    def addsTypeInfo(ourKup: LookupElement, builtIns: util.ArrayList[(Boolean, LookupElement)]): Boolean = {
+      !builtIns.asScala.exists((tuple) => {
+        val (isGuess, builtInKup) = tuple
+        var memName = builtInKup.getLookupString
+        if (memName.endsWith("()")) {
+          memName = substr(memName, 0, -2)
+        }
+        val isBuiltInUseful = !isGuess && onlyTyped &&
+          (memName equals( ourKup.getLookupString))
+        isBuiltInUseful
+      })
+    }
+    val depth = getMaxDepth(parameters.isAutoPopup)
+    val search = new SearchCtx(depth, project=Option(parameters.getEditor.getProject))
+    val startTime = System.nanoTime
+    var typesGot = 0
+
+    val types = nit(nullPsi)
+      .flatMap(ref => Option(ref.getQualifier))
+      .filter(qual => {
+        // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
+        val qualEnd = qual.getTextOffset + qual.getTextLength
+        qualEnd < parameters.getOriginalPosition.getTextOffset
+      })
+      .flatMap(qual => search.findExprType(qual))
+    val mems = types
+      .filter(t => {
+        if (typesGot == 0) {
+          Console.println("resolved first type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
+          //throw new RuntimeException("first type was not lazy. why? " + types.getClass)
+        } else if (typesGot == 1) {
+          Console.println("resolved second type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
+        } else {
+          Console.println("resolved n-th type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
+        }
+        typesGot = typesGot + 1
+        true
+      })
+      .flatMap(typ => getProps(typ, nullPsi.getProject))
+      .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
+
+    Console.println("Created property iterator within " + search.expressionsResolved + " expressions (" + typesGot + " types)")
+    val builtInSuggestions = getBuiltIns()
+
+    val suggested = new mutable.HashSet[String]()
+    mems
+      .zipWithIndex
+      .map({case (e,i) => makeLookup(e,i)})
+      .filter(ourKup => addsTypeInfo(ourKup, builtInSuggestions))
+      .foreach(ourKup => {
+        result.addElement(ourKup)
+        suggested.add(ourKup.getLookupString)
+      })
+
+    val elapsed = System.nanoTime - startTime
+    result.addLookupAdvertisement("Resolved all in " + (elapsed / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
+
+    val keptBuiltIns = builtInSuggestions.asScala
+      .flatMap(tuple => {
+        val (isGuess, builtInKup) = tuple
+        var memName = builtInKup.getLookupString
+        if (memName.endsWith("()")) {
+          memName = substr(memName, 0, -2)
+        }
+        if (suggested.contains(memName)) None else {
+          Some(builtInKup)
+        }
+      })
+    result.addAllElements(keptBuiltIns.asJava)
   }
 
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
     val depth = getMaxDepth(false)
     val search = new SearchCtx(depth, project=Option(editor.getProject))
 
-    Option(caretPsi)
+    nit(caretPsi)
       .flatMap(leaf => Option(leaf.getParent))
       .flatMap(cast[JSReferenceExpression](_))
-      .toList.flatMap(ref => Option(ref.getQualifier)
+      .flatMap(ref => nit(ref.getQualifier)
         .flatMap(qual => search.findExprType(qual))
-        .toList.flatMap(typ => getMems(typ, caretPsi.getProject))
+        .flatMap(typ => getMems(typ, caretPsi.getProject))
         .flatMap(cast[DeepIndexSignatureImpl](_))
         .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
-          .contains(ref.getReferenceName)))
+          .exists(lit => lit equals ref.getReferenceName)))
       .flatMap(p => p.psi)
-      .distinct
+      .itr().lift(0)
       .toArray
   }
 

@@ -21,11 +21,12 @@ import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
 import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl}
 import org.klesun.lang.Lang
-import org.klesun.lang.Lang.cast
+import org.klesun.lang.Lang.{cast, nit}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import org.klesun.lang.Lang._
 
 object ArgRes {
 
@@ -151,7 +152,7 @@ object ArgRes {
 
   private def resolveTsFuncArgArg(objt: Option[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, inlineFuncArgOrder: Int, argOrder: Int): GenTraversableOnce[JSType] = {
     new GenericRes(ctx).resolveFuncArg(objt, ctx, inlineFuncArgOrder, tsFuncDecl)
-      .toList.flatMap(cast[JSFunctionTypeImpl](_))
+      .itr.flatMap(cast[JSFunctionTypeImpl](_))
       .flatMap(funct => funct.getParameters.asScala.lift(argOrder))
       .flatMap(arg => Option(arg.getType))
   }
@@ -160,10 +161,10 @@ object ArgRes {
     Option(callerDef.getParent)
       .flatMap(cast[JSAssignmentExpression](_))
       .flatMap(defi => Option(defi.getROperand))
-      .flatMap(cast[JSFunction](_)).toList
+      .flatMap(cast[JSFunction](_)).itr
       .flatMap(callerFunc => callerFunc.getParameters.lift(inlineFuncArgOrder)
         .flatMap(callerArg => cast[JSParameter](callerArg))
-        .toList.flatMap(par => VarRes.findVarUsages(par, par.getName))
+        .itr.flatMap(par => VarRes.findVarUsages(par, par.getName))
         .flatMap(usage => Option(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))
@@ -175,23 +176,23 @@ object ArgRes {
 case class ArgRes(ctx: IExprCtx) {
 
   private def getInlineFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
-    Option(func.getParent).toList
+    Option(func.getParent).itr
       .flatMap(cast[JSArgumentList](_))
-      .flatMap(argList => Option(argList.getArguments.indexOf(func)).toList
+      .flatMap(argList => Option(argList.getArguments.indexOf(func)).itr
         .flatMap(inlineFuncArgOrder => Option(true)
           .flatMap(ok => Option(argList.getParent))
-          .flatMap(cast[JSCallExpression](_)).toList
-          .flatMap(call => Option(call.getMethodExpression).toList
+          .flatMap(cast[JSCallExpression](_)).itr
+          .flatMap(call => Option(call.getMethodExpression).itr
 
             .flatMap(cast[JSReferenceExpressionImpl](_))
             .flatMap(ref => {
-              val objt = Option(ref.getQualifier)
+              val objt = nit(ref.getQualifier)
                 .flatMap(obj => ctx.findExprType(obj))
               val outerCallCtx = ctx.subCtxDirect(call)
 
               // completion on arg of anonymous function based on what is passed to it
               // i should use _deep_ logic instead of ref.resolve() one day...
-              (Option(ref.resolve()).toList
+              (Option(ref.resolve()).itr
                 .flatMap {
                   // TODO: test and uncomment
                   //case tsFuncDecl: TypeScriptFunctionSignatureImpl => {
@@ -207,22 +208,22 @@ case class ArgRes(ctx: IExprCtx) {
               // should check and remove each of them one by one from here
 
               ++
-              Option(ref.getQualifier)
+              nit(ref.getQualifier)
                 .filter(expr => argOrder == 0)
                 .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => Mt.getKey(arrt, None)).toList
+                .flatMap(arrt => Mt.getKey(arrt, None)).itr
                 ++
-              Option(ref.getQualifier)
+              nit(ref.getQualifier)
                 .filter(expr => argOrder == 1)
                 .filter(expr => List("reduce").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => Mt.getKey(arrt, None)).toList
+                .flatMap(arrt => Mt.getKey(arrt, None)).itr
                 ++
-              Option(ref.getQualifier)
+              nit(ref.getQualifier)
                 // func arg order does not matter, it may be 0 or 1, maybe something else as well
                 .filter(expr => List("use", "get", "post").contains(ref.getReferencedName))
-                .flatMap(expr => ctx.findExprType(expr)).toList
+                .flatMap(expr => ctx.findExprType(expr)).itr
                 .flatMap(t => Mt.flattenTypes(t))
                 .flatMap(cast[JSDeepModuleTypeImpl](_))
                 .filter(modt => ("express" equals modt.name) && (modt.instType equals EInstType.Called))
@@ -238,10 +239,10 @@ case class ArgRes(ctx: IExprCtx) {
                   }
                 }: GenTraversableOnce[JSType])
                 ++
-                Option(ref.getQualifier)
+                nit(ref.getQualifier)
                   .filter(expr => argOrder == 0)
                   .filter(expr => List("then").contains(ref.getReferencedName))
-                  .flatMap(expr => ctx.findExprType(expr)).toList
+                  .flatMap(expr => ctx.findExprType(expr))
                   .flatMap(promiset => Mt.unwrapPromise(promiset))
               )
             })
@@ -253,7 +254,7 @@ case class ArgRes(ctx: IExprCtx) {
   // private function completion (based on scanning current
   // file for usages and taking what is passed to the function)
   private def getPrivateFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
-    Option(func.getParent).toList
+    Option(func.getParent).itr
       .flatMap(cast[JSVariable](_))
       .flatMap(vari => VarRes.findVarUsages(vari, vari.getName))
       .flatMap(usage => Option(usage.getParent)
@@ -265,33 +266,32 @@ case class ArgRes(ctx: IExprCtx) {
 
   private def getCtxArgType(func: JSFunction, para: JSParameterListElement): GenTraversableOnce[JSType] = {
     val order = func.getParameters.indexOf(para)
-    grabClosureCtxs(ctx.func()).toList
-      .filter(_.getClosurePsi().exists(_ equals func))
-      .lift(0).toList
+    grabClosureCtxs(ctx.func()).itr
+      .find(_.getClosurePsi().exists(_ equals func)).itr
       .flatMap(_.getArg(order))
   }
 
-  private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): Option[JSType] = {
+  private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {
     PsiTreeUtil.findChildrenOfType(file, classOf[JSAssignmentExpression]).asScala
-      .filter(assi => assi.getText.startsWith("klesun.whenLoaded")).toList.lift(0)
+      .find(assi => assi.getText.startsWith("klesun.whenLoaded")).itr
       .flatMap(assi => Option(assi.getROperand)) // \(^o^)/
       .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
   }
 
-  private def resolveRequireJsSupplierDef(file: PsiFile): Option[JSType] = {
+  private def resolveRequireJsSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {
     PsiTreeUtil.findChildrenOfType(file, classOf[JSCallExpression]).asScala
-      .filter(assi => assi.getText.startsWith("define(")).toList.lift(0)
-      .flatMap(call => call.getArguments.lift(1))
+      .find(assi => assi.getText.startsWith("define("))
+      .flatMap(call => call.getArguments.lift(1)).itr
       .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
   }
 
-  def resolveCommonJsFormatDef(file: PsiFile): Option[JSType] = {
+  def resolveCommonJsFormatDef(file: PsiFile): GenTraversableOnce[JSType] = {
     val types = file.getChildren
       .flatMap(cast[JSExpressionStatement](_))
       .flatMap(_.getChildren)
       .flatMap(cast[JSAssignmentExpression](_))
-      .flatMap(ass => Option(ass.getROperand)
-        .flatMap(value => Option(ass.getLOperand)
+      .flatMap(ass => nit(ass.getROperand)
+        .flatMap(value => nit(ass.getLOperand)
           .flatMap(vari => {
             val txt = Option(vari.getText).getOrElse("")
             if (txt startsWith "module.exports") {
@@ -310,17 +310,17 @@ case class ArgRes(ctx: IExprCtx) {
           })
         )
       )
-    Mt.mergeTypes(types)
+    types
   }
 
-  private def resolveRequireJsFormatDef(file: PsiFile): Option[JSType] = {
+  private def resolveRequireJsFormatDef(file: PsiFile): GenTraversableOnce[JSType] = {
     val types = List[JSType]() ++
       resolveKlesunWhenLoadedSupplierDef(file) ++
       resolveRequireJsSupplierDef(file)
-    Mt.mergeTypes(types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty())))
+    types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
   }
 
-  private def getKlesunRequiresArgType(func: JSFunction): GenTraversableOnce[JSType] = Option(func.getParent)
+  private def getKlesunRequiresArgType(func: JSFunction): GenTraversableOnce[JSType] = nit(func.getParent)
     .flatMap(cast[JSAssignmentExpression](_))
     .flatMap(assi => Option(assi.getDefinitionExpression))
     .flatMap(defi => Option(defi.getExpression))
@@ -330,7 +330,7 @@ case class ArgRes(ctx: IExprCtx) {
     .flatMap(cast[JSCallExpression](_))
     .filter(call => Option(call.getMethodExpression)
       .map(e => e.getText).getOrElse("").equals("klesun.requires"))
-    .flatMap(call => call.getArguments.toList.lift(0)).toList
+    .flatMap(call => call.getArguments.itr.lift(0))
     .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
@@ -352,20 +352,20 @@ case class ArgRes(ctx: IExprCtx) {
     expr
   }
 
-  private def findVarDecl(caretPsi: PsiElement, varName: String): Option[JSType] = {
+  private def findVarDecl(caretPsi: PsiElement, varName: String): GenTraversableOnce[JSType] = {
     var scope: Option[PsiElement] = None
-    var stmts = List[JSStatement]()
+    var stmts: GenTraversableOnce[PsiElement] = Iterator.empty
     val funcOpt = Lang.findParent[JSBlockStatement](caretPsi)
     val fileOpt = Lang.findParent[JSFile](caretPsi)
     if (funcOpt.isDefined) {
       scope = funcOpt
-      stmts = funcOpt.get.getStatements.toList
+      stmts = funcOpt.get.getStatements.itr()
     } else if (fileOpt.isDefined) {
       scope = fileOpt
-      stmts = fileOpt.get.getStatements.toList
+      stmts = fileOpt.get.getStatements.itr()
         .flatMap(cast[JSStatement](_))
     }
-    val types = scope.toList.flatMap(b => stmts
+    val types = scope.itr().flatMap(b => stmts.itr()
       .flatMap(st => st match {
         case varSt: JSVarStatement =>
           varSt.getDeclarations
@@ -385,47 +385,53 @@ case class ArgRes(ctx: IExprCtx) {
       })
       .++(findVarDecl(b, varName))
     )
-    Mt.mergeTypes(types)
+    types
   }
 
-  def parseDocExpr(caretPsi: PsiElement, expr: String): Iterable[JSType] = {
-    Option(null)
-      .orElse("""^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+  def parseDocExpr(caretPsi: PsiElement, expr: String): GenTraversableOnce[JSType] = {
+    frs(
+      """^\s*=\s*(\w+)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+        .itr()
         .flatMap(found => {
           val varName = found.group(1)
           val isFuncCall = !found.group(2).equals("")
-          findVarDecl(caretPsi, varName)
+          findVarDecl(caretPsi, varName).itr()
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
-        }))
-      .orElse("""^\s*=\s*require\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+        })
+      ,
+      """^\s*=\s*require\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
+        .itr()
         .flatMap(found => {
           val path = found.group(1)
           val isFuncCall = !found.group(2).equals("")
-          Option(caretPsi.getContainingFile)
-            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f)).toList
+          nit(caretPsi.getContainingFile)
+            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f)).itr
             .flatMap(file => List()
               ++ resolveCommonJsFormatDef(file)
               ++ resolveRequireJsFormatDef(file)
-            ).lift(0)
+            ).lift(0).itr
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
-        }))
-      .orElse("""^\s*=\s*([\s\S]+)$""".r.findFirstMatchIn(expr)
+        })
+      ,
+      """^\s*=\s*([\s\S]+)$""".r.findFirstMatchIn(expr)
+        .itr
         .flatMap(found => {
           // making it async, because IDEA does not recognize await keyword otherwise if any
           val expr = "(async () => (" + found.group(1) + "))()"
           val psiFile = PsiFileFactory.getInstance(caretPsi.getProject)
             .createFileFromText(JavascriptLanguage.INSTANCE, expr)
-          Option(psiFile.getFirstChild)
+          nit(psiFile.getFirstChild)
             .flatMap(cast[JSExpressionStatementImpl](_))
             .flatMap(st => Option(st.getExpression))
             .flatMap(expr => ctx.subCtxEmpty().findExprType(expr))
             .map(promiset => Mt.unwrapPromise(promiset).getOrElse(promiset)) // since we wrapped it in async
-        }))
+        })
+    )
   }
 
-  private def getArgDocExprType(func: JSFunction, para: JSParameterListElement): List[JSType] = {
+  private def getArgDocExprType(func: JSFunction, para: JSParameterListElement): GenTraversableOnce[JSType] = {
     Option(JSDocumentationUtils.findDocComment(para))
-      .flatMap(cast[JSDocCommentImpl](_)).toList
+      .flatMap(cast[JSDocCommentImpl](_)).itr
       .flatMap(tag => tag.getTags)
       .filter(tag => "param".equals(tag.getName))
       .filter(tag => Option(tag.getDocCommentData)
@@ -434,14 +440,14 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(expr => parseDocExpr(para, expr))
   }
 
-  def resolve(para: JSParameterListElement): Option[JSType] = {
+  def resolve(para: JSParameterListElement): GenTraversableOnce[JSType] = {
     val types = Option(para.getDeclaringFunction)
-      .toList.flatMap(func => List[JSType]()
+      .itr.flatMap(func => List[JSType]()
       ++ getArgDocExprType(func, para)
       ++ getCtxArgType(func, para)
       ++ getInlineFuncArgType(func, func.getParameters.indexOf(para))
       ++ getPrivateFuncArgType(func, func.getParameters.indexOf(para))
       ++ getKlesunRequiresArgType(func))
-    Mt.mergeTypes(types)
+    types
   }
 }

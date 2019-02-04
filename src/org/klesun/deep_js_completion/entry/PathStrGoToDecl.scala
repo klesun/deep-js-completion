@@ -1,17 +1,15 @@
 package org.klesun.deep_js_completion.entry
 
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
-import com.intellij.lang.javascript.psi.{JSExpression, JSLiteralExpression}
+import com.intellij.lang.javascript.psi.JSExpression
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.psi.{PsiElement, PsiFile, PsiManager}
-import org.klesun.lang.Lang._
-
-import scala.collection.JavaConverters._
-import PathStrGoToDecl._
 import com.intellij.psi.search.{FilenameIndex, ProjectScope}
+import com.intellij.psi.{PsiElement, PsiFile, PsiManager}
+import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
+import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
 
@@ -26,7 +24,7 @@ object PathStrGoToDecl {
   }
 
   def getReferencedFile(expr: JSExpression): GenTraversableOnce[PsiFile] = {
-    cast[JSLiteralExpressionImpl](expr).toList
+    cast[JSLiteralExpressionImpl](expr).itr
       .flatMap(lit => {
         val relPath = Option(lit.getValue).map(_.toString).getOrElse("")
         if (relPath.startsWith("./") || relPath.startsWith("../")) {
@@ -52,7 +50,7 @@ class PathStrGoToDecl extends GotoDeclarationHandler {
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
     Option(caretPsi)
       .flatMap(psi => Option(psi.getParent))
-      .flatMap(cast[JSLiteralExpressionImpl](_)).toList
+      .flatMap(cast[JSLiteralExpressionImpl](_)).itr
       .flatMap(lit => getReferencedFile(lit)).toArray
   }
 
