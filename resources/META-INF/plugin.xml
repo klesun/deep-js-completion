@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.01.30.002</version>
+  <version>2019.02.05.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,9 +57,10 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Make `@param arg = at('File.js').someVar` resolve any var in a file, not just the vars declared in the toppest level</li>
-  <li>Allow specifying var type with an `=` in jsdoc comment above declaration with either `@type varName = somOtherVar` or `@var varName = someOtherVar` (not just the @param)</li>
-  <li>Provide completion from `Promise.all` and any other `.d.ts` func having `Iterable<T>` in args</li>
+  <li>Optimize: return values one-by-one as soon as they get resolved (instead of waiting for complete type resolution before showing popup)</li>
+  <li>Optimize: resolve only the key names of the requested object needed for completion at hand (instead of always resolving _complete_ type)</li>
+  <li>Infer type from this and ES6 class methods</li>
+  <li>Support `async` keyword</li>
     ]]>
   </change-notes>
 
