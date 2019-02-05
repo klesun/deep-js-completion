@@ -98,7 +98,7 @@ object PropNamePvdr {
     mems.map {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
-        Mt.mkProp(sig.getMemberName, () => Option(sig.getType), Some(sig))
+        Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))
       case rest => rest
     }
   }
@@ -125,12 +125,6 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-
-    //val numList = List(1,2,3,4,5)
-    //val nums = numList.mem().itr().map(n => Console.println("guzno num " + n))
-    //Console.println("zhopa created iterator")
-    //nums.foreach(a => Console.println("guzno iterated value"))
-
     // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
     // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
     //val nullPsi = parameters.getPosition
@@ -193,12 +187,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     val mems = types
       .filter(t => {
         if (typesGot == 0) {
-          Console.println("resolved first type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
-          //throw new RuntimeException("first type was not lazy. why? " + types.getClass)
-        } else if (typesGot == 1) {
-          Console.println("resolved second type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
-        } else {
-          Console.println("resolved n-th type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions " + t.getClass + " " + t)
+          result.addLookupAdvertisement("Resolved first type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
         }
         typesGot = typesGot + 1
         true

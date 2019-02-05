@@ -80,7 +80,7 @@ case class VarRes(ctx: IExprCtx) {
         // someVar.someKey = 123
         , nit(superRef.getReferenceName)
           .flatMap(name => resolveAssignmentTo(superRef).itr()
-            .map(valt => Mt.mkProp(name, () => Some(valt), Some(superRef)))
+            .map(valt => Mt.mkProp(name, Some(valt), Some(superRef)))
             .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)))
       )
       // someVar[i] = value

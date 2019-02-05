@@ -4,11 +4,12 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
-import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList
 import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
+import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
+import com.intellij.psi.stubs.StubElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl}
@@ -20,8 +21,8 @@ import scala.util.Try
 
 object MainRes {
 
-  def getReturns(func: PsiElement): Iterable[JSExpression] = {
-    val arrow = cast[JSFunctionExpression](func)
+  def getReturns(func: PsiElement): It[JSExpression] = {
+    val arrow = cast[JSFunctionExpression](func).itr()
       .flatMap(f => Option(f.getLastChild))
       .flatMap(cast[JSExpression](_))
     val classic = func.getChildren.itr
@@ -29,6 +30,32 @@ object MainRes {
       .flatMap(c => getReturns(c) ++ cast[JSReturnStatement](c)
         .flatMap(ret => Option(ret.getExpression)))
     arrow.++(classic)
+  }
+
+  def resolveThisExpr(expr: JSThisExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
+    var parent = expr.getParent
+    var clsOpt: Option[JSClass[StubElement[_]]] = None
+    var isStatic = false
+    var done = false
+    while (parent != null && clsOpt.isEmpty) {
+      if (parent.isInstanceOf[JSFunction]) {
+        if (cast[JSFunctionExpression](parent).exists(f => f.isShorthandArrowFunction)) {
+          // ignore, arrow functions don't have their own this
+        } else {
+          isStatic = parent.getChildren
+            .flatMap(cast[JSAttributeList](_))
+            .exists(attrs => attrs.hasModifier(ModifierType.STATIC))
+          clsOpt = Option(parent.getParent).flatMap(cast[JSClass[StubElement[_]]](_))
+          done = true
+        }
+      }
+      parent = parent.getParent
+    }
+    clsOpt.itr()
+      .map(cls => JSDeepClassType(cls, ctx.subCtxEmpty()))
+      .flatMap(clst =>
+        if (isStatic) Some(clst)
+        else clst.getNewInstType(ctx.subCtxEmpty()))
   }
 
   def resolveIn(expr: JSExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
@@ -69,11 +96,6 @@ object MainRes {
         val returns = getReturns(func)
         Some(JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
           returns.flatMap(r => {
-            /** @debug */
-            val exc = new RuntimeException("stack too long, fucking hamburger " + func.getName + " " + callCtx)
-            if (exc.getStackTrace.length > 1000) {
-              throw exc
-            }
             val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
               .exists(lst => lst.hasModifier(ModifierType.ASYNC))
             val rett = callCtx.findExprType(r)
@@ -89,9 +111,9 @@ object MainRes {
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true, -1))
       case obje: JSObjectLiteralExpression =>
         val props: util.List[TypeMember] = obje.getProperties.flatMap(p => {
-          val getValue = () => nit(p.getValue)
+          val valtit = nit(p.getValue)
             .flatMap(expr => ctx.findExprType(expr))
-          Option(p.getName).map(n => Mt.mkProp(n, () => getValue(), Some(p)))
+          Option(p.getName).map(n => Mt.mkProp(n, valtit, Some(p)))
         }).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
       case bina: JSBinaryExpression =>
@@ -121,6 +143,7 @@ object MainRes {
         } else {
           None
         }
+      case thisExpr: JSThisExpression => resolveThisExpr(thisExpr, ctx)
       case _ => {
         None
       }

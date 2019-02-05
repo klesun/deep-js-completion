@@ -19,7 +19,7 @@ import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
-import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl}
+import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
 import org.klesun.lang.Lang
 import org.klesun.lang.Lang.{cast, nit}
 
@@ -42,12 +42,11 @@ object ArgRes {
 
   // for modules resolution - if module is a function - return
   // this function, otherwise wrap the object in a function
-  private def ensureFunc(clsT: JSType): Option[JSType] = {
-    val funcTs = Mt.flattenTypes(clsT).map(t => {t match {
+  private def ensureFunc(clsT: JSType): It[JSType] = {
+    Mt.flattenTypes(clsT).map(t => {t match {
       case funcT: JSFunctionTypeImpl => funcT
       case _ => new JSFunctionTypeImpl(JSTypeSource.EMPTY, List[JSParameterTypeDecorator]().asJava, clsT)
     }}: JSFunctionTypeImpl)
-    Mt.mergeTypes(funcTs)
   }
 
   // based on https://expressjs.com/en/api.html#req, though I witnessed some of the described fields (protocol, cookies, signedCookies, fresh, stale) being absent...
@@ -302,7 +301,7 @@ case class ArgRes(ctx: IExprCtx) {
                 .flatMap(defi => Option(defi.getFirstChild))
                 .flatMap(cast[JSReferenceExpressionImpl](_))
                 .flatMap(ref => Option(ref.getReferencedName))
-                .map(name => Mt.mkProp(name, () => ctx.findExprType(value), Some(vari)))
+                .map(name => Mt.mkProp(name, ctx.findExprType(value), Some(vari)))
                 .map(prop => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
             } else {
               None
@@ -376,7 +375,7 @@ case class ArgRes(ctx: IExprCtx) {
           if (varName.equals(func.getName)) {
             val rts = MainRes.getReturns(func)
               .flatMap(ret => ctx.findExprType(ret))
-            val rt = Mt.mergeTypes(rts).getOrElse(JSUnknownType.JS_INSTANCE)
+            val rt = JSDeepMultiType(rts.mem())
             Some(new JSFunctionTypeImpl(JSTypeSource.EMPTY, new util.ArrayList, rt))
           } else {
             None
@@ -424,7 +423,7 @@ case class ArgRes(ctx: IExprCtx) {
             .flatMap(cast[JSExpressionStatementImpl](_))
             .flatMap(st => Option(st.getExpression))
             .flatMap(expr => ctx.subCtxEmpty().findExprType(expr))
-            .map(promiset => Mt.unwrapPromise(promiset).getOrElse(promiset)) // since we wrapped it in async
+            .flatMap(promiset => Mt.unwrapPromise(promiset)) // since we wrapped it in async
         })
     )
   }

@@ -30,5 +30,7 @@ case class JSDeepMultiType(
 
   def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
     "*|*|*"
+    // uncomment for debug
+    //mit.itr().toList + ""
   }
 }

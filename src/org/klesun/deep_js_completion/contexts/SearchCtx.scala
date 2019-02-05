@@ -9,40 +9,6 @@ import org.klesun.lang.Lang._
 
 import scala.collection.GenTraversableOnce
 
-object SearchCtx {
-    /**
-     * make sure nobody will start iterating over this
-     * src before first iteration finished, since it
-     * could cause an infinite recursion otherwise
-     */
-//    private def noRec[T](ble: Iterable[T]): Iterable[T] = {
-//        var isNexting = false
-//        new Iterable[T] {
-//            override def iterator: Iterator[T] = {
-//                val source = ble.iterator
-//                new Iterator[T] {
-//                    override def hasNext: Boolean = {
-//                        if (isNexting) {
-//                            false
-//                        } else {
-//                            isNexting = true
-//                            val has = source.hasNext
-//                            isNexting = false
-//                            has
-//                        }
-//                    }
-//                    override def next(): T = {
-//                        isNexting = true
-//                        val next = source.next()
-//                        isNexting = false
-//                        next
-//                    }
-//                }
-//            }
-//        }
-//    }
-}
-
 class SearchCtx(
     val maxDepth: Integer = 20,
     val debug: Boolean = false,
@@ -109,14 +75,14 @@ class SearchCtx(
                   gotTypeInfo = hasTypeInfo(t)
                   true
               })
-            if (debug) {
-                println(indent + "resolution: " + resolved.map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
-            }
             // no point getting built-in type here, IDEA will show it itself
             val isAtCaret = exprCtx.parent.isEmpty
             val builtIn = getWsType(expr).filter(t => !isAtCaret && !gotTypeInfo)
             var result = frs(resolved, builtIn)
             val mit = result.mem()
+            if (debug) {
+                println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
+            }
 
             exprToResult.put(expr, mit)
             val cachedTit = mit.itr()

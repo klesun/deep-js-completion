@@ -6,7 +6,8 @@ import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTyp
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.resolveTypeExpr
-import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.deep_js_completion.structures
+import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.Lang.cast
 
 import scala.collection.GenTraversableOnce
@@ -21,23 +22,23 @@ object GenericRes {
       case arrts: TypeScriptArrayType =>
         val elts = nit(arrts.getType)
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
-        val arrt = new JSArrayTypeImpl(Mt.mergeTypes(elts).orNull, JSTypeSource.EMPTY)
+        val arrt = new JSArrayTypeImpl(JSDeepMultiType(elts.mem()), JSTypeSource.EMPTY)
         Some(arrt)
       case arrts: TypeScriptTupleType =>
         val els = arrts.getElements
           .map(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
-          .map(oneElTypes => Mt.mergeTypes(oneElTypes).getOrElse(JSUnknownType.JS_INSTANCE))
+          .map(oneElTypes => structures.JSDeepMultiType(oneElTypes.mem()): JSType)
 
         val tupt = new JSTupleTypeImpl(JSTypeSource.EMPTY, els.toList.asJava, true, -1)
         Some(tupt)
       case functs: TypeScriptFunctionType =>
         val rettypes = parseTypePsi(functs.getReturnTypeElement, generics)
-        val rett: JSType = Mt.mergeTypes(rettypes).getOrElse(JSUnknownType.JS_INSTANCE)
+        val rett: JSType = JSDeepMultiType(rettypes.mem())
         val argtypes = functs.getParameters.map(arg => {
           val argtypes = Option(arg.getTypeElement)
             .flatMap(cast[TypeScriptType](_)).itr
             .flatMap(argts => parseTypePsi(argts, generics))
-          val argt = Mt.mergeTypes(argtypes).getOrElse(JSUnknownType.JS_INSTANCE)
+          val argt = JSDeepMultiType(argtypes.mem())
           new JSParameterTypeDecoratorImpl(argt, arg.isOptional, arg.isRest, true)
         })
         val src: JSTypeSource = JSTypeSource.EMPTY
@@ -52,8 +53,7 @@ object GenericRes {
         } else {
           val clsType = JSTypeUtils.createType(sints.getQualifiedTypeName, JSTypeSource.EMPTY)
           val clsGenerics: java.util.List[JSType] = sints.getTypeArguments.map(
-            gena => Mt.mergeTypes(GenericRes.parseTypePsi(gena, generics))
-              .getOrElse(JSUnknownType.JS_INSTANCE)
+            gena => JSDeepMultiType(GenericRes.parseTypePsi(gena, generics).mem()): JSType
           ).toList.asJava
           Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
         }

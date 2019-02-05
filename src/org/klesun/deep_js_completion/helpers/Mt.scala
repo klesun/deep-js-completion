@@ -138,7 +138,7 @@ object Mt {
         case gen: JSGenericTypeImpl => Some(gen)
         case arr: JSArrayType => Option(arr.asGenericType())
         case tupt: JSTupleTypeImpl =>
-          val elt = Mt.mergeTypes(tupt.getTypes.asScala).getOrElse(JSUnknownType.JS_INSTANCE)
+          val elt: JSType = JSDeepMultiType(tupt.getTypes.asScala.mem())
           val fqnType = JSTypeUtils.createType("Array", JSTypeSource.EMPTY)
           Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, fqnType, List(elt).asJava))
         case funct: JSDeepFunctionTypeImpl =>
@@ -148,22 +148,24 @@ object Mt {
       }
   }
 
-  def unwrapPromise(promiset: JSType): Option[JSType] = {
-    val promisedt = flattenTypes(promiset)
-      .flatMap(cast[JSGenericTypeImpl](_))
-      .filter(gene => List("Promise", "Bluebird")
-        .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
-      .flatMap(gene => gene.getArguments.asScala.lift(0))
-    mergeTypes(promisedt)
+  def unwrapPromise(promiset: JSType): It[JSType] = {
+    flattenTypes(promiset)
+      .map(t => {
+        cast[JSGenericTypeImpl](t)
+          .filter(gene => List("Promise", "Bluebird")
+            .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
+          .map(gene => gene.getArguments.asScala.lift(0).getOrElse(JSUnknownType.JS_INSTANCE))
+          .getOrElse(t)
+      })
   }
 
   def wrapPromise(value: JSType): JSType = {
     Mkt.inst("Promise", List(value)).get
   }
 
-  def mkProp(name: String, getValue: () => GenTraversableOnce[JSType], psi: Option[PsiElement] = None): TypeMember = {
+  def mkProp(name: String, valtit: GenTraversableOnce[JSType], psi: Option[PsiElement] = None): TypeMember = {
     val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
-    val valt = JSDeepMultiType(getValue().mem())
+    val valt = JSDeepMultiType(valtit.mem())
     DeepIndexSignatureImpl(keyt, valt, psi)
   }
 }

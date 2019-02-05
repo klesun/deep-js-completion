@@ -38,7 +38,7 @@ case class FuncCallRes(ctx: IExprCtx) {
     } else if (methName equals "then") {
       args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
           .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
-          .map(value => Mt.unwrapPromise(value).getOrElse(value))
+          .flatMap(value => Mt.unwrapPromise(value))
           .map(value => Mt.wrapPromise(value))
     } else if ((methName equals "catch") || (methName equals "finally")) {
       ctx.findExprType(obj) // Promise .catch(), could actually add the type from callback, but nah for now

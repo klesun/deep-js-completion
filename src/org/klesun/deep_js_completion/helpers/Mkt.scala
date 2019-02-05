@@ -3,10 +3,12 @@ package org.klesun.deep_js_completion.helpers
 import com.intellij.lang.javascript.psi.{JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.structures.JSDeepMultiType
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.immutable.List
+import org.klesun.lang.Lang._
 
 /** stands for MaKe Type - a helper with handy functions to describe typedefs */
 object Mkt {
@@ -33,12 +35,12 @@ object Mkt {
   def assoc(keys: GenTraversableOnce[(String, () => GenTraversableOnce[JSType])], psi: Option[PsiElement] = None): Some[JSRecordTypeImpl] = {
     Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, keys.toList.map(t => {
       val (name, getValt) = t
-      Mt.mkProp(name, getValt, psi)
+      Mt.mkProp(name, getValt(), psi)
     }).asJava))
   }
 
   def arr(elts: GenTraversableOnce[JSType]): Some[JSArrayTypeImpl] = {
-    val elt = Mt.mergeTypes(elts).getOrElse(JSUnknownType.JS_INSTANCE)
+    val elt = JSDeepMultiType(elts.mem())
     Some(new JSArrayTypeImpl(elt, JSTypeSource.EMPTY))
   }
 

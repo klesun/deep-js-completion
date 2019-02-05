@@ -41,14 +41,14 @@ case class JSDeepClassType(
           .exists(lst => lst.hasModifier(ModifierType.STATIC))
         isStatic equals static
       })
-      .map(m => Mt.mkProp(m.getName, () => VarRes(declCtx).resolveFunc(m), Some(m)))
+      .map(m => Mt.mkProp(m.getName, VarRes(declCtx).resolveFunc(m), Some(m)))
   }
 
   def getNewInstType(newCtx: IExprCtx): GenTraversableOnce[JSType] = {
     val declCtx = newCtx.subCtxEmpty()
 
     val props: GenTraversableOnce[TypeMember] = List() ++
-      clsPsi.getFields.map(f => Mt.mkProp(f.getName, () => Option(f.getInitializer).itr
+      clsPsi.getFields.map(f => Mt.mkProp(f.getName, Option(f.getInitializer).itr
         .flatMap(expr => declCtx.findExprType(expr)), Some(f))) ++
       getMethods(declCtx, false)
 
