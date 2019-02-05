@@ -40,6 +40,7 @@ object VarRes {
 
   // possibly there is no point in a different implementation for
   // findVarAt() since we traverse whole tree anyway there as well...
+  // TODO: include vars defined in methods and anonymous functions
   def findAllVarsAt(file: PsiElement): GenTraversableOnce[JSVariable] = {
     cast[JSElement](file).itr().flatMap(file => {
       val hap = JSScopeNamesCache.getOrCreateNamesForScope(file)
