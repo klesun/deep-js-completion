@@ -12,7 +12,9 @@ class DeepJsCompletionConfidence extends CompletionConfidence {
   // that in order to see the require('<caret>') completion
   override def shouldSkipAutopopup(psi: PsiElement, psiFile: PsiFile, offset: Int): ThreeState = {
     val prefix = Lang.substr(psi.getText, 0, offset - psi.getTextOffset)
-    if (JsdocPvdr.matchFileNameTaker(prefix).nonEmpty) {
+    if (JsdocPvdr.matchFileNameTaker(prefix).nonEmpty ||
+        JsdocPvdr.matchAtModuleVarTaker(prefix).nonEmpty
+    ) {
       ThreeState.NO
     } else {
       ThreeState.UNSURE

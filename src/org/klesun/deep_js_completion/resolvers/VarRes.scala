@@ -38,6 +38,19 @@ object VarRes {
     })
   }
 
+  // possibly there is no point in a different implementation for
+  // findVarAt() since we traverse whole tree anyway there as well...
+  def findAllVarsAt(file: PsiElement): GenTraversableOnce[JSVariable] = {
+    cast[JSElement](file).itr().flatMap(file => {
+      val hap = JSScopeNamesCache.getOrCreateNamesForScope(file)
+      val scopeVars = hap.getValues
+        .flatMap(cast[JSVariable](_)).mem()
+      scopeVars.itr() ++ scopeVars.itr()
+        .flatMap(ref => Option(ref.getInitializer))
+        .flatMap(v => findAllVarsAt(v))
+    })
+  }
+
   def findVarUsages(decl: PsiElement, name: String): GenTraversableOnce[JSReferenceExpression] = {
     // maybe this could be used instead: JSScopeNamesUsages
     if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts"))) {
@@ -224,7 +237,7 @@ case class VarRes(ctx: IExprCtx) {
     cast[JSCallExpression](qual)
       .filter(call => Option(call.getMethodExpression).exists(meth => meth.getText equals "at"))
       .flatMap(call => call.getArguments.lift(0)).itr
-      .flatMap(PathStrGoToDecl.getReferencedFile)
+      .flatMap(PathStrGoToDecl.getReferencedFileLoose)
   }
 
   def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {

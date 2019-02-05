@@ -28,7 +28,7 @@ class DeepJsCbtr extends CompletionContributor {
     new JsdocPvdr()
   )
   override def invokeAutoPopup(position: PsiElement, typeChar: Char): Boolean = {
-    if (typeChar == '\'' || typeChar == '"') {
+    if (typeChar == '\'' || typeChar == '"' || typeChar == '.') {
       true
     } else {
       false

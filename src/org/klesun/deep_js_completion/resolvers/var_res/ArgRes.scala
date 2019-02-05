@@ -330,7 +330,7 @@ case class ArgRes(ctx: IExprCtx) {
     .filter(call => Option(call.getMethodExpression)
       .map(e => e.getText).getOrElse("").equals("klesun.requires"))
     .flatMap(call => call.getArguments.itr.lift(0))
-    .flatMap(arg => PathStrGoToDecl.getReferencedFile(arg))
+    .flatMap(arg => PathStrGoToDecl.getReferencedFileLoose(arg))
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
 
@@ -404,7 +404,7 @@ case class ArgRes(ctx: IExprCtx) {
           val path = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           nit(caretPsi.getContainingFile)
-            .flatMap(f => PathStrGoToDecl.getReferencedFile(path, f)).itr
+            .flatMap(f => PathStrGoToDecl.getReferencedFileStrict(path, f)).itr
             .flatMap(file => List()
               ++ resolveCommonJsFormatDef(file)
               ++ resolveRequireJsFormatDef(file)
