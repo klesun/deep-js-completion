@@ -71,10 +71,11 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
   <depends>JavaScript</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.PropNameCbtr"/>
+    <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepJsCbtr"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.PathStrGoToDecl"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.DestrPropGoToDecl"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.completion_providers.PropNamePvdr"/>
+    <completion.confidence language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepJsCompletionConfidence" order="first"/>
   </extensions>
 
   <actions>
