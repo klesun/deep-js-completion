@@ -40,13 +40,17 @@ class JsdocPvdr extends CompletionProvider[CompletionParameters] {
     result: CompletionResultSet
   ) = {
     val prefix = parameters.getEditor.getDocument
-      .getText(new TextRange(parameters.getOffset - 100, parameters.getOffset))
+      .getText(new TextRange(Math.max(parameters.getOffset - 100, 0), parameters.getOffset))
+    val postfix = parameters.getEditor.getDocument
+          .getText(new TextRange(parameters.getOffset, Math.min(parameters.getOffset + 100, parameters.getEditor.getDocument.getTextLength)))
+    val ending = if (!postfix.startsWith("'") && !postfix.startsWith("\"")) "')" else ""
     val lookups = matchFileNameTaker(prefix)
       .itr().flatMap((tuple) => {
         // WebStorm splits leaf PSI-s by space
         val (leafStart, namePrefix) = tuple
         nit(parameters.getOriginalFile)
           .flatMap(f =>
+
             getJsFiles(f).itr().flatMap(fname => {
               List(
                 // idea currently excludes options not prefixed by  the
@@ -54,7 +58,7 @@ class JsdocPvdr extends CompletionProvider[CompletionParameters] {
                 LookupElementBuilder.create(fname)
                   .bold().withIcon(getIcon)
                 ,
-                LookupElementBuilder.create(leafStart + fname)
+                LookupElementBuilder.create(leafStart + fname + ending)
                   .bold().withIcon(getIcon)
               )
             })
