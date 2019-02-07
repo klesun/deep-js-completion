@@ -58,29 +58,32 @@ object MainRes {
         else clst.getNewInstType(ctx.subCtxEmpty()))
   }
 
+  def resolveNewExpr(newex: JSNewExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
+    if (Option(newex.getMethodExpression).forall(ref => ref.getText equals "Promise")) {
+      val types = newex.getArguments.lift(0)
+        .flatMap(cbArg => cast[JSFunction](cbArg))
+        .flatMap(f => f.getParameters.lift(0))
+        .flatMap(cbArg => cast[JSParameter](cbArg))
+        .itr.flatMap(par => VarRes.findVarUsages(par, par.getName))
+        .flatMap(usage => Option(usage.getParent)
+          .flatMap(cast[JSCallExpression](_))
+          .filter(call => usage eq call.getMethodExpression))
+        .flatMap(call => call.getArguments.lift(0))
+        .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+        .map(valuet => Mt.wrapPromise(valuet))
+      types
+    } else {
+      nit(newex.getMethodExpression)
+        .flatMap(exp => ctx.findExprType(exp)).itr
+        .flatMap(Mt.flattenTypes)
+        .flatMap(cast[JSDeepClassType](_))
+        .flatMap(clst => clst.getNewInstType(ctx.subCtxDirect(newex)))
+    }
+  }
+
   def resolveIn(expr: JSExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
     val types: GenTraversableOnce[JSType] = expr match {
-      case newex: JSNewExpression =>
-        if (Option(newex.getMethodExpression).forall(ref => ref.getText equals "Promise")) {
-          val types = newex.getArguments.lift(0)
-            .flatMap(cbArg => cast[JSFunction](cbArg))
-            .flatMap(f => f.getParameters.lift(0))
-            .flatMap(cbArg => cast[JSParameter](cbArg))
-            .itr.flatMap(par => VarRes.findVarUsages(par, par.getName))
-            .flatMap(usage => Option(usage.getParent)
-              .flatMap(cast[JSCallExpression](_))
-              .filter(call => usage eq call.getMethodExpression))
-            .flatMap(call => call.getArguments.lift(0))
-            .flatMap(value => ctx.subCtxEmpty().findExprType(value))
-            .map(valuet => Mt.wrapPromise(valuet))
-          types
-        } else {
-          nit(newex.getMethodExpression)
-            .flatMap(exp => ctx.findExprType(exp)).itr
-            .flatMap(Mt.flattenTypes)
-            .flatMap(cast[JSDeepClassType](_))
-            .flatMap(clst => clst.getNewInstType(ctx.subCtxDirect(newex)))
-        }
+      case newex: JSNewExpression => resolveNewExpr(newex, ctx)
       case call: JSCallExpression => FuncCallRes(ctx).resolve(call)
       case vari: JSReferenceExpression => VarRes(ctx).resolve(vari)
       case indx: JSIndexedPropertyAccessExpression =>
@@ -117,7 +120,7 @@ object MainRes {
         }).toList.asJava
         Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
       case bina: JSBinaryExpression =>
-        val types = (Option(bina.getLOperand) ++ Option(bina.getROperand))
+        val types = cnc(nit(bina.getLOperand), nit(bina.getROperand))
           .flatMap(op => ctx.findExprType(op))
         types
       case lit: JSLiteralExpressionImpl =>

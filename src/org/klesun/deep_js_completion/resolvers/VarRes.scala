@@ -54,23 +54,30 @@ object VarRes {
 
   def findVarUsages(decl: PsiElement, name: String): GenTraversableOnce[JSReferenceExpression] = {
     // maybe this could be used instead: JSScopeNamesUsages
-    if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts"))) {
+    if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts")) ||
+        Option(decl.getContainingFile).exists(f => f.getTextLength > 3000 * 64)
+    ) {
       List()
     } else {
-      val t1 = System.nanoTime
       val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
         .getOrElse(decl.getContainingFile)
-      val result = Lang.findChildren[JSReferenceExpression](scope)
-        .filter(usage => Objects.equals(usage.getReferenceName, name))
-        .filter(usage => !Objects.equals(usage, decl))
-        .filter(usage => Objects.equals(decl, usage.resolve()))
-      val duration = (System.nanoTime - t1) / 1e9d
-      result
+      if (scope.getTextLength > 3000 * 64) {
+        // eliminate .min.js files and such - anything longer than ~ 3000 lines
+        List()
+      } else {
+        val t1 = System.nanoTime
+        val result = Lang.findChildren[JSReferenceExpression](scope)
+          .filter(usage => Objects.equals(usage.getReferenceName, name))
+          .filter(usage => !Objects.equals(usage, decl))
+          .filter(usage => Objects.equals(decl, usage.resolve()))
+        val duration = (System.nanoTime - t1) / 1e9d
+        result
+      }
     }
   }
 
   private def findRefUsages(ref: JSReferenceExpression): GenTraversableOnce[JSReferenceExpression] = {
-    Option(ref.resolve()).itr.flatMap(decl => findVarUsages(decl, ref.getReferenceName))
+    nit(ref.resolve()).flatMap(decl => findVarUsages(decl, ref.getReferenceName))
       .filter(usage => !usage.equals(ref))
   }
 }

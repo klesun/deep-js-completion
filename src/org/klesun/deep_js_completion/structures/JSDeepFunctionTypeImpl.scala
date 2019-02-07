@@ -40,7 +40,7 @@ case class JSDeepFunctionTypeImpl(
   def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function"
 
 //  override def toString(): String = {
-//    val funcCtx = FuncCtx(new SearchCtx())
+//    val funcCtx = FuncCtx(new SearchCtx(project=Option(funcPsi.getProject)))
 //    val exprCtx = ExprCtx(funcCtx, new FakePsiElement with JSExpression {
 //      override def getParent: PsiElement = null
 //      override def replace(jsExpression: JSExpression): JSExpression = ???
