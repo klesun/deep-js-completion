@@ -265,11 +265,11 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(file => findVarAt(file, varName))
           .flatMap(vari => resolveMainDeclVar(vari)))
       ++
-      findRefUsages(ref).itr()
-        .flatMap(usage => resolveAssignmentTo(usage))
-      ++
       getDeclarations(ref).itr()
         .flatMap(psi => resolveFromMainDecl(psi))
+      ++
+      findRefUsages(ref).itr()
+        .flatMap(usage => resolveAssignmentTo(usage))
     )
   }
 }

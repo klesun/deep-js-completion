@@ -210,6 +210,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
 
     val elapsed = System.nanoTime - startTime
     result.addLookupAdvertisement("Resolved all in " + (elapsed / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
+    Console.println("Resolved all in " + (elapsed / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
 
     val keptBuiltIns = builtInSuggestions.asScala
       .flatMap(tuple => {
