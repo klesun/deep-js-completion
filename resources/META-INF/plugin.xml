@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.02.07.001</version>
+  <version>2019.02.19.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,7 +57,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Optimize: make sure we do not take full scan of a file consisting of many thousands of lines looking fr var usages. Caused several seconds hang if you used `require` and there was a requirejs module in the project</li>
+  <li>Provide js var type info to phpdoc if deep-assoc plugin is enabled as well</li>
     ]]>
   </change-notes>
 
