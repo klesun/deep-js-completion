@@ -26,7 +26,7 @@ import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getProps
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.{GenIterable, GenTraversableOnce, mutable}
 import scala.collection.JavaConverters._

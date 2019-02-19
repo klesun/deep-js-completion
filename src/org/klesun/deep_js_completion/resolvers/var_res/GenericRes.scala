@@ -8,11 +8,11 @@ import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.resolveTypeExpr
 import org.klesun.deep_js_completion.structures
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
-import org.klesun.lang.Lang.cast
+import org.klesun.lang.DeepJsLang.cast
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 
 object GenericRes {

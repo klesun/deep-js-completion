@@ -9,7 +9,7 @@ import com.intellij.psi.impl.FakePsiElement
 import com.intellij.util
 import com.intellij.util.ProcessingContext
 import org.klesun.deep_js_completion.contexts._
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 

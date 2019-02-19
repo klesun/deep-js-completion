@@ -66,6 +66,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
   <!-- if you don't add this, you'll get "plugin does not include any module dependency tags" error  -->
   <depends>com.intellij.modules.lang</depends>
   <depends>JavaScript</depends>
+  <depends optional="true" config-file="deep-assoc-wrapper.xml">lv.midiana.misc.phpstorm-plugins.deep-keys</depends>
 
   <extensions defaultExtensionNs="com.intellij">
     <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepJsCbtr"/>

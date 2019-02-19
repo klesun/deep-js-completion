@@ -4,7 +4,7 @@ import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.types.{JSTypeBaseImpl, JSTypeSource}
 import com.intellij.util
 import com.intellij.util.ProcessingContext
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 /**
   * a wrapper for a type iterator that implements JSType so

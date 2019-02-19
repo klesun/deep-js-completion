@@ -1,17 +1,18 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
+import com.intellij.psi.PsiElement
 
 import scala.collection.GenTraversableOnce
 
 case class ExprCtx(
   funcCtx: FuncCtx,
-  expr: JSExpression,
+  expr: PsiElement,
   depth: Integer,
   parent: Option[ExprCtx] = None
 ) extends IExprCtx {
 
-  def subExpr(expr: JSExpression, funcCtx: FuncCtx): ExprCtx = {
+  def subExpr(expr: PsiElement, funcCtx: FuncCtx): ExprCtx = {
       ExprCtx(funcCtx, expr, depth + 1, Some(this))
   }
 

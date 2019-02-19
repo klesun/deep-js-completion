@@ -1,0 +1,5 @@
+<idea-plugin>
+   <extensions defaultExtensionNs="com.intellij">
+       <completion.contributor order="first" language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepAssocWrapperCbtr"/>
+   </extensions>
+</idea-plugin>

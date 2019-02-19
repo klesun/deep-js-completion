@@ -20,13 +20,13 @@ import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
 import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
-import org.klesun.lang.Lang
-import org.klesun.lang.Lang.{cast, nit}
+import org.klesun.lang.DeepJsLang
+import org.klesun.lang.DeepJsLang.{cast, nit}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 object ArgRes {
 
@@ -354,8 +354,8 @@ case class ArgRes(ctx: IExprCtx) {
   private def findVarDecl(caretPsi: PsiElement, varName: String): GenTraversableOnce[JSType] = {
     var scope: Option[PsiElement] = None
     var stmts: GenTraversableOnce[PsiElement] = Iterator.empty
-    val funcOpt = Lang.findParent[JSBlockStatement](caretPsi)
-    val fileOpt = Lang.findParent[JSFile](caretPsi)
+    val funcOpt = DeepJsLang.findParent[JSBlockStatement](caretPsi)
+    val fileOpt = DeepJsLang.findParent[JSFile](caretPsi)
     if (funcOpt.isDefined) {
       scope = funcOpt
       stmts = funcOpt.get.getStatements.itr()

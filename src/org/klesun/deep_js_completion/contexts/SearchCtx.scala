@@ -5,7 +5,7 @@ import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSRefer
 import com.intellij.openapi.project.Project
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.resolvers.MainRes
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 

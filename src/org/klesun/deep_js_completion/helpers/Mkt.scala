@@ -8,7 +8,7 @@ import org.klesun.deep_js_completion.structures.JSDeepMultiType
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.immutable.List
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 /** stands for MaKe Type - a helper with handy functions to describe typedefs */
 object Mkt {

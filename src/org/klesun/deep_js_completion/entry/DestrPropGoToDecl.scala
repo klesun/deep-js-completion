@@ -8,7 +8,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 
 class DestrPropGoToDecl extends GotoDeclarationHandler {

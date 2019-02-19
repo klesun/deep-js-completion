@@ -17,10 +17,11 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
+import org.klesun.deep_js_completion.resolvers.other_plugin_integration.DeepAssocWrapper
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType}
-import org.klesun.lang.Lang
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
@@ -59,14 +60,14 @@ object VarRes {
     ) {
       List()
     } else {
-      val scope: PsiElement = Lang.findParent[JSFunctionExpression](decl)
+      val scope: PsiElement = DeepJsLang.findParent[JSFunctionExpression](decl)
         .getOrElse(decl.getContainingFile)
       if (scope.getTextLength > 3000 * 64) {
         // eliminate .min.js files and such - anything longer than ~ 3000 lines
         List()
       } else {
         val t1 = System.nanoTime
-        val result = Lang.findChildren[JSReferenceExpression](scope)
+        val result = DeepJsLang.findChildren[JSReferenceExpression](scope)
           .filter(usage => Objects.equals(usage.getReferenceName, name))
           .filter(usage => !Objects.equals(usage, decl))
           .filter(usage => Objects.equals(decl, usage.resolve()))

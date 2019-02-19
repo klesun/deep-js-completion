@@ -11,7 +11,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures._
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._

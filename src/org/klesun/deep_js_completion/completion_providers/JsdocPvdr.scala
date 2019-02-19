@@ -10,7 +10,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.util.ProcessingContext
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.getIcon
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._

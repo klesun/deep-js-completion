@@ -3,7 +3,7 @@ package org.klesun.deep_js_completion.contexts
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.EArgPsiType.EArgPsiType
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 

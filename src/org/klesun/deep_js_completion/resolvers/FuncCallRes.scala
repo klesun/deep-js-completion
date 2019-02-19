@@ -7,7 +7,7 @@ import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl}
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 

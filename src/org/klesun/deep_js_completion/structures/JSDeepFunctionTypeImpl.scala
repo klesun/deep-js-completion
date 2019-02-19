@@ -11,7 +11,7 @@ import com.intellij.util.ProcessingContext
 import org.klesun.deep_js_completion.contexts._
 
 import scala.collection.GenTraversableOnce
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 /**
   * unlike built-in JSFunctionTypeImpl, this one has the getReturnType(context)

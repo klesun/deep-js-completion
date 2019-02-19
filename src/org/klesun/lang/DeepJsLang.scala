@@ -7,7 +7,7 @@ import scala.reflect.{ClassTag, classTag}
 
 
 /** provides some core functions needed for IDEA plugin development */
-object Lang {
+object DeepJsLang {
 
   // it would be nice to tell compiler somehow that T
   // is subclass of value arg... I could not find the way
@@ -199,12 +199,17 @@ object Lang {
   class It[T](values: GenTraversableOnce[T]) extends Iterator[T] {
     private val src = values.toIterator
     private var ended = false
+    private var allowEndHasNextFlag = false
 
     override def hasNext: Boolean = {
       if (src.hasNext) {
         true
       } else if (ended) {
-        throw new RuntimeException("Tried to reuse disposed iterator")
+        if (allowEndHasNextFlag) {
+          false
+        } else {
+          throw new RuntimeException("Tried to reuse disposed iterator")
+        }
       } else {
         ended = true
         false
@@ -225,6 +230,11 @@ object Lang {
         i = i + 1
       }
       if (hasNext) Some(next()) else None
+    }
+
+    def allowEndHasNext() = {
+      allowEndHasNextFlag = true
+      this
     }
   }
 

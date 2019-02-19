@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.search.{FilenameIndex, ProjectScope}
 import com.intellij.psi.{PsiElement, PsiFile, PsiManager}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
-import org.klesun.lang.Lang._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
 
