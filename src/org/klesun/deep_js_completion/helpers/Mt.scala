@@ -4,11 +4,15 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureImpl
+import com.intellij.lang.javascript.psi.resolve.JSClassResolver
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import com.intellij.psi.search.EverythingGlobalScope
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures._
 import org.klesun.lang.DeepJsLang._
@@ -37,17 +41,17 @@ object Mt {
   def flattenTypes(t: JSType): It[JSType] = {
     ({t match {
       case mt: JSContextualUnionTypeImpl => {
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
+        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
       }
       case mt: JSCompositeTypeImpl => {
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
+        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
       }
       case mt: JSUnionOrIntersectionType =>
-        mt.getTypes.asScala.flatMap(mt => flattenTypes(mt))
+        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
       case mt: JSDeepMultiType =>
         mt.mit.itr()
-      case _ => Some(t)
-    }}: GenTraversableOnce[JSType]).itr()
+      case _ => Some(t).itr()
+    }}: It[JSType])
   }
 
   private def getLiteralValueOpts(litT: JSType): Iterable[Option[String]] = {
@@ -94,7 +98,6 @@ object Mt {
   }
 
   def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType]): GenTraversableOnce[JSType] = {
-    // TODO: it seems I broke something here. result.headerData. suggests me just 'passengerList'
     // TODO: should optimize to stop right after first
     //  "unknown" key type, like it's done in deep-assoc
     val keyTOpt = Mt.mergeTypes(keyTIt)
@@ -119,6 +122,59 @@ object Mt {
       }
     }
     elts
+  }
+
+  private def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
+    val genMems = Mt.asGeneric(typ, project).itr
+      .flatMap(mt => {
+        val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
+        val scope = new EverythingGlobalScope(project)
+        val tsMems = JSClassResolver.getInstance().findClassesByQName(fqn, scope).asScala
+          .itr.flatMap(ifc => ifc.getMembers.asScala)
+          .flatMap(cast[TypeMember](_))
+        // I suspect just asRecordType() would be enough
+        mt.asRecordType().getTypeMembers.asScala ++ tsMems
+      })
+    var mems = typ match {
+      case objT: JSRecordType => objT.getTypeMembers.asScala
+      case mt: JSType =>
+        // when you specify class with jsdoc for example - JSTypeImpl
+        mt.asRecordType().getTypeMembers.asScala
+      case _ =>
+        /** @debug*/
+        //println("Unsupported typ " + typ.getClass + " " + typ)
+        List()
+    }
+    mems = mems ++ genMems
+    mems.map {
+      case sig: TypeScriptFunctionSignatureImpl =>
+        // it implements both PsiElement and TypeMember interfaces at same time
+        Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))
+      case rest => rest
+    }
+  }
+
+  def getProps(objt: JSType, proj: Project): GenTraversableOnce[DeepIndexSignatureImpl] = {
+    val mems = Mt.flattenTypes(objt).flatMap(t => getFlatMems(t, proj))
+    mems.itr().map(mem => {
+      var kpsi: Option[PsiElement] = None
+      var keyt: JSType = JSUnknownType.JS_INSTANCE
+      var valt: JSType = JSUnknownType.JS_INSTANCE
+      mem match {
+        case deep: DeepIndexSignatureImpl =>
+          kpsi = deep.psi
+          keyt = deep.keyt
+          valt = deep.valt
+        case idx: IndexSignatureImpl =>
+          keyt = idx.getMemberParameterType
+          valt = idx.getMemberType
+        case prop: PropertySignature =>
+          keyt = new JSStringLiteralTypeImpl(prop.getMemberName, true, JSTypeSource.EMPTY)
+          valt = prop.getType
+        case _ =>
+      }
+      DeepIndexSignatureImpl(keyt, valt, kpsi)
+    })
   }
 
   def getReturnType(funcT: JSType, ctx: IExprCtx): GenTraversableOnce[JSType] = {

@@ -1,7 +1,5 @@
 package org.klesun.deep_js_completion.resolvers.other_plugin_integration
 
-import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
-import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
 import com.intellij.lang.javascript.psi.{JSFunction, JSType}
@@ -10,12 +8,11 @@ import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import org.klesun.deep_assoc_completion.helpers.{Mt => PhpMt}
 import org.klesun.deep_assoc_completion.resolvers.other_plugin_integration.DeepAssocApi
 import org.klesun.deep_assoc_completion.structures.{DeepType, KeyType}
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.deep_js_completion.helpers.{Mt => JsMt}
 import org.klesun.deep_js_completion.resolvers.other_plugin_integration.DeepAssocWrapper._
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.JavaConverters._
@@ -53,25 +50,12 @@ object DeepAssocWrapper {
             .addType(() => new PhpMt(() => valTit))
           phpt
         case _ =>
-          val mems = PropNamePvdr.getMems(jst, psi.getProject)
+          val props = JsMt.getProps(jst, psi.getProject)
           val phpt = new DeepType(psi, PhpType.ARRAY)
-          mems.foreach(mem => {
-            var kpsi = psi
-            var keyt: JSType = JSUnknownType.JS_INSTANCE
-            var valt: JSType = JSUnknownType.JS_INSTANCE
-            mem match {
-              case deep: DeepIndexSignatureImpl =>
-                kpsi = deep.psi.getOrElse(psi)
-                keyt = deep.keyt
-                valt = deep.valt
-              case idx: IndexSignatureImpl =>
-                keyt = idx.getMemberParameterType
-                valt = idx.getMemberType
-              case prop: PropertySignature =>
-                keyt = new JSStringLiteralTypeImpl(prop.getMemberName, true, JSTypeSource.EMPTY)
-                valt = prop.getType
-              case _ =>
-            }
+          props.foreach(prop => {
+            var kpsi = prop.psi.getOrElse(psi)
+            var keyt = prop.getMemberParameterType
+            var valt = prop.getMemberType
             val keyTit = JsMt.flattenTypes(keyt)
               .map(t => jsToPhp(t, kpsi, depth + 1, nextOccs))
               .itr().allowEndHasNext().asJava
@@ -97,7 +81,7 @@ class DeepAssocWrapper {
 
     DeepAssocApi.inst().addCustomDocParser("deep-js-completion", (str: String, psi: PsiElement/*, phpCtx: IExprCtx*/) => {
       // should probably use a global search ctx for such stuff, so that caching and depth limits worked
-      val jsSearch = new SearchCtx(project=Option(psi.getProject))
+      val jsSearch = new SearchCtx(project=Option(psi.getProject), maxDepth = 35)
       val funcCtx = FuncCtx(jsSearch)
       val jsCtx = ExprCtx(funcCtx, psi, 0)
 

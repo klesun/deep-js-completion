@@ -9,9 +9,13 @@ import org.klesun.lang.DeepJsLang._
 
 import scala.collection.{GenTraversableOnce, mutable}
 
+object SearchCtx {
+  val DEBUG_DEFAULT = false
+}
+
 class SearchCtx(
     val maxDepth: Integer = 20,
-    val debug: Boolean = false,
+    val debug: Boolean = SearchCtx.DEBUG_DEFAULT,
     val project: Option[Project],
 ) {
     // for performance measurement
@@ -50,7 +54,7 @@ class SearchCtx(
 
     private def hasTypeInfo(t: JSType): Boolean = {
         project.itr.flatMap(project =>
-            PropNamePvdr.getProps(t, project)).nonEmpty
+            PropNamePvdr.getNamedProps(t, project)).nonEmpty
     }
 
     private def takeFromCache(ctx: IExprCtx, expr: JSExpression): Option[MemIt[JSType]] = {

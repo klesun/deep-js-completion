@@ -1,6 +1,7 @@
 package org.klesun.lang
 
 import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.contexts.SearchCtx
 
 import scala.collection.GenTraversableOnce
 import scala.reflect.{ClassTag, classTag}
@@ -200,17 +201,30 @@ object DeepJsLang {
     private val src = values.toIterator
     private var ended = false
     private var allowEndHasNextFlag = false
+    private var hadAny = false
+
+    /** @debug */
+    val createdAt = if (SearchCtx.DEBUG_DEFAULT) Some(new Exception("created here")) else None
+    var disposedAt: Option[Exception] = None
 
     override def hasNext: Boolean = {
       if (src.hasNext) {
+        hadAny = true
         true
       } else if (ended) {
-        if (allowEndHasNextFlag) {
+        if (allowEndHasNextFlag || !hadAny) {
           false
         } else {
-          throw new RuntimeException("Tried to reuse disposed iterator")
+          val exc = new RuntimeException("Tried to reuse disposed iterator")
+          if (disposedAt.nonEmpty) {
+            exc.initCause(disposedAt.get)
+          }
+          throw exc
         }
       } else {
+        if (createdAt.nonEmpty) {
+          disposedAt = Some(new Exception("disposed here", createdAt.get))
+        }
         ended = true
         false
       }

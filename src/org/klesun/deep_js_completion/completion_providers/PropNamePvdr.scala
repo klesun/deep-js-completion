@@ -22,7 +22,7 @@ import com.intellij.psi.search.EverythingGlobalScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getProps, _}
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getNamedProps, _}
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
@@ -73,49 +73,11 @@ object PropNamePvdr {
     PrioritizedLookupElement.withPriority(lookup, DEEP_PRIO - i)
   }
 
-  def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
-    val genMems = Mt.asGeneric(typ, project).itr
-      .flatMap(mt => {
-        val fqn = mt.getType.getTypeText(TypeTextFormat.CODE)
-        val scope = new EverythingGlobalScope(project)
-        val tsMems = JSClassResolver.getInstance().findClassesByQName(fqn, scope).asScala
-          .itr.flatMap(ifc => ifc.getMembers.asScala)
-          .flatMap(cast[TypeMember](_))
-        // I suspect just asRecordType() would be enough
-        mt.asRecordType().getTypeMembers.asScala ++ tsMems
-      })
-    var mems = typ match {
-      case objT: JSRecordType => objT.getTypeMembers.asScala
-      case mt: JSType =>
-        // when you specify class with jsdoc for example - JSTypeImpl
-        mt.asRecordType().getTypeMembers.asScala
-      case _ =>
-        /** @debug*/
-        //println("Unsupported typ " + typ.getClass + " " + typ)
-        List()
-    }
-    mems = mems ++ genMems
-    mems.map {
-      case sig: TypeScriptFunctionSignatureImpl =>
-        // it implements both PsiElement and TypeMember interfaces at same time
-        Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))
-      case rest => rest
-    }
-  }
-
-  def getMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
-    Mt.flattenTypes(typ).flatMap(t => getFlatMems(t, project))
-  }
-
-  def getProps(typ: JSType, project: Project): It[PropertySignature] = {
-    val mems = getMems(typ, project)
-    mems.itr().flatMap {
-      case prop: PropertySignature => Some(prop)
-      case idx: IndexSignature => Mt
+  def getNamedProps(typ: JSType, project: Project): It[PropertySignature] = {
+    val mems = Mt.getProps(typ, project)
+    mems.itr().flatMap(idx => Mt
         .getAnyLiteralValues(idx.getMemberParameterType)
-        .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource))
-      case _ => None
-    }
+        .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource)))
   }
 }
 
@@ -192,7 +154,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         typesGot = typesGot + 1
         true
       })
-      .flatMap(typ => getProps(typ, nullPsi.getProject))
+      .flatMap(typ => getNamedProps(typ, nullPsi.getProject))
       .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
 
     Console.println("Created property iterator within " + search.expressionsResolved + " expressions (" + typesGot + " types)")
@@ -235,8 +197,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       .flatMap(cast[JSReferenceExpression](_))
       .flatMap(ref => nit(ref.getQualifier)
         .flatMap(qual => search.findExprType(qual))
-        .flatMap(typ => getMems(typ, caretPsi.getProject))
-        .flatMap(cast[DeepIndexSignatureImpl](_))
+        .flatMap(typ => Mt.getProps(typ, caretPsi.getProject))
         .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
           .exists(lit => lit equals ref.getReferenceName)))
       .flatMap(p => p.psi)

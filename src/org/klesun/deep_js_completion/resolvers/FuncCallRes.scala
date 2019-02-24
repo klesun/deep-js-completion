@@ -6,8 +6,9 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
-import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl}
+import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang._
+import scala.collection.JavaConverters._
 
 import scala.collection.GenTraversableOnce
 
@@ -35,6 +36,18 @@ case class FuncCallRes(ctx: IExprCtx) {
       // IDEA actually has the built-in function generic return type mapping, but I'm
       // not able to get the info (getReturnType returns AnyType instead of A & B)
       args.flatMap(arg => ctx.findExprType(arg))
+    } else if ((obj.getText equals "Object") && (methName equals "entries")) {
+      // d.ts has the generic for value, but not for key sadly
+      args.lift(0).itr().flatMap(arg => ctx.findExprType(arg))
+        .map(objt => {
+          val elts: GenTraversableOnce[JSType] = Mt
+            .getProps(objt, obj.getProject).itr().map(prop => {
+              val tts = List(prop.getMemberParameterType, prop.getMemberType)
+              new JSTupleTypeImpl(JSTypeSource.EMPTY, tts.asJava, true, -1)
+            })
+          val elt = JSDeepMultiType(elts.mem())
+          new JSArrayTypeImpl(elt, JSTypeSource.EMPTY)
+        })
     } else if (methName equals "then") {
       args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
           .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
