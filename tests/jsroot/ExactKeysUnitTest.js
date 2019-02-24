@@ -6,3 +6,5 @@ let provideAsyncPromise = async () => {
         zxc3: 123,
     });
 };
+
+require('GdsProfiles.js').AMADEUS.;

@@ -55,4 +55,20 @@ case class FuncCtx(
 
   override def getClosurePsi(): Option[JSFunction] = closurePsi
   override def getClosureCtx(): Option[IFuncCtx] = closureCtx
+
+  private def getHashValues(): List[Object] = {
+    if (argGetters.isEmpty) {
+      closureCtx.toList
+    } else {
+      closureCtx.toList ++ List(argPsiType) ++ uniqueRef ++ parent
+    }
+  }
+
+  override def hashCode(): Int = {
+    getHashValues().hashCode()
+  }
+
+  override def equals(that: Any): Boolean = {
+    cast[FuncCtx](that).exists(that => that.getHashValues equals this.getHashValues)
+  }
 }

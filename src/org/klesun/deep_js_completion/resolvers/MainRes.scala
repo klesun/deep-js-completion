@@ -96,9 +96,9 @@ object MainRes {
             result
           })
       case func: JSFunctionExpression =>
-        val returns = getReturns(func)
+        val returns = getReturns(func).mem()
         Some(JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
-          returns.flatMap(r => {
+          returns.itr().flatMap(r => {
             val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
               .exists(lst => lst.hasModifier(ModifierType.ASYNC))
             val rett = callCtx.findExprType(r)

@@ -11,7 +11,7 @@ object DeepJsLang {
 
   // it would be nice to tell compiler somehow that T
   // is subclass of value arg... I could not find the way
-  def cast[T : ClassTag](value: Object): Option[T] = {
+  def cast[T : ClassTag](value: Any): Option[T] = {
     value match {
       /** @see https://stackoverflow.com/a/21640639/2750743 */
       case matched: T if classTag[T].runtimeClass.isInstance(matched) => Some(matched)

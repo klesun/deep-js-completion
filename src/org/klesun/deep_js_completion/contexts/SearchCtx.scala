@@ -7,21 +7,20 @@ import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.DeepJsLang._
 
-import scala.collection.GenTraversableOnce
+import scala.collection.{GenTraversableOnce, mutable}
 
 class SearchCtx(
     val maxDepth: Integer = 20,
     val debug: Boolean = false,
     val project: Option[Project],
 ) {
-
     // for performance measurement
     var expressionsResolved = 0
 
     // for very basic GoTo
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
     // caching - to not re-resolve same expression 100500 times, also prevents many recursion cases
-    val exprToResult = scala.collection.mutable.Map[JSExpression, MemIt[JSType]]()
+    val ctxToExprToResult = mutable.Map[IFuncCtx, mutable.Map[JSExpression, MemIt[JSType]]]()
 
     private def getWsType(expr: JSExpression) = {
         val isProp = cast[JSReferenceExpression](expr)
@@ -54,6 +53,24 @@ class SearchCtx(
             PropNamePvdr.getProps(t, project)).nonEmpty
     }
 
+    private def takeFromCache(ctx: IExprCtx, expr: JSExpression): Option[MemIt[JSType]] = {
+      if (!ctxToExprToResult.contains(ctx.func())) {
+        None
+      } else if (!ctxToExprToResult(ctx.func()).contains(expr)) {
+        None
+      } else {
+        Some(ctxToExprToResult(ctx.func())(expr))
+      }
+    }
+
+    private def putToCache(ctx: IExprCtx, expr: JSExpression, result: MemIt[JSType]): Unit = {
+      if (!ctxToExprToResult.contains(ctx.func())) {
+        ctxToExprToResult.put(ctx.func(), mutable.Map())
+      }
+      ctxToExprToResult(ctx.func()).remove(expr)
+      ctxToExprToResult(ctx.func()).put(expr, result)
+    }
+
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
         if (debug) {
@@ -61,14 +78,15 @@ class SearchCtx(
         }
 
         expressionsResolved += 1
-        if (exprToResult.contains(expr)) {
-            exprToResult(expr).itr()
+        val fromCache = takeFromCache(exprCtx, expr)
+        if (fromCache.nonEmpty) {
+          fromCache.get.itr()
         } else if (exprCtx.depth > maxDepth) {
             None
         } else if (expressionsResolved >= 7500) {
             None
         } else {
-            exprToResult.put(expr, Iterator.empty.mem())
+            putToCache(exprCtx, expr, Iterator.empty.mem())
             var gotTypeInfo = false
             val resolved = MainRes.resolveIn(expr, exprCtx).itr
               .filter(t => {
@@ -84,7 +102,7 @@ class SearchCtx(
                 println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
             }
 
-            exprToResult.put(expr, mit)
+            putToCache(exprCtx, expr, mit)
             val cachedTit = mit.itr()
             cachedTit.map(t => typeToDecl.put(t, expr))
             cachedTit
