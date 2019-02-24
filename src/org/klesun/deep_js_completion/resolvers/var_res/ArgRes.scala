@@ -267,7 +267,7 @@ case class ArgRes(ctx: IExprCtx) {
     val order = func.getParameters.indexOf(para)
     grabClosureCtxs(ctx.func()).itr
       .find(_.getClosurePsi().exists(_ equals func)).itr
-      .flatMap(_.getArg(order))
+      .flatMap(ctx => if (para.isRest) Some(ctx.getSpreadArg) else ctx.getArg(order))
   }
 
   private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {

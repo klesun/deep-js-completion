@@ -57,9 +57,14 @@ class ExactKeysUnitTest
         ];
     }
 
-    // ========================
-    // following not implemented yet
-    // ========================
+    /** @param $arg = require('ExactKeysUnitTest.js').provideArgSpread() */
+    public function provideArgSpread($arg)
+    {
+        $arg[0][''];
+        return [
+            [$arg[0], ['name', 'age', 'height', 'salary']],
+        ];
+    }
 
     /** @param $arg = require('ExactKeysUnitTest.js').provideArrayMerge() */
     public function provideArrayMerge($arg)
@@ -67,8 +72,12 @@ class ExactKeysUnitTest
         $arg['mergedObj'][''];
         $arg['mergedArr'][0][''];
         return [
-            //[$arg['mergedObj'], ['a', 'b', 'c', 'd', 'e']],
-            //[$arg['mergedArr'][0], ['f', 'g']],
+            [$arg['mergedObj'], ['a', 'b', 'c', 'd', 'e']],
+            [$arg['mergedArr'][0], ['f', 'g']],
         ];
     }
+
+    // ========================
+    // following not implemented yet
+    // ========================
 }

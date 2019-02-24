@@ -40,7 +40,8 @@ exports.provideArgSpread = () => {
         {name: 'Lena', height: 175},
         {name: 'Ksyusha', salary: 800},
     );
-    arr[0].;
+    arr[0].n;
+    return arr;
 };
 
 exports.provideArrayMerge = () => {

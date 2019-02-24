@@ -1,8 +1,10 @@
 package org.klesun.deep_js_completion.contexts
 
+import com.intellij.lang.javascript.psi.types.{JSArrayType, JSArrayTypeImpl, JSTypeSource}
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.EArgPsiType.EArgPsiType
+import org.klesun.deep_js_completion.structures.JSDeepMultiType
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -51,6 +53,12 @@ case class FuncCtx(
     } else {
       None
     }
+  }
+
+  override def getSpreadArg(): JSArrayType = {
+    val elts = argGetters.itr().flatMap(g => g.itr())
+    val elt = JSDeepMultiType(elts.mem())
+    new JSArrayTypeImpl(elt, JSTypeSource.EMPTY)
   }
 
   override def getClosurePsi(): Option[JSFunction] = closurePsi
