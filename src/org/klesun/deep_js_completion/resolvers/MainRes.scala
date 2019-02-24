@@ -103,7 +103,7 @@ object MainRes {
               .exists(lst => lst.hasModifier(ModifierType.ASYNC))
             val rett = callCtx.findExprType(r)
             if (!isAsync) rett else {
-              rett.itr.map(t => Mt.wrapPromise(t))
+              rett.itr.flatMap(t => Mt.unwrapPromise(t)).map(t => Mt.wrapPromise(t))
             }
           }))
         )

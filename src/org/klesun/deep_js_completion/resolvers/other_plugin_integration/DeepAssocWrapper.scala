@@ -1,26 +1,24 @@
 package org.klesun.deep_js_completion.resolvers.other_plugin_integration
 
 import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
-import com.intellij.lang.javascript.psi.{JSFunction, JSType}
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
-import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.openapi.project.Project
+import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
+import com.intellij.lang.javascript.psi.{JSFunction, JSType}
 import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import org.klesun.deep_assoc_completion.helpers.{Mt => PhpMt}
 import org.klesun.deep_assoc_completion.resolvers.other_plugin_integration.DeepAssocApi
-import org.klesun.deep_assoc_completion.structures.{DeepType, KeyType, Mkt}
+import org.klesun.deep_assoc_completion.structures.{DeepType, KeyType}
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
-import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, IExprCtx, SearchCtx}
+import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.deep_js_completion.helpers.{Mt => JsMt}
-import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
-
-import scala.collection.JavaConverters._
 import org.klesun.deep_js_completion.resolvers.other_plugin_integration.DeepAssocWrapper._
+import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
 import org.klesun.lang.DeepJsLang._
-import org.klesun.lang.Lang._
+
+import scala.collection.JavaConverters._
 
 object DeepAssocWrapper {
   def jsToPhp(jst: JSType, psi: PsiElement, depth: Integer = 0, occs: Set[JSType] = Set()): DeepType = {
