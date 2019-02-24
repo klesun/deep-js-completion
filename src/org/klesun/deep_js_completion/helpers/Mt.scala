@@ -49,7 +49,7 @@ object Mt {
       case mt: JSUnionOrIntersectionType =>
         mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
       case mt: JSDeepMultiType =>
-        mt.mit.itr()
+        mt.mit.itr().flatMap(mt => flattenTypes(mt))
       case _ => Some(t).itr()
     }}: It[JSType])
   }
@@ -154,7 +154,7 @@ object Mt {
     }
   }
 
-  def getProps(objt: JSType, proj: Project): GenTraversableOnce[DeepIndexSignatureImpl] = {
+  def getProps(objt: JSType, proj: Project): It[DeepIndexSignatureImpl] = {
     val mems = Mt.flattenTypes(objt).flatMap(t => getFlatMems(t, proj))
     mems.itr().map(mem => {
       var kpsi: Option[PsiElement] = None
