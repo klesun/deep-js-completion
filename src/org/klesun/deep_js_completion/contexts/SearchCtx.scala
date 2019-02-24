@@ -3,6 +3,7 @@ package org.klesun.deep_js_completion.contexts
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.DeepJsLang._
@@ -10,12 +11,11 @@ import org.klesun.lang.DeepJsLang._
 import scala.collection.{GenTraversableOnce, mutable}
 
 object SearchCtx {
-  val DEBUG_DEFAULT = false
+  val DEBUG = false
 }
 
 class SearchCtx(
     val maxDepth: Integer = 20,
-    val debug: Boolean = SearchCtx.DEBUG_DEFAULT,
     val project: Option[Project],
 ) {
     // for performance measurement
@@ -74,10 +74,59 @@ class SearchCtx(
       ctxToExprToResult(ctx.func()).remove(expr)
       ctxToExprToResult(ctx.func()).put(expr, result)
     }
+    private def getExprChain(ctxArg: ExprCtx): List[PsiElement] = {
+      var ctx = ctxArg
+      var chain: List[PsiElement] = List()
+      while (ctx != null) {
+        if (!chain.lastOption.contains(ctx.expr)) {
+          chain = List(ctx.expr) ++ chain
+        }
+        ctx = ctx.parent.orNull
+      }
+      chain
+    }
+
+    private def endsWith[T](superList: List[T], subList: List[T]): Boolean = {
+      var endsWith = true
+      var i = 0
+      while (i < subList.length && endsWith) {
+        if (i >= superList.length) {
+          endsWith = false
+        } else {
+          val left = superList(superList.size - i - 1)
+          val right = subList(subList.size - i - 1)
+          if (!left.equals(right)) {
+            endsWith = false
+          }
+        }
+        i += 1
+      }
+      endsWith
+    }
+
+    /** @untested, possibly has mistakes */
+    private def isRecursion(ctx: ExprCtx) = {
+      // imagine sequence: a b c d e f g e f g
+      //                           ^_____^_____
+      // from my experience this assumption is right -  I
+      // treat any case where end repeats pre-end as recursion
+      var isRecursion = false
+      val psiTrace = getExprChain(ctx)
+      var i = 0
+      while (i < psiTrace.length / 2 && !isRecursion) {
+        val start = psiTrace.length - i * 2 - 2
+        val subList = psiTrace.slice(start, start + i + 1)
+        if (endsWith(psiTrace, subList)) {
+          isRecursion = true
+        }
+        i += 1
+      }
+      isRecursion
+    }
 
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
-        if (debug) {
+        if (SearchCtx.DEBUG) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
@@ -89,6 +138,8 @@ class SearchCtx(
             None
         } else if (expressionsResolved >= 7500) {
             None
+//        } else if (isRecursion(exprCtx)) {
+//            None
         } else {
             putToCache(exprCtx, expr, Iterator.empty.mem())
             var gotTypeInfo = false
@@ -102,7 +153,7 @@ class SearchCtx(
             val builtIn = getWsType(expr).filter(t => !isAtCaret && !gotTypeInfo)
             var result = frs(resolved, builtIn)
             val mit = result.mem()
-            if (debug) {
+            if (SearchCtx.DEBUG) {
                 println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
             }
 

@@ -204,23 +204,26 @@ object DeepJsLang {
     private var hadAny = false
 
     /** @debug */
-    val createdAt = if (SearchCtx.DEBUG_DEFAULT) Some(new Exception("created here")) else None
+    val createdAt = if (SearchCtx.DEBUG) Some(new Exception("created here")) else None
     var disposedAt: Option[Exception] = None
 
     override def hasNext: Boolean = {
-      if (src.hasNext) {
-        hadAny = true
-        true
-      } else if (ended) {
+      if (ended) {
         if (allowEndHasNextFlag || !hadAny) {
           false
         } else {
           val exc = new RuntimeException("Tried to reuse disposed iterator")
           if (disposedAt.nonEmpty) {
             exc.initCause(disposedAt.get)
+            exc.printStackTrace()
+            disposedAt.get.printStackTrace()
+            createdAt.get.printStackTrace()
           }
           throw exc
         }
+      } else if (src.hasNext) {
+        hadAny = true
+        true
       } else {
         if (createdAt.nonEmpty) {
           disposedAt = Some(new Exception("disposed here", createdAt.get))
