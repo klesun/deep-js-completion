@@ -13,7 +13,8 @@ exports.providePushSpread = () => {
     let result = [];
     let more = [{huj: 1, pizda: 2}];
     result.push(...more);
-    result[0].;
+    result[0].h;
+    return result;
 };
 
 exports.provideObjectEntries = () => {

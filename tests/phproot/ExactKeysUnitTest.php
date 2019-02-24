@@ -48,6 +48,15 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').providePushSpread() */
+    public function providePushSpread($arg)
+    {
+        $arg[0][''];
+        return [
+            [$arg[0], ['huj', 'pizda']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================

@@ -147,6 +147,18 @@ object MainRes {
           None
         }
       case thisExpr: JSThisExpression => resolveThisExpr(thisExpr, ctx)
+      case spread: JSSpreadExpression =>
+        ctx.findExprType(spread.getExpression).itr()
+          .flatMap(t => Mt.flattenTypes(t))
+          .flatMap(t => {
+            // does not handle {...obj}
+            val arrElts: GenTraversableOnce[JSType] = t match {
+              case arrt: JSArrayType => Some(arrt.getType)
+              case tupt: JSTupleType => tupt.getTypes.asScala
+              case _ => None
+            }
+            arrElts
+          })
       case _ => {
         None
       }
