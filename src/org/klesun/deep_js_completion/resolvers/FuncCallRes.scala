@@ -63,7 +63,7 @@ case class FuncCallRes(ctx: IExprCtx) {
   def resolveBuiltInFuncCall(funcName: String, args: List[JSExpression]): GenTraversableOnce[JSType] = {
     if (List("require").contains(funcName)) {
       val types = args.lift(0).itr.flatMap(arg => {
-        PathStrGoToDecl.getReferencedFileLoose(arg).itr
+        PathStrGoToDecl.getReferencedFileAnyDir(arg).itr
           .flatMap(file => ArgRes(ctx.subCtxEmpty()).resolveCommonJsFormatDef(file)) ++
         cast[JSLiteralExpression](arg)
           .map(lit => JSDeepModuleTypeImpl(lit.getValue + "", EInstType.Required))

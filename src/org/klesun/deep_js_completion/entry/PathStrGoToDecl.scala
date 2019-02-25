@@ -1,17 +1,20 @@
 package org.klesun.deep_js_completion.entry
 
+import com.intellij.codeInsight.completion.PrefixMatcher
+import com.intellij.codeInsight.completion.impl.CamelHumpMatcher
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.javascript.psi.JSExpression
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.{LocalFileSystem, VirtualFile}
 import com.intellij.psi.search.{FilenameIndex, ProjectScope}
 import com.intellij.psi.{PsiElement, PsiFile, PsiManager}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
 import org.klesun.lang.DeepJsLang._
 
+import scala.collection.JavaConverters._
 import scala.collection.GenTraversableOnce
 
 object PathStrGoToDecl {
@@ -24,7 +27,7 @@ object PathStrGoToDecl {
       .flatMap(f => Option(PsiManager.getInstance(caretFile.getProject).findFile(f)))
   }
 
-  def getReferencedFileLoose(relPath: String, caretFile: PsiFile): GenTraversableOnce[PsiFile] = {
+  def getReferencedFileAnyDir(relPath: String, caretFile: PsiFile): GenTraversableOnce[PsiFile] = {
     if (relPath.startsWith("./") || relPath.startsWith("../")) {
       getReferencedFileStrict(relPath, caretFile)
     } else if (relPath.endsWith(".es6")
@@ -40,12 +43,20 @@ object PathStrGoToDecl {
     }
   }
 
-  def getReferencedFileLoose(expr: JSExpression): GenTraversableOnce[PsiFile] = {
+  def getFilesByPartialName(partialName: String, proj: Project): GenTraversableOnce[VirtualFile] = {
+    val scope = ProjectScope.getProjectScope(proj)
+    val matcher = new CamelHumpMatcher(partialName, false)
+    FilenameIndex.getAllFilesByExt(proj, "js", scope).asScala
+      .filter(f => matcher.prefixMatches(f.getName))
+      .filter(vf => !Option(vf.getCanonicalPath).exists(path => path.contains("/node_modules/")))
+  }
+
+  def getReferencedFileAnyDir(expr: JSExpression): GenTraversableOnce[PsiFile] = {
     cast[JSLiteralExpressionImpl](expr).itr()
       .flatMap(lit => {
         val relPath = Option(lit.getValue).map(_.toString).getOrElse("")
         nit(lit.getContainingFile)
-          .flatMap(f => getReferencedFileLoose(relPath, f))
+          .flatMap(f => getReferencedFileAnyDir(relPath, f))
       })
   }
 }
@@ -56,7 +67,7 @@ class PathStrGoToDecl extends GotoDeclarationHandler {
     Option(caretPsi)
       .flatMap(psi => Option(psi.getParent))
       .flatMap(cast[JSLiteralExpressionImpl](_)).itr
-      .flatMap(lit => getReferencedFileLoose(lit)).toArray
+      .flatMap(lit => getReferencedFileAnyDir(lit)).toArray
   }
 
   // renames _Navigate -> GoTo_ if you make it return not null

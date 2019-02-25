@@ -4,7 +4,6 @@ import java.util
 
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
-import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.FilenameIndex
@@ -66,7 +65,7 @@ class JsdocPvdr extends CompletionProvider[CompletionParameters] {
       matchAtModuleVarTaker(prefix)
         .itr().flatMap(tuple => {
           val (leafStart, fileName, varNamePrefix) = tuple
-          PathStrGoToDecl.getReferencedFileLoose(fileName, f).itr()
+          PathStrGoToDecl.getReferencedFileAnyDir(fileName, f).itr()
             .flatMap(f => VarRes.findAllVarsAt(f))
             .map(v => v.getName)
             .flatMap(n =>

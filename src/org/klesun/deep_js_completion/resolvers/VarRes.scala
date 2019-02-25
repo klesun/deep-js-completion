@@ -246,7 +246,7 @@ case class VarRes(ctx: IExprCtx) {
     cast[JSCallExpression](qual)
       .filter(call => Option(call.getMethodExpression).exists(meth => meth.getText equals "at"))
       .flatMap(call => call.getArguments.lift(0)).itr
-      .flatMap(PathStrGoToDecl.getReferencedFileLoose)
+      .flatMap(PathStrGoToDecl.getReferencedFileAnyDir)
   }
 
   def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {

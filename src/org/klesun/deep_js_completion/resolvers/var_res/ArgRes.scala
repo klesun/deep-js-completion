@@ -330,7 +330,7 @@ case class ArgRes(ctx: IExprCtx) {
     .filter(call => Option(call.getMethodExpression)
       .map(e => e.getText).getOrElse("").equals("klesun.requires"))
     .flatMap(call => call.getArguments.itr.lift(0))
-    .flatMap(arg => PathStrGoToDecl.getReferencedFileLoose(arg))
+    .flatMap(arg => PathStrGoToDecl.getReferencedFileAnyDir(arg))
     .flatMap(file => resolveRequireJsFormatDef(file))
     .flatMap(clsT => ensureFunc(clsT))
 
