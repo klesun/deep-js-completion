@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.02.19.001</version>
+  <version>2019.02.25.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,7 +57,11 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Provide js var type info to phpdoc if deep-assoc plugin is enabled as well</li>
+  <li>Various type resolution fixes</li>
+  <li>Support spread operator in function declaration</li>
+  <li>Support array spread operator (Treat `doStuff(...arr)` as `doStuff(arr[anyKey])`)</li>
+  <li>Keep key names from object passed to Object.entries()</li>
+  <li>Make sure async function will not return promise of a promise</li>
     ]]>
   </change-notes>
 
