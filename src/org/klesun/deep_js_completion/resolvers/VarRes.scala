@@ -17,9 +17,8 @@ import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
-import org.klesun.deep_js_completion.resolvers.other_plugin_integration.DeepAssocWrapper
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType}
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang._
 
@@ -111,7 +110,8 @@ case class VarRes(ctx: IExprCtx) {
           .filter(qual => usage equals qual).itr
           .flatMap(qual => resolveAssignmentTo(indexing))
           .map(valT => {
-            val keyt = Mt.mergeTypes(ctx.findExprType(indexing.getIndexExpression)).orNull
+            val keyts = ctx.findExprType(indexing.getIndexExpression)
+            val keyt = JSDeepMultiType(keyts.mem())
             DeepIndexSignatureImpl(keyt, valT, Some(indexing))
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))

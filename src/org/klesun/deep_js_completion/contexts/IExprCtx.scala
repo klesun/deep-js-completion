@@ -14,4 +14,5 @@ abstract class IExprCtx {
   def subCtxDirect(funcCall: JSCallExpression): IExprCtx
   def subCtxEmpty(): IExprCtx
   def withClosure(funcPsi: JSFunction, closureCtx: IFuncCtx): IExprCtx
+  def getDepth(): Int
 }

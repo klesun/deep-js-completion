@@ -41,7 +41,7 @@ case class FuncCallRes(ctx: IExprCtx) {
       args.lift(0).itr().flatMap(arg => ctx.findExprType(arg))
         .map(objt => {
           val elts: GenTraversableOnce[JSType] = Mt
-            .getProps(objt, obj.getProject).itr().map(prop => {
+            .getProps(objt, obj.getProject).map(prop => {
               val tts = List(prop.getMemberParameterType, prop.getMemberType)
               new JSTupleTypeImpl(JSTypeSource.EMPTY, tts.asJava, true, -1)
             })

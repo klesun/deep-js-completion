@@ -55,3 +55,26 @@ exports.provideArrayMerge = () => {
         mergedArr: mergedArr,
     }
 };
+
+exports.provideSelfDependency = () => {
+    let $parsedData = {};
+    let $result = {
+        passengerList: [{
+            lastName: 'Vasya',
+            firstName: 'Pupkin',
+            nameNumber: {
+                lastNameNumber: 3,
+                firstNameNumber: 2,
+                absolute: 5,
+            },
+            ptc: 'Y13',
+        }],
+    };
+    $parsedData['passengerList'] = php.array_merge($parsedData['passengerList'], $result['passengerList']);
+    return $parsedData;
+};
+
+/** @param pax = require('PnrParser.js').parse().passengers.passengerList[0] */
+let provideParsePnrOutOfMemory = (pax) => {
+    pax.nameNumber;
+};

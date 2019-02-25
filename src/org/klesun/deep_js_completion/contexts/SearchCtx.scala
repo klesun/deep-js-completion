@@ -154,7 +154,10 @@ class SearchCtx(
             var result = frs(resolved, builtIn)
             val mit = result.mem()
             if (SearchCtx.DEBUG) {
-                println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + " ||| " + singleLine(expr.getText, 350))
+                val tit = mit.itr()
+                val postfix = " ||| " + singleLine(expr.getText, 350)
+                // TODO: one of types happens to be null sometimes - fix!
+                println(indent + "resolution: " + tit.map(a => a + " " + a.getClass).toList + postfix)
             }
 
             putToCache(exprCtx, expr, mit)

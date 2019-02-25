@@ -33,7 +33,7 @@ class ExactKeysUnitTest
     public function provideParsePnr($pnr)
     {
         $pnr['dataExistsInfo'];
-        $pnr['passengers'][0][''];
+        $pnr['passengers']['passengerList'][0][''];
         return [
             [$pnr, ['dataExistsInfo', 'headerData', 'passengers', 'itineraryData', 'foneData', 'adrsData', 'dlvrData', 'formOfPaymentData', 'tktgData', 'atfqData', 'ticketListData', 'ssrData', 'remarks', 'acknData']],
         ];
@@ -77,7 +77,30 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideSelfDependency() */
+    public function provideSelfDependency($arg)
+    {
+        $arg[''];
+        $arg['passengerList'][0]['nameNumber'][''];
+        return [
+            [$arg, ['passengerList']],
+            [$arg['passengerList'][0], ['lastName', 'firstName', 'ptc', 'nameNumber']],
+            [$arg['passengerList'][0]['nameNumber'], ['lastNameNumber', 'firstNameNumber', 'absolute']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================
+
+    /** @param $pnr = require('PnrParser.js').parse() */
+    public function provideParsePnrOutOfMemory($pnr)
+    {
+        $pnr['dataExistsInfo'];
+        $pnr['passengers']['passengerList'][0][''];
+        return [
+            [$pnr['passengers'], ['passengerList', 'pnrIsCurrentlyInUse', 'reservationInfo', 'shopInfo', 'agentName']],
+            [$pnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber']],
+        ];
+    }
 }

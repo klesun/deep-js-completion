@@ -41,4 +41,6 @@ case class ExprCtx(
   }
 
   override def func(): IFuncCtx = funcCtx
+
+  override def getDepth(): Int = depth
 }
