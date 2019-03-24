@@ -15,7 +15,7 @@ import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.{PsiElement, PsiFile}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
 import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType, JSDeepMultiType}
@@ -87,6 +87,20 @@ object VarRes {
  */
 case class VarRes(ctx: IExprCtx) {
 
+  /**
+   * @param elDecl - either VarStatement, Variable (declared above) or destructuring array
+   * @return - type of element of the iterated array
+   */
+  private def resolveForInEl(elDecl: PsiElement): GenTraversableOnce[JSType] = {
+    nit(elDecl.getParent)
+      .flatMap(cast[JSForInStatement](_))
+      .filter(st => !Objects.equals(elDecl, st.getCollectionExpression))
+      .filter(st => st.isForEach)
+      .flatMap(st => Option(st.getCollectionExpression))
+      .flatMap(arrexpr => ctx.findExprType(arrexpr))
+      .flatMap(arrt => Mt.getKey(arrt, None))
+  }
+
   private def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
     nit(usage.getParent).flatMap {
       case superRef: JSReferenceExpression => frs(Iterator.empty
@@ -122,7 +136,18 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(cast[JSAssignmentExpression](_))
           .flatMap(defi => Option(defi.getROperand))
           .flatMap(expr => ctx.findExprType(expr))
-      case _ => List[JSType]()
+      case arrLit: JSArrayLiteralExpression =>
+        // for ([k,v] of arr) {}
+        // [el1, el2] = tuple;
+        val elOrder = arrLit.getExpressions.indexOf(usage)
+        val kit: GenTraversableOnce[JSType] =
+          if (elOrder > -1) Mkt.str(elOrder + "") else None
+
+        val artit = resolveForInEl(arrLit)
+        artit.itr().flatMap(elt => Mt.getKey(elt, kit))
+      case untyped =>
+        //Console.println("zhopa unsupported assignment destination " + untyped.getClass + " " + untyped.getText)
+        List[JSType]()
     }
   }
 
@@ -131,12 +156,7 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(doc => doc.getTags)
       .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag))
       .flatMap(txt => ArgRes(ctx.subCtxEmpty()).parseDocExpr(varst, txt)) ++
-    nit(varst.getParent)
-      .flatMap(cast[JSForInStatement](_))
-      .filter(st => st.isForEach)
-      .flatMap(st => Option(st.getCollectionExpression))
-      .flatMap(arrexpr => ctx.findExprType(arrexpr))
-      .flatMap(arrt => Mt.getKey(arrt, None))
+    resolveForInEl(varst)
   }
 
   private def resolveDestructEl(el: PsiElement): GenTraversableOnce[JSType] = {
