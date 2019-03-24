@@ -22,15 +22,15 @@ class ExactKeysUnitTest
     {
         $GdsProfiles['AMADEUS'][''];
         return [
-            [$GdsProfiles, ['TRAVELPORT', 'AMADEUS', 'SABRE', 'getTravelport', 'getSabre', 'getAmadeus']],
+            [$GdsProfiles, ['TRAVELPORT', 'AMADEUS', 'SABRE', 'getTravelport', 'getSabre', 'getAmadeus', 'getLimit', 'chooseAmaProfile']],
             [$GdsProfiles['TRAVELPORT'], ['DynApolloProd_1O3K', 'DynApolloCopy_1O3K', 'DynApolloProd_2F3K', 'DynApolloProd_2G55', 'DynGalileoProd_711M']],
             [$GdsProfiles['SABRE'], ['SABRE_PROD_L3II', 'SABRE_PROD_Z2NI', 'SABRE_PROD_6IIF', 'SABRE_PROD_8ZFH']],
-            [$GdsProfiles['AMADEUS'], ['AMADEUS_TEST_1ASIWTUTICO', 'AMADEUS_PROD_1ASIWTUTICO', 'AMADEUS_PROD_1ASIWTUT0GW']],
+            [$GdsProfiles['AMADEUS'], ['AMADEUS_TEST_1ASIWTUTICO', 'AMADEUS_PROD_1ASIWTUTICO', 'AMADEUS_PROD_1ASIWTUT0GW', 'AMADEUS_PROD_1ASIWTUTDTT']],
         ];
     }
 
-    /** @param $pnr = require('PnrParser.js').parse() */
-    public function provideParsePnr($pnr)
+    /** @param $pnr = require('ExactKeysUnitTest.js').provideParseApoPnr() */
+    public function provideParseApoPnr($pnr)
     {
         $pnr['dataExistsInfo'];
         $pnr['passengers']['passengerList'][0][''];
@@ -45,6 +45,16 @@ class ExactKeysUnitTest
         $arg[''];
         return [
             [$arg, ['aa', 'bb', 'cc']],
+        ];
+    }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideForInExistingVar() */
+    public function provideForInExistingVar($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['hi', 'how']],
+            [$arg['how'], ['are', 'doing']],
         ];
     }
 
@@ -93,14 +103,29 @@ class ExactKeysUnitTest
     // following not implemented yet
     // ========================
 
-    /** @param $pnr = require('PnrParser.js').parse() */
-    public function provideParsePnrOutOfMemory($pnr)
+    /** @param $pnr = require('ExactKeysUnitTest.js').provideFfInfoStackOverflow() */
+    public function provideFfInfoStackOverflow($pnr)
+    {
+        $pnr[''];
+        return [
+            [$pnr, ['parsedData']],
+            [$pnr['parsedData'], ['misc']],
+        ];
+    }
+
+    /**
+     * @param $pnr = require('PnrParser.js').parse()
+     * @param $apoPnr = require('ExactKeysUnitTest.js').provideParseApoPnr()
+     */
+    public function provideParsePnrOutOfMemory($pnr, $apoPnr)
     {
         $pnr['dataExistsInfo'];
         $pnr['passengers']['passengerList'][0][''];
+        $apoPnr[''];
+        $apoPnr['passengers']['passengerList'][0][''];
         return [
-            [$pnr['passengers'], ['passengerList', 'pnrIsCurrentlyInUse', 'reservationInfo', 'shopInfo', 'agentName']],
-            [$pnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber']],
+            [$apoPnr['passengers'], ['passengerList', 'pnrIsCurrentlyInUse', 'reservationInfo', 'shopInfo', 'agentName']],
+            [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber']],
         ];
     }
 }

@@ -1,5 +1,10 @@
 
 let php = require('./../unv/grect/backend/Transpiled/php.js');
+const ApoPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Apollo/Pnr/PnrParser");
+const SabPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Sabre/Pnr/PnrParser");
+const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeus/Pnr/PnrParser");
+const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
+const Fp = require('../unv/grect/backend/Transpiled/Lib/Utils/Fp.js');
 
 exports.provideAsyncPromise = async () => {
     return Promise.resolve({
@@ -17,10 +22,73 @@ exports.providePushSpread = () => {
     return result;
 };
 
+exports.provideParseApoPnr = () => {
+    let parsed = ApoPnrParser.parse('ASD ASD');
+    parsed.passengers.passengerList[0];
+    return parsed;
+};
+
+exports.provideParseSabPnr = () => {
+    let parsed = SabPnrParser.parse('ASD ASD');
+    parsed.passengers.passengerList[0];
+    return parsed;
+};
+
+exports.provideParseAmaPnr = () => {
+    let parsed = AmaPnrParser.parse('ASD ASD');
+    parsed.passengers.passengerList[0];
+    return parsed;
+};
+
+exports.provideParseGalPnr = () => {
+    let parsed = GalPnrParser.parse('ASD ASD');
+    parsed.passengers.passengerList[0];
+    return parsed;
+};
+
+exports.provideFfInfoStackOverflow = () => {
+    // taken from Sabre PNR parser
+    let $result, $sections;
+
+    $result = {
+        'parsedData': {
+            'misc': null,
+        },
+    };
+
+    let $lines = Fp.map(($line) => php.trim($line), []);
+    $result['parsedData']['misc'] = {
+        'ffDataExists': $lines.includes('FREQUENT TRAVELER DATA EXISTS *FF TO DISPLAY ALL'),
+    };
+    $result['parsedData']['misc']['ffDataExists'] =
+        $result['parsedData']['misc']['ffDataExists'] ||
+        php.count((($result['parsedData'] || {})['frequentTraveler'] || {})['mileagePrograms'] || []) > 0;
+
+    $result.p;
+    return $result;
+};
+
 exports.provideObjectEntries = () => {
     let srcObj = {aa: 5, bb:6, cc:7};
     let result = {};
     for (let [k,v] of Object.entries(srcObj)) {
+        result[k] = v;
+    }
+    result.a;
+    return result;
+};
+
+exports.provideForInExistingVar = () => {
+    let k, v;
+    let source = [
+        ['hi', 'dude'],
+        ['how', {
+            are: 'you',
+            doing: 'today',
+        }],
+    ];
+    let result = {};
+    for ([k,v] of source) {
         result[k] = v;
     }
     return result;
