@@ -1,10 +1,10 @@
 
 let php = require('./../unv/grect/backend/Transpiled/php.js');
+let php2 = require('../php.js');
 const ApoPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Apollo/Pnr/PnrParser");
 const SabPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Sabre/Pnr/PnrParser");
 const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeus/Pnr/PnrParser");
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
-const Fp = require('../unv/grect/backend/Transpiled/Lib/Utils/Fp.js');
 
 exports.provideAsyncPromise = async () => {
     return Promise.resolve({
@@ -45,6 +45,13 @@ exports.provideParseGalPnr = () => {
     parsed.passengers.passengerList[0];
     return parsed;
 };
+
+
+class Fp {
+    static map($function, $arr) {
+        return php2.array_map($function, $arr);
+    }
+}
 
 exports.provideFfInfoStackOverflow = () => {
     // taken from Sabre PNR parser
