@@ -23,7 +23,13 @@ object PathStrGoToDecl {
       .flatMap(f => Option(f.getContainingDirectory))
       .flatMap(f => Option(f.getVirtualFile))
       .map(f => f.getPath + "/" + relPath + (if (relPath.matches(".*\\.[a-zA-Z0-9]+$")) "" else ".js"))
-      .flatMap(fullPath => Option(LocalFileSystem.getInstance.findFileByPath(fullPath)))
+      .flatMap(fullPath => {
+        try {
+          Option(LocalFileSystem.getInstance.findFileByPath(fullPath))
+        } catch {
+          case exc: Throwable => None
+        }
+      })
       .flatMap(f => Option(PsiManager.getInstance(caretFile.getProject).findFile(f)))
   }
 

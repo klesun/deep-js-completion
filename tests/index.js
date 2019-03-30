@@ -1,5 +1,9 @@
 
+let SomeInvalidPathModule = require('.//../asd.js');
 let SomeCjsModule = require('./SomeCjsModule.js');
+
+// tried to reproduce #13, did not succeed, but will add the try-catch nevertheless
+SomeInvalidPathModule.asd;
 
 SomeCjsModule({}).runInputCmd('*R').then(resp => {
     resp.o;
