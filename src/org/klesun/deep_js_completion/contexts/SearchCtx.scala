@@ -53,8 +53,11 @@ class SearchCtx(
     }
 
     private def hasTypeInfo(t: JSType): Boolean = {
-        project.itr.flatMap(project =>
-            PropNamePvdr.getNamedProps(t, project)).nonEmpty
+        val props = project.itr.flatMap(project => {
+            PropNamePvdr.getNamedProps(t, project)
+        })
+        // causes infinite recursion when it gets to normFunc() in php.js
+        props.hasNext
     }
 
     private def takeFromCache(ctx: IExprCtx, expr: JSExpression): Option[MemIt[JSType]] = {
@@ -142,15 +145,10 @@ class SearchCtx(
 //            None
         } else {
             putToCache(exprCtx, expr, Iterator.empty.mem())
-            var gotTypeInfo = false
             val resolved = MainRes.resolveIn(expr, exprCtx).itr
-              .filter(t => {
-                  gotTypeInfo = hasTypeInfo(t)
-                  true
-              })
             // no point getting built-in type here, IDEA will show it itself
             val isAtCaret = exprCtx.parent.isEmpty
-            val builtIn = getWsType(expr).filter(t => !isAtCaret && !gotTypeInfo)
+            val builtIn = getWsType(expr).filter(t => !isAtCaret)
             var result = frs(resolved, builtIn)
             val mit = result.mem()
             if (SearchCtx.DEBUG) {

@@ -2,16 +2,11 @@ package org.klesun.deep_js_completion.structures
 
 import java.util.Objects
 
+import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.types.{JSTypeBaseImpl, JSTypeSource}
-import com.intellij.lang.javascript.psi.{JSExpression, JSFunction, JSType}
-import com.intellij.psi.PsiElement
-import com.intellij.psi.impl.FakePsiElement
 import com.intellij.util
 import com.intellij.util.ProcessingContext
-import org.klesun.deep_js_completion.contexts._
 import org.klesun.lang.DeepJsLang._
-
-import scala.collection.GenTraversableOnce
 
 object EInstType extends Enumeration {
   type T = Value
@@ -40,7 +35,7 @@ case class JSDeepModuleTypeImpl(
     Objects.hash(List(name))
   }
 
-  def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
+  override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
     var typeStr = "require('" + name + "')"
     if (instType == EInstType.Called) {
       typeStr += "()"

@@ -2,16 +2,14 @@ package org.klesun.deep_js_completion.structures
 
 import java.util.Objects
 
-import com.intellij.lang.javascript.psi.{JSExpression, JSFunction, JSFunctionType, JSType}
 import com.intellij.lang.javascript.psi.types.{JSTypeBaseImpl, JSTypeSource}
-import com.intellij.psi.PsiElement
-import com.intellij.psi.impl.FakePsiElement
+import com.intellij.lang.javascript.psi.{JSFunction, JSType}
 import com.intellij.util
 import com.intellij.util.ProcessingContext
 import org.klesun.deep_js_completion.contexts._
+import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
-import org.klesun.lang.DeepJsLang._
 
 /**
   * unlike built-in JSFunctionTypeImpl, this one has the getReturnType(context)
@@ -37,7 +35,7 @@ case class JSDeepFunctionTypeImpl(
     Objects.hash(List(funcPsi))
   }
 
-  def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function"
+  override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Function"
 
 //  override def toString(): String = {
 //    val funcCtx = FuncCtx(new SearchCtx(project=Option(funcPsi.getProject)))

@@ -135,7 +135,7 @@ object Mt {
         // I suspect just asRecordType() would be enough
         mt.asRecordType().getTypeMembers.asScala ++ tsMems
       })
-    var mems = typ match {
+    var mems: GenTraversableOnce[TypeMember] = typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala
       case mt: JSType =>
         // when you specify class with jsdoc for example - JSTypeImpl
@@ -145,8 +145,8 @@ object Mt {
         //println("Unsupported typ " + typ.getClass + " " + typ)
         List()
     }
-    mems = mems ++ genMems
-    mems.map {
+    mems = cnc(mems, genMems)
+    mems.itr().map {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
         Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))

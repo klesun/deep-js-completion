@@ -28,7 +28,7 @@ case class JSDeepMultiType(
     mit.hashCode()
   }
 
-  def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
+  override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
     "*|*|*"
     // uncomment for debug
     //mit.itr().toList + ""
