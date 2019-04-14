@@ -136,7 +136,7 @@ class SearchCtx(
         expressionsResolved += 1
         val fromCache = takeFromCache(exprCtx, expr)
         if (fromCache.nonEmpty) {
-          fromCache.get.itr()
+          fromCache.get
         } else if (exprCtx.depth > maxDepth) {
             None
         } else if (expressionsResolved >= 7500) {
@@ -152,15 +152,13 @@ class SearchCtx(
             var result = frs(resolved, builtIn)
             val mit = result.mem()
             if (SearchCtx.DEBUG) {
-                val tit = mit.itr()
                 val postfix = " ||| " + singleLine(expr.getText, 350)
                 // TODO: one of types happens to be null sometimes - fix!
-                println(indent + "resolution: " + tit.map(a => a + " " + a.getClass).toList + postfix)
+                println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + postfix)
             }
 
             putToCache(exprCtx, expr, mit)
-            val cachedTit = mit.itr()
-            cachedTit.map(t => {
+            mit.itr().map(t => {
               typeToDecl.put(t, expr)
               t
             })

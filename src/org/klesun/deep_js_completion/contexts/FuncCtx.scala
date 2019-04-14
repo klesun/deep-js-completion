@@ -49,14 +49,14 @@ case class FuncCtx(
 
   override def getArg(order: Integer): GenTraversableOnce[JSType] = {
     if (order > -1) {
-      argGetters.lift(order).itr().flatMap(g => g.itr())
+      argGetters.lift(order).itr().flatMap(g => g)
     } else {
       None
     }
   }
 
   override def getSpreadArg(): JSArrayType = {
-    val elts = argGetters.itr().flatMap(g => g.itr())
+    val elts = argGetters.itr().flatMap(g => g)
     val elt = JSDeepMultiType(elts.mem())
     new JSArrayTypeImpl(elt, JSTypeSource.EMPTY)
   }

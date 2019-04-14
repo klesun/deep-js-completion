@@ -39,7 +39,7 @@ object Mt {
   }
 
   def flattenTypes(t: JSType): It[JSType] = {
-    ({t match {
+    {t match {
       case mt: JSContextualUnionTypeImpl => {
         mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
       }
@@ -51,7 +51,7 @@ object Mt {
       case mt: JSDeepMultiType =>
         mt.mit.itr().flatMap(mt => flattenTypes(mt))
       case _ => Some(t).itr()
-    }}: It[JSType])
+    }}: It[JSType]
   }
 
   private def getLiteralValueOpts(litT: JSType): Iterable[Option[String]] = {

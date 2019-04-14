@@ -3,9 +3,8 @@ package org.klesun.lang
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.SearchCtx
 
-import scala.collection.GenTraversableOnce
+import scala.collection.{AbstractIterable, GenIterableLike, GenTraversable, GenTraversableOnce, IterableLike}
 import scala.reflect.{ClassTag, classTag}
-
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -149,7 +148,7 @@ object DeepJsLang {
     }
   }
 
-  class MemIt[T](values: GenTraversableOnce[T]) {
+  class MemIt[T](values: GenTraversableOnce[T]) extends AbstractIterable[T] {
     // we can't use .toStream() at once, since it
     // would instantly calculate the first value
     private var streamOpt: Option[Stream[T]] = None
@@ -163,7 +162,8 @@ object DeepJsLang {
       }
       streamOpt.get
     }
-    def itr(): It[T] = {
+
+    override def iterator: Iterator[T] = {
       var torOpt: Option[Iterator[T]] = None
       val getSrc = () => {
         if (torOpt.isEmpty) {
