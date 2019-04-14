@@ -25,7 +25,7 @@ exports.providePushSpread = () => {
 
 exports.provideParseApoPnr = () => {
     let parsed = ApoPnrParser.parse('ASD ASD');
-    parsed.passengers.passengerList[0];
+    parsed.passengers.passengerList[0].;
     return parsed;
 };
 

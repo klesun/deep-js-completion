@@ -6,6 +6,9 @@ import org.klesun.deep_js_completion.contexts.SearchCtx
 import scala.collection.GenTraversableOnce
 import scala.reflect.{ClassTag, classTag}
 
+import java.io.PrintWriter
+import java.io.StringWriter
+
 
 /** provides some core functions needed for IDEA plugin development */
 object DeepJsLang {
@@ -104,9 +107,6 @@ object DeepJsLang {
       .itr
   }
 
-  import java.io.PrintWriter
-  import java.io.StringWriter
-
   def getStackTrace(exc: Throwable): String = {
     val sw = new StringWriter
     val pw = new PrintWriter(sw)
@@ -183,6 +183,9 @@ object DeepJsLang {
           }
         }
         def next(): T = {
+          if (isNexting) {
+            throw new RuntimeException("Tried to next MemIt again when still not done nexting")
+          }
           isNexting = true
           val next = getSrc().next
           isNexting = false
@@ -202,6 +205,7 @@ object DeepJsLang {
     private var ended = false
     private var allowEndHasNextFlag = false
     private var hadAny = false
+    private var disposed = false
 
     /** @debug */
     val createdAt = if (SearchCtx.DEBUG) Some(new Exception("created here")) else None
@@ -233,14 +237,37 @@ object DeepJsLang {
       }
     }
 
+    def dispose(): Unit = {
+      if (disposed) {
+        throw new RuntimeException("Tried to reuse disposed iterator ", disposedAt.orNull)
+      }
+      if (createdAt.nonEmpty) {
+        disposedAt = Some(new Exception("disposed here", createdAt.get))
+      }
+      disposed = true
+    }
+
     override def next(): T = src.next()
 
-    override def filter(f: (T) => Boolean): It[T] = new It(values.toIterator.filter(f))
-    override def map[Tnew](f: (T) => Tnew): It[Tnew] = new It(values.toIterator.map(f))
-    override def flatMap[Tnew](f: (T) => GenTraversableOnce[Tnew]): It[Tnew] = new It(values.toIterator.flatMap(f))
-    def ++(other: GenTraversableOnce[T]): It[T] = new It(values.toIterator ++ other)
+    override def filter(f: T => Boolean): It[T] = {
+      dispose()
+      new It(values.toIterator.filter(f))
+    }
+    override def map[Tnew](f: T => Tnew): It[Tnew] = {
+      dispose()
+      new It(values.toIterator.map(f))
+    }
+    override def flatMap[Tnew](f: T => GenTraversableOnce[Tnew]): It[Tnew] = {
+      dispose()
+      new It(values.toIterator.flatMap(f))
+    }
+    def ++(other: GenTraversableOnce[T]): It[T] = {
+      dispose()
+      new It(values.toIterator ++ other)
+    }
 
     def lift(n: Int): Option[T] = {
+      dispose()
       var i = 0
       while (i < n && hasNext) {
         next()
@@ -249,6 +276,10 @@ object DeepJsLang {
       if (hasNext) Some(next()) else None
     }
 
+    /**
+     * should not be needed in deep-js code, but deep-assoc, which uses it, has
+     * MemIt implementation that may ping hasNext() multiple times for same value
+     */
     def allowEndHasNext() = {
       allowEndHasNextFlag = true
       this

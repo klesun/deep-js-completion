@@ -160,8 +160,10 @@ class SearchCtx(
 
             putToCache(exprCtx, expr, mit)
             val cachedTit = mit.itr()
-            cachedTit.map(t => typeToDecl.put(t, expr))
-            cachedTit
+            cachedTit.map(t => {
+              typeToDecl.put(t, expr)
+              t
+            })
         }
     }
 }
