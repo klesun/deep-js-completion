@@ -1,6 +1,7 @@
 
 let php = require('./../unv/grect/backend/Transpiled/php.js');
 let php2 = require('../php.js');
+let php3 = require('../php3.js');
 const ApoPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Apollo/Pnr/PnrParser");
 const SabPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Sabre/Pnr/PnrParser");
 const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeus/Pnr/PnrParser");
@@ -30,7 +31,7 @@ exports.provideParseApoPnr = () => {
 
 exports.provideParseSabPnr = () => {
     let parsed = SabPnrParser.parse('ASD ASD');
-    parsed.passengers.passengerList[0];
+    parsed.parsedData.passengers.parsedData.passengerList[0].nameNumber.r;
     return parsed;
 };
 
@@ -42,7 +43,7 @@ exports.provideParseAmaPnr = () => {
 
 exports.provideParseGalPnr = () => {
     let parsed = GalPnrParser.parse('ASD ASD');
-    parsed.passengers.passengerList[0];
+    parsed.passengers.passengerList[0].;
     return parsed;
 };
 
@@ -74,6 +75,17 @@ exports.provideFfInfoStackOverflow = () => {
     $result.p;
     return $result;
 };
+
+exports.provideGalStackOverflow = ($dump) => {
+    let $result, $sections, $parsedHead;
+
+    // remove scrolling indicator if any
+    $result = {};
+    $result['foneData'] = false ? [] :
+        php3.array_map('asd', StringUtil.lines('asd'));
+    $result.;
+    return $result;
+}
 
 exports.provideObjectEntries = () => {
     let srcObj = {aa: 5, bb:6, cc:7};

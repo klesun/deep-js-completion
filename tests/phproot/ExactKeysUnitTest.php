@@ -113,6 +113,15 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $pnr = require('ExactKeysUnitTest.js').provideGalStackOverflow() */
+    public function provideGalStackOverflow($pnr)
+    {
+        $pnr[''];
+        return [
+            [$pnr, ['foneData']],
+        ];
+    }
+
     /**
      * @param $pnr = require('PnrParser.js').parse()
      * @param $apoPnr = require('ExactKeysUnitTest.js').provideParseApoPnr()
