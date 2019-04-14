@@ -12,7 +12,8 @@ import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.{JSRecordType, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
+import com.intellij.lang.javascript.psi.{JSFunction, JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -20,12 +21,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.ui.JBColor
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getNamedProps, _}
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
+import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.{GenIterable, GenTraversableOnce, mutable}
@@ -36,7 +38,7 @@ object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
-  val DEEP_PRIO = 200
+  val DEEP_PRIO = 2000
 
   def getIcon = icon
 
@@ -44,7 +46,9 @@ object PropNamePvdr {
     if (isAutoPopup) 25 else 40
   }
 
-  private def makeLookup(prop: PropertySignature, i: Int) = {
+  private def makeLookup(propRec: PropRec, i: Int) = {
+    val prop = propRec.prop
+    val isBuiltIn = propRec.isBuiltIn
     val typeStr = Option(prop.getType)
       .map {
         case lit: JSPrimitiveLiteralType[_] =>
@@ -67,19 +71,43 @@ object PropNamePvdr {
     val source = prop.getMemberSource
     val sourceElement = Option(source.getSingleElement).getOrElse(name)
 
-    val lookup = LookupElementBuilder.create(sourceElement, name)
-      .bold().withIcon(getIcon)
+    var lookup = LookupElementBuilder.create(sourceElement, name)
+      .withBoldness(!isBuiltIn)
+      .withItemTextItalic(isBuiltIn)
+      .withIcon(getIcon)
       .withTypeText(typeStr, true)
-    PrioritizedLookupElement.withPriority(lookup, DEEP_PRIO - i)
+    var priority = DEEP_PRIO - i
+    if (isBuiltIn) {
+      lookup = lookup.withItemTextForeground(JBColor.GRAY)
+      priority = priority - 1500
+    }
+    PrioritizedLookupElement.withPriority(lookup, priority)
   }
 
   def getNamedProps(typ: JSType, project: Project): It[PropertySignature] = {
     val mems = Mt.getProps(typ, project)
     mems.itr().flatMap(idx => Mt
         .getAnyLiteralValues(idx.getMemberParameterType)
-        .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource)))
+        .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource))
+        .filter(prop => !prop.getMemberName.startsWith("[Symbol.")))
+  }
+
+  private def isBuiltIn(t: JSType): Boolean = {
+    t.isInstanceOf[JSPrimitiveLiteralType[Any]] ||
+      t.isInstanceOf[JSStringType] ||
+      t.isInstanceOf[JSNumberType] ||
+      t.isInstanceOf[JSBooleanType] ||
+      t.isInstanceOf[JSFunction] ||
+      t.isInstanceOf[JSDeepFunctionTypeImpl] ||
+      t.isInstanceOf[JSArrayType] ||
+      t.isInstanceOf[JSTupleType]
   }
 }
+
+case class PropRec(
+  prop: PropertySignature,
+  isBuiltIn: Boolean,
+)
 
 class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDeclarationHandler {
   override def addCompletions(
@@ -138,7 +166,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     val startTime = System.nanoTime
     var typesGot = 0
 
-    val types = nit(nullPsi)
+    var types = nit(nullPsi)
       .flatMap(ref => Option(ref.getQualifier))
       .filter(qual => {
         // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
@@ -146,7 +174,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         qualEnd < parameters.getOriginalPosition.getTextOffset
       })
       .flatMap(qual => search.findExprType(qual))
-    val mems = types
+    types = types
       .filter(t => {
         if (typesGot == 0) {
           result.addLookupAdvertisement("Resolved first type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
@@ -154,8 +182,9 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         typesGot = typesGot + 1
         true
       })
-      .flatMap(typ => getNamedProps(typ, nullPsi.getProject))
-      .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
+    val mems = types
+      .flatMap(typ => getNamedProps(typ, nullPsi.getProject)
+        .map(p => PropRec(p, isBuiltIn(typ))))
 
     Console.println("Created property iterator within " + search.expressionsResolved + " expressions (" + typesGot + " types)")
     val builtInSuggestions = getBuiltIns()
