@@ -1,12 +1,12 @@
 package org.klesun.lang
 
+import java.io.{PrintWriter, StringWriter}
+
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.SearchCtx
 
-import scala.collection.{AbstractIterable, GenIterableLike, GenTraversable, GenTraversableOnce, IterableLike}
+import scala.collection.{AbstractIterable, GenTraversableOnce}
 import scala.reflect.{ClassTag, classTag}
-import java.io.PrintWriter
-import java.io.StringWriter
 
 
 /** provides some core functions needed for IDEA plugin development */
@@ -208,7 +208,7 @@ object DeepJsLang {
     private var disposed = false
 
     /** @debug */
-    val createdAt = if (SearchCtx.DEBUG) Some(new Exception("created here")) else None
+    val createdAt = if (SearchCtx.DEBUG) Some(new RuntimeException("created here")) else None
     var disposedAt: Option[Exception] = None
 
     override def hasNext: Boolean = {

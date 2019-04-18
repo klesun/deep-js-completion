@@ -5,10 +5,8 @@ import java.util
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
-import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
+import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.ecma6.impl.{TypeScriptFunctionSignatureImpl, TypeScriptInterfaceImpl}
-import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
@@ -19,7 +17,6 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import com.intellij.psi.search.EverythingGlobalScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ProcessingContext
@@ -27,12 +24,11 @@ import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getNamedProps, _}
 import org.klesun.deep_js_completion.contexts.SearchCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.DeepJsLang._
 
-import scala.collection.{GenIterable, GenTraversableOnce, mutable}
 import scala.collection.JavaConverters._
-import scala.collection.mutable._
+import scala.collection.mutable
 
 object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
@@ -79,7 +75,7 @@ object PropNamePvdr {
     var priority = DEEP_PRIO - i
     if (isBuiltIn) {
       lookup = lookup.withItemTextForeground(JBColor.GRAY)
-      priority = priority - 1500
+      priority = 0
     }
     PrioritizedLookupElement.withPriority(lookup, priority)
   }

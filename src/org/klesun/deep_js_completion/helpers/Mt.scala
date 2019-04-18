@@ -15,7 +15,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.structures._
-import org.klesun.lang.DeepJsLang._
+import org.klesun.lang.DeepJsLang.{It, _}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
@@ -39,19 +39,29 @@ object Mt {
   }
 
   def flattenTypes(t: JSType): It[JSType] = {
-    {t match {
-      case mt: JSContextualUnionTypeImpl => {
-        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
+    val occurrences = new util.HashSet[JSType]()
+    def internal(t: JSType): It[JSType] = {
+      if (occurrences.contains(t)) {
+        new It(None)
+      } else {
+        occurrences.add(t)
+        val flattened: It[JSType] = t match {
+          case mt: JSContextualUnionTypeImpl => {
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+          }
+          case mt: JSCompositeTypeImpl => {
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+          }
+          case mt: JSUnionOrIntersectionType =>
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+          case mt: JSDeepMultiType =>
+            mt.mit.itr().flatMap(mt => internal(mt))
+          case _ => Some(t).itr()
+        }
+        flattened
       }
-      case mt: JSCompositeTypeImpl => {
-        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
-      }
-      case mt: JSUnionOrIntersectionType =>
-        mt.getTypes.asScala.itr().flatMap(mt => flattenTypes(mt))
-      case mt: JSDeepMultiType =>
-        mt.mit.itr().flatMap(mt => flattenTypes(mt))
-      case _ => Some(t).itr()
-    }}: It[JSType]
+    }
+    internal(t)
   }
 
   private def getLiteralValueOpts(litT: JSType): Iterable[Option[String]] = {
