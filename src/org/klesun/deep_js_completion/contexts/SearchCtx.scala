@@ -5,6 +5,7 @@ import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSRefer
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.DeepJsLang._
 
@@ -12,6 +13,14 @@ import scala.collection.{GenTraversableOnce, mutable}
 
 object SearchCtx {
   val DEBUG = false
+  val DEBUG_OBJ = new {
+    val PRINT_PSI_TREE = true
+  }
+  def formatPsi(element: PsiElement): String = {
+    val line = element.getContainingFile.getText
+      .slice(0, element.getTextOffset).split("\n").length
+    element.getText.replace("\n", " \\n ") + ":" + line
+  }
 }
 
 class SearchCtx(
@@ -82,11 +91,11 @@ class SearchCtx(
       var chain: List[PsiElement] = List()
       while (ctx != null) {
         if (!chain.lastOption.contains(ctx.expr)) {
-          chain = List(ctx.expr) ++ chain
+          chain = chain ++ List(ctx.expr)
         }
         ctx = ctx.parent.orNull
       }
-      chain
+      chain.reverse
     }
 
     private def endsWith[T](superList: List[T], subList: List[T]): Boolean = {
@@ -141,8 +150,9 @@ class SearchCtx(
             None
         } else if (expressionsResolved >= 7500) {
             None
-//        } else if (isRecursion(exprCtx)) {
-//            None
+        } else if (isRecursion(exprCtx)) {
+            //Console.println("ololo recursion")
+            None
         } else {
             putToCache(exprCtx, expr, Iterator.empty.mem())
             val resolved = MainRes.resolveIn(expr, exprCtx).itr
@@ -150,7 +160,7 @@ class SearchCtx(
             val isAtCaret = exprCtx.parent.isEmpty
             val builtIn = getWsType(expr).filter(t => !isAtCaret)
             var result = frs(resolved, builtIn)
-            val mit = result.mem()
+            val mit = result.flatMap(t => Mt.flattenTypes(t)).unq().mem()
             if (SearchCtx.DEBUG) {
                 val postfix = " ||| " + singleLine(expr.getText, 350)
                 // TODO: one of types happens to be null sometimes - fix!

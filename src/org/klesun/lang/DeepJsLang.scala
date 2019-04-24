@@ -1,6 +1,7 @@
 package org.klesun.lang
 
 import java.io.{PrintWriter, StringWriter}
+import java.util
 
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.contexts.SearchCtx
@@ -274,6 +275,18 @@ object DeepJsLang {
         i = i + 1
       }
       if (hasNext) Some(next()) else None
+    }
+
+    def unq(): It[T] = {
+      val met = new util.HashSet[T]
+      filter(el => {
+        if (met.contains(el)) {
+          false
+        } else {
+          met.add(el)
+          true
+        }
+      })
     }
 
     /**
