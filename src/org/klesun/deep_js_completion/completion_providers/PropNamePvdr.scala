@@ -22,7 +22,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getNamedProps, _}
-import org.klesun.deep_js_completion.contexts.SearchCtx
+import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.DeepJsLang._
@@ -98,6 +98,14 @@ object PropNamePvdr {
       t.isInstanceOf[JSArrayType] ||
       t.isInstanceOf[JSTupleType]
   }
+
+//  private def printExprTree(root: ExprCtx, depth: Int): Unit = {
+//    val indent = " " * depth
+//    Console.println(indent + SearchCtx.formatPsi(root.expr))
+//    for (subCtx <- root.children.asScala) {
+//      printExprTree(subCtx, depth + 1)
+//    }
+//  }
 }
 
 case class PropRec(
@@ -159,8 +167,12 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     }
     val depth = getMaxDepth(parameters.isAutoPopup)
     val search = new SearchCtx(depth, project=Option(parameters.getEditor.getProject))
+    val funcCtx = FuncCtx(search)
+    val exprCtx = ExprCtx(funcCtx, nullPsi, 0)
+
     val startTime = System.nanoTime
     var typesGot = 0
+    var propsGot = 0
 
     var types = nit(nullPsi)
       .flatMap(ref => Option(ref.getQualifier))
@@ -169,7 +181,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         val qualEnd = qual.getTextOffset + qual.getTextLength
         qualEnd < parameters.getOriginalPosition.getTextOffset
       })
-      .flatMap(qual => search.findExprType(qual))
+      .flatMap(qual => exprCtx.findExprType(qual))
     types = types
       .filter(t => {
         if (typesGot == 0) {
@@ -180,6 +192,13 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       })
     val mems = types
       .flatMap(typ => getNamedProps(typ, nullPsi.getProject)
+        .filter(prop => {
+          if (propsGot == 0) {
+            result.addLookupAdvertisement("Resolved first key " + prop.getMemberName + " in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
+          }
+          propsGot = propsGot + 1
+          true
+        })
         .map(p => PropRec(p, isBuiltIn(typ))))
 
     Console.println("Created property iterator within " + search.expressionsResolved + " expressions (" + typesGot + " types)")
@@ -211,6 +230,11 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         }
       })
     result.addAllElements(keptBuiltIns.asJava)
+
+    //if (SearchCtx.DEBUG_OBJ.PRINT_PSI_TREE) {
+    //  Console.println("========= tree ========")
+    //  printExprTree(exprCtx, 0)
+    //}
   }
 
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
