@@ -23,6 +23,7 @@ case class FuncCtx(
   closurePsi: Option[JSFunction] = None,
   closureCtx: Option[IFuncCtx] = None,
 ) extends IFuncCtx {
+  var hashCodeField: Option[Int] = None
 
   def getSearch = search
 
@@ -73,7 +74,17 @@ case class FuncCtx(
   }
 
   override def hashCode(): Int = {
-    getHashValues().hashCode()
+    if (hashCodeField.isEmpty) {
+      val startMs = System.currentTimeMillis
+      val hashValues = getHashValues()
+      val hashCode = hashValues.hashCode()
+      val deltaMs = System.currentTimeMillis - startMs
+      if (deltaMs > 0) {
+        Console.println("hashCode in " + deltaMs + " ms " + hashValues)
+      }
+      hashCodeField = Some(hashCode)
+    }
+    hashCodeField.get
   }
 
   override def equals(that: Any): Boolean = {
