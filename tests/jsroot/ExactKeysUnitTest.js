@@ -83,6 +83,9 @@ exports.provideGalStackOverflow = ($dump) => {
     $result = {};
     $result['foneData'] = false ? [] :
         php3.array_map('asd', StringUtil.lines('asd'));
+
+    php3.array_map('asd').;
+
     $result.;
     return $result;
 }

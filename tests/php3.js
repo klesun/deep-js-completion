@@ -3,11 +3,6 @@
 let php = {};
 
 php.array_slice = (arr, start, length = undefined) => {
-	arr = Object.values(arr);
-	if (start < 0) {
-		start = arr.length + start;
-	}
-	length = length === undefined ? arr.length : length;
 	return arr.slice(start, start + length);
 };
 
@@ -16,22 +11,11 @@ php.array_slice = (arr, start, length = undefined) => {
 // ------------------
 
 let normFunc = (func) => {
-	if (typeof func === 'string') {
-		if (func in php) {
-			func = php[func];
-		} else {
-			throw Error('Unsupported built-in function - ' + func);
-		}
-	}
-	return func;
+	return php[func];
 };
 php.array_map = (func, obj, additionalValues = []) => {
 	func = normFunc(func);
-	let newObj = Array.isArray(obj) ? [] : {};
-	for (let [key, val] of Object.entries(obj)) {
-		newObj[key] = func(val, additionalValues[key]);
-	}
-	return newObj;
+	return func(-100, additionalValues[0]);
 };
 
 //php.PREG_OFFSET_CAPTURE = 256;
