@@ -102,6 +102,7 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   private def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
+    // TODO: track occurrences to avoid infinite circular references
     nit(usage.getParent).flatMap {
       case superRef: JSReferenceExpression => frs(Iterator.empty
         // someVar.push(value)
@@ -120,12 +121,14 @@ case class VarRes(ctx: IExprCtx) {
       )
       // someVar[i] = value
       case indexing: JSIndexedPropertyAccessExpression =>
-        Option(indexing.getQualifier)
-          .filter(qual => usage equals qual).itr
-          .flatMap(qual => resolveAssignmentTo(indexing))
-          .map(valT => {
-            val keyts = ctx.findExprType(indexing.getIndexExpression)
-            val keyt = JSDeepMultiType(keyts.mem())
+        Option(indexing.getIndexExpression)
+          .filter(lit => usage equals indexing.getQualifier).itr()
+          // TODO: put a strict limit here so that it did not get
+          //  in 100500 levels depth just to resolve an integer key
+          .flatMap(lit => ctx.findExprType(lit))
+          .map(keyt => {
+            val valts = resolveAssignmentTo(indexing)
+            val valT = JSDeepMultiType(valts.mem())
             DeepIndexSignatureImpl(keyt, valT, Some(indexing))
           })
           .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))

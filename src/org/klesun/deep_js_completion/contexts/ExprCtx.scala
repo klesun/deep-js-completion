@@ -9,11 +9,12 @@ case class ExprCtx(
   funcCtx: FuncCtx,
   expr: PsiElement,
   depth: Integer,
-  parent: Option[ExprCtx] = None
+  parent: Option[ExprCtx] = None,
 ) extends IExprCtx {
 
   def subExpr(expr: PsiElement, funcCtx: FuncCtx): ExprCtx = {
-      ExprCtx(funcCtx, expr, depth + 1, Some(this))
+      val sub = ExprCtx(funcCtx, expr, depth + 1, Some(this))
+      sub
   }
 
   def subCtxDirect(funcCall: JSCallExpression): ExprCtx = {

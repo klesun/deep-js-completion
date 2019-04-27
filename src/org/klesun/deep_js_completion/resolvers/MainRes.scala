@@ -133,7 +133,7 @@ object MainRes {
           None
         }
       case tern: JSConditionalExpression =>
-        List(tern.getThen, tern.getElse)
+        List(tern.getThen, tern.getElse).itr()
           .flatMap(expr => ctx.findExprType(expr))
       case par: JSParenthesizedExpression =>
         nit(par.getInnerExpression)

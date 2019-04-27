@@ -14,7 +14,8 @@ import scala.collection.{GenTraversableOnce, mutable}
 object SearchCtx {
   val DEBUG = false
   val DEBUG_OBJ = new {
-    val PRINT_PSI_TREE = true
+    val PRINT_REAL_TIME_TREE = false
+    val PRINT_PSI_TREE = false
   }
   def formatPsi(element: PsiElement): String = {
     val line = element.getContainingFile.getText
@@ -138,7 +139,8 @@ class SearchCtx(
 
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
-        if (SearchCtx.DEBUG) {
+
+        if (SearchCtx.DEBUG_OBJ.PRINT_REAL_TIME_TREE) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 

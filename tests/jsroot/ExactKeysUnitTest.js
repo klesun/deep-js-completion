@@ -37,7 +37,7 @@ exports.provideParseSabPnr = () => {
 
 exports.provideParseAmaPnr = () => {
     let parsed = AmaPnrParser.parse('ASD ASD');
-    parsed.passengers.passengerList[0];
+    parsed.parsed.passengers[0].nameNumber.;
     return parsed;
 };
 
