@@ -3,7 +3,6 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
-import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
@@ -15,10 +14,10 @@ import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.{PsiElement, PsiFile}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
-import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, GenericRes}
-import org.klesun.deep_js_completion.structures.{DeepIndexSignatureImpl, JSDeepClassType, JSDeepMultiType}
+import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, AssRes, GenericRes}
+import org.klesun.deep_js_completion.structures.JSDeepClassType
 import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang._
 
@@ -91,7 +90,7 @@ case class VarRes(ctx: IExprCtx) {
    * @param elDecl - either VarStatement, Variable (declared above) or destructuring array
    * @return - type of element of the iterated array
    */
-  private def resolveForInEl(elDecl: PsiElement): GenTraversableOnce[JSType] = {
+  def resolveForInEl(elDecl: PsiElement): GenTraversableOnce[JSType] = {
     nit(elDecl.getParent)
       .flatMap(cast[JSForInStatement](_))
       .filter(st => !Objects.equals(elDecl, st.getCollectionExpression))
@@ -99,59 +98,6 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(st => Option(st.getCollectionExpression))
       .flatMap(arrexpr => ctx.findExprType(arrexpr))
       .flatMap(arrt => Mt.getKey(arrt, None))
-  }
-
-  private def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
-    // TODO: track occurrences to avoid infinite circular references
-    nit(usage.getParent).flatMap {
-      case superRef: JSReferenceExpression => frs(Iterator.empty
-        // someVar.push(value)
-        , nit(superRef.getReferenceName)
-          .filter(refName => List("push", "unshift").contains(refName))
-          .flatMap(refName => Option(superRef.getParent))
-          .flatMap(cast[JSCallExpression](_))
-          .flatMap(call => call.getArguments.lift(0))
-          .flatMap(value => ctx.findExprType(value))
-          .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
-        // someVar.someKey = 123
-        , nit(superRef.getReferenceName)
-          .flatMap(name => resolveAssignmentTo(superRef).itr()
-            .map(valt => Mt.mkProp(name, Some(valt), Some(superRef)))
-            .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)))
-      )
-      // someVar[i] = value
-      case indexing: JSIndexedPropertyAccessExpression =>
-        Option(indexing.getIndexExpression)
-          .filter(lit => usage equals indexing.getQualifier).itr()
-          // TODO: put a strict limit here so that it did not get
-          //  in 100500 levels depth just to resolve an integer key
-          .flatMap(lit => ctx.findExprType(lit))
-          .map(keyt => {
-            val valts = resolveAssignmentTo(indexing)
-            val valT = JSDeepMultiType(valts.mem())
-            DeepIndexSignatureImpl(keyt, valT, Some(indexing))
-          })
-          .map((prop: TypeMember) => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
-      // var someVar = null;
-      // someVar = initializeSomething()
-      case usage: JSDefinitionExpression =>
-        nit(usage.getParent)
-          .flatMap(cast[JSAssignmentExpression](_))
-          .flatMap(defi => Option(defi.getROperand))
-          .flatMap(expr => ctx.findExprType(expr))
-      case arrLit: JSArrayLiteralExpression =>
-        // for ([k,v] of arr) {}
-        // [el1, el2] = tuple;
-        val elOrder = arrLit.getExpressions.indexOf(usage)
-        val kit: GenTraversableOnce[JSType] =
-          if (elOrder > -1) Mkt.str(elOrder + "") else None
-
-        val artit = resolveForInEl(arrLit)
-        artit.itr().flatMap(elt => Mt.getKey(elt, kit))
-      case untyped =>
-        //Console.println("zhopa unsupported assignment destination " + untyped.getClass + " " + untyped.getText)
-        List[JSType]()
-    }
   }
 
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
@@ -293,7 +239,7 @@ case class VarRes(ctx: IExprCtx) {
         .flatMap(psi => resolveFromMainDecl(psi))
       ++
       findRefUsages(ref).itr()
-        .flatMap(usage => resolveAssignmentTo(usage))
+        .flatMap(usage => new AssRes(ctx).resolveAssignmentTo(usage))
     )
   }
 }

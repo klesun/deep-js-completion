@@ -34,7 +34,7 @@ object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
-  val DEEP_PRIO = 2000
+  val DEEP_PRIO = 20000
 
   def getIcon = icon
 
