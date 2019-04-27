@@ -71,13 +71,7 @@ class AssRes(val ctx: IExprCtx) {
   }
 
   def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
-    if (occurrences.contains(usage)) {
-      None
-    } else {
-      // now that I think about it, this seems unnecessary,
-      // unless you want to catch code mistakes here...
-      occurrences.add(usage)
-      resolveAssignmentNoCirc(usage)
-    }
+    // not sure, but I guess there can't be circular references here
+    resolveAssignmentNoCirc(usage)
   }
 }
