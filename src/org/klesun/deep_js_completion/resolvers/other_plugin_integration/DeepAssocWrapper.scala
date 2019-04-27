@@ -80,8 +80,13 @@ class DeepAssocWrapper {
 //    Console.println("test obj from deep-assoc - " + test)
 
     DeepAssocApi.inst().addCustomDocParser("deep-js-completion", (str: String, psi: PsiElement/*, phpCtx: IExprCtx*/) => {
+      val maxDepth = if (Option(psi.getContainingFile).exists(f => "ExactKeysUnitTest.php" equals f.getName)) {
+        60
+      } else {
+        35
+      }
       // should probably use a global search ctx for such stuff, so that caching and depth limits worked
-      val jsSearch = new SearchCtx(project=Option(psi.getProject), maxDepth = 35)
+      val jsSearch = new SearchCtx(project=Option(psi.getProject), maxDepth = maxDepth)
       val funcCtx = FuncCtx(jsSearch)
       val jsCtx = ExprCtx(funcCtx, psi, 0)
 

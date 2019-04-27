@@ -134,7 +134,7 @@ class ExactKeysUnitTest
         $apoPnr['passengers']['passengerList'][0][''];
         return [
             [$apoPnr['passengers'], ['passengerList', 'pnrIsCurrentlyInUse', 'reservationInfo', 'shopInfo', 'agentName']],
-            [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber']],
+            [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber', 'success', 'parsedNumber', 'rawNumber', 'joinedFirstNames', 'ageGroup', 'age', 'dob', 'ptc', 'carrierText']],
         ];
     }
 }
