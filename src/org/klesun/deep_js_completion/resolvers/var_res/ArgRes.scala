@@ -19,7 +19,7 @@ import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
-import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
+import org.klesun.deep_js_completion.structures.{EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang.{cast, nit}
 
@@ -156,51 +156,64 @@ object ArgRes {
       .flatMap(arg => Option(arg.getType))
   }
 
-  private def resolvePrivateFuncUsages(inlineFuncArgOrder: Int, callerDef: JSDefinitionExpression, ctx: IExprCtx, argOrder: Int): GenTraversableOnce[JSType] = {
-    Option(callerDef.getParent)
-      .flatMap(cast[JSAssignmentExpression](_))
-      .flatMap(defi => Option(defi.getROperand))
-      .flatMap(cast[JSFunction](_)).itr
-      .flatMap(callerFunc => callerFunc.getParameters.lift(inlineFuncArgOrder)
-        .flatMap(callerArg => cast[JSParameter](callerArg))
-        .itr.flatMap(par => VarRes.findVarUsages(par, par.getName))
+  private def findReferencedFunc(funcVarDecl: PsiElement): Option[JSFunction] = {
+    // TODO: add circular references check... and implementation
+    funcVarDecl match {
+      // TODO: test and uncomment
+      //case tsFuncDecl: TypeScriptFunctionSignatureImpl => {
+      //  resolveTsFuncArgArg(objt, tsFuncDecl, outerCallCtx, inlineFuncArgOrder, argOrder)
+      //}
+      case varDef: JSDefinitionExpression =>
+        Option(varDef.getParent)
+          .flatMap(cast[JSAssignmentExpression](_))
+          .flatMap(defi => Option(defi.getROperand))
+          .flatMap(cast[JSFunction](_))
+      case _ =>
+        None
+    }
+  }
+
+  private def resolvePrivateFuncUsages(par: JSParameter, ctx: IExprCtx, argOrder: Int): It[JSType] = {
+    VarRes.findVarUsages(par, par.getName).itr()
         .flatMap(usage => Option(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))
         .flatMap(call => call.getArguments.lift(argOrder))
-        .flatMap(value => ctx.subCtxEmpty().findExprType(value)))
+        .flatMap(value => ctx.subCtxEmpty().findExprType(value))
   }
 }
 
 case class ArgRes(ctx: IExprCtx) {
 
+  private def getFuncParam(paramOrder: Int, ref: JSReferenceExpressionImpl): It[JSParameter] = {
+    val wsFuncDefs = nit(ref.resolve())
+      .flatMap(funcVarDecl => findReferencedFunc(funcVarDecl))
+
+    val deepFuncDefs = ctx.subCtxEmpty().findExprType(ref).itr()
+      .flatMap(cast[JSDeepFunctionTypeImpl](_))
+      .map(ft => ft.funcPsi)
+
+    cnc(wsFuncDefs, deepFuncDefs)
+      .flatMap(callerFunc => callerFunc.getParameters.lift(paramOrder)
+        .flatMap(callerArg => cast[JSParameter](callerArg)))
+  }
+
   private def getInlineFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
-    Option(func.getParent).itr
+    nit(func.getParent)
       .flatMap(cast[JSArgumentList](_))
-      .flatMap(argList => Option(argList.getArguments.indexOf(func)).itr
+      .flatMap(argList => nit(argList.getArguments.indexOf(func))
         .flatMap(inlineFuncArgOrder => Option(true)
           .flatMap(ok => Option(argList.getParent))
           .flatMap(cast[JSCallExpression](_)).itr
-          .flatMap(call => Option(call.getMethodExpression).itr
-
+          .flatMap(call => nit(call.getMethodExpression)
             .flatMap(cast[JSReferenceExpressionImpl](_))
             .flatMap(ref => {
               val objt = nit(ref.getQualifier)
                 .flatMap(obj => ctx.findExprType(obj))
               val outerCallCtx = ctx.subCtxDirect(call)
 
-              // completion on arg of anonymous function based on what is passed to it
-              // i should use _deep_ logic instead of ref.resolve() one day...
-              (Option(ref.resolve()).itr
-                .flatMap {
-                  // TODO: test and uncomment
-                  //case tsFuncDecl: TypeScriptFunctionSignatureImpl => {
-                  //  resolveTsFuncArgArg(objt, tsFuncDecl, outerCallCtx, inlineFuncArgOrder, argOrder)
-                  //}
-                  case callerDef: JSDefinitionExpression =>
-                    resolvePrivateFuncUsages(inlineFuncArgOrder, callerDef, ctx.subCtxEmpty(), argOrder)
-                  case _ => None
-                }
+              (getFuncParam(inlineFuncArgOrder, ref).flatMap(par =>
+                resolvePrivateFuncUsages(par, ctx.subCtxEmpty(), argOrder))
 
               // following built-in functions are hardcoded and probably
               // are not needed once generic parsing works properly...
