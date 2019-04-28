@@ -56,6 +56,10 @@ case class FuncCtx(
     }
   }
 
+  override def areArgsKnown(): Boolean = {
+    !argPsiType.equals(EArgPsiType.NONE)
+  }
+
   override def getSpreadArg(): JSArrayType = {
     val elts = argGetters.itr().flatMap(g => g)
     val elt = JSDeepMultiType(elts.mem())

@@ -173,6 +173,15 @@ exports.provideObjSpread = () => {
     return copied;
 };
 
+exports.provideObjInstructuring = () => {
+    let context = {agentId: 6206, gds: 'apollo'};
+    let id = 1235;
+    let gdsData = {profile: 'OLOLO', token: 'qwe123sdg345'};
+    let sessionRecord = noBuiltIn({id, context, gdsData});
+    sessionRecord.c;
+    return sessionRecord;
+};
+
 exports.provideSelfDependency = () => {
     let $parsedData = {};
     let $result = {

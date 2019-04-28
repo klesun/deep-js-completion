@@ -94,6 +94,17 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideObjInstructuring() */
+    public function provideObjInstructuring($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['id', 'context', 'gdsData']],
+            [$arg['context'], ['agentId', 'gds']],
+            [$arg['gdsData'], ['profile', 'token']],
+        ];
+    }
+
     /** @param $arg = require('ExactKeysUnitTest.js').provideArrayMerge() */
     public function provideArrayMerge($arg)
     {

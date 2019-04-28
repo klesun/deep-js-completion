@@ -11,6 +11,7 @@ import scala.collection.GenTraversableOnce
  */
 abstract class IFuncCtx {
   def getArg(order: Integer): GenTraversableOnce[JSType]
+  def areArgsKnown(): Boolean
   def getSpreadArg(): JSArrayType
   def getClosurePsi(): Option[JSFunction]
   def getClosureCtx(): Option[IFuncCtx]
