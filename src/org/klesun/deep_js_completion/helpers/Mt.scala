@@ -64,15 +64,15 @@ object Mt {
     internal(t)
   }
 
-  private def getLiteralValueOpts(litT: JSType): Iterable[Option[String]] = {
+  private def getLiteralValueOpts(litT: JSType): It[Option[String]] = {
     flattenTypes(litT).itr().map {
       case lit: JSPrimitiveLiteralType[_] => Some(lit.getLiteral + "")
       case _ => None
-    }.toIterable
+    }.itr()
   }
 
-  def getAnyLiteralValues(litT: JSType): Iterable[String] = {
-    getLiteralValueOpts(litT).flatten
+  def getAnyLiteralValues(litT: JSType): It[String] = {
+    getLiteralValueOpts(litT).flatMap(a => a)
   }
 
   def getAllLiteralValues(litT: JSType): Option[Iterable[String]] = {
@@ -111,8 +111,6 @@ object Mt {
   }
 
   private def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
-    // TODO: should optimize to stop right after first
-    //  "unknown" key type, like it's done in deep-assoc
     val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
     val litVals = litValsOpt.toIterable.flatten

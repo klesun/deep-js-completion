@@ -8,6 +8,7 @@ import org.klesun.deep_js_completion.contexts.SearchCtx
 
 import scala.collection.{AbstractIterable, GenTraversableOnce}
 import scala.reflect.{ClassTag, classTag}
+import scala.collection.JavaConverters._
 
 
 /** provides some core functions needed for IDEA plugin development */
@@ -64,11 +65,22 @@ object DeepJsLang {
       substr(str, startIndex, str.length())
   }
 
-  def all[T](opts: Iterable[Option[T]]): Option[Iterable[T]] = {
-    if (opts.exists(o => o.isEmpty)) {
+  def all[T](opts: GenTraversableOnce[Option[T]]): Option[Iterable[T]] = {
+    val values = new util.ArrayList[T]()
+    var iter = opts.itr()
+    var break = false
+    while (!break && iter.hasNext) {
+      val opt = iter.next()
+      if (opt.nonEmpty) {
+        values.add(opt.get)
+      } else {
+        break = true
+      }
+    }
+    if (break) {
       None
     } else {
-      Some(opts.map(o => o.get))
+      Some(values.asScala)
     }
   }
 
