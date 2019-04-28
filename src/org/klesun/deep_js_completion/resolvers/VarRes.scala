@@ -14,7 +14,6 @@ import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.{PsiElement, PsiFile}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, AssRes, GenericRes}
 import org.klesun.deep_js_completion.structures.JSDeepClassType
@@ -97,7 +96,7 @@ case class VarRes(ctx: IExprCtx) {
       .filter(st => st.isForEach)
       .flatMap(st => Option(st.getCollectionExpression))
       .flatMap(arrexpr => ctx.findExprType(arrexpr))
-      .flatMap(arrt => Mt.getKey(arrt, None))
+      .flatMap(arrt => ctx.mt().getKey(arrt, None))
   }
 
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
@@ -135,7 +134,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(qualT => {
             val keyTOpt = Option(dest.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            Mt.getKey(qualT, keyTOpt)
+            ctx.mt().getKey(qualT, keyTOpt)
           })
         types
       case arr: JSDestructuringArray =>
@@ -145,7 +144,7 @@ case class VarRes(ctx: IExprCtx) {
             val keyTOpt = Option(arr.getElements.indexOf(dest))
               .filter(idx => idx > -1)
               .map(idx => new JSStringLiteralTypeImpl(idx + "", true, JSTypeSource.EMPTY))
-            Mt.getKey(qualT, keyTOpt)
+            ctx.mt().getKey(qualT, keyTOpt)
           })
         types
       case varst: JSVarStatement => resolveVarSt(varst)
@@ -225,7 +224,7 @@ case class VarRes(ctx: IExprCtx) {
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
             .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-          val result = Mt.getKey(qualT, keyTOpt)
+          val result = ctx.mt().getKey(qualT, keyTOpt)
           result
         })
       ++

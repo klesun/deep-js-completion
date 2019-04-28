@@ -2,6 +2,8 @@ package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
 import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.helpers
+import org.klesun.deep_js_completion.helpers.Mt
 
 import scala.collection.GenTraversableOnce
 
@@ -42,6 +44,8 @@ case class ExprCtx(
   }
 
   override def func(): IFuncCtx = funcCtx
+
+  override def mt(): Mt = helpers.Mt(funcCtx.search.project)
 
   override def getDepth(): Int = depth
 }

@@ -6,8 +6,7 @@ import com.intellij.lang.javascript.psi.{JSDestructuringElement, JSDestructuring
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.contexts.SearchCtx
-import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.lang.DeepJsLang._
 
 
@@ -15,6 +14,8 @@ class DestrPropGoToDecl extends GotoDeclarationHandler {
   /** @param caretPsi nullable */
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
     val search = new SearchCtx(40, project=Option(editor.getProject))
+    val funcCtx = FuncCtx(search)
+    val exprCtx = ExprCtx(funcCtx, caretPsi, 0)
     Option(caretPsi)
       .flatMap(psi => Option(psi.getParent))
       .flatMap(cast[JSVariable](_)).itr
@@ -26,11 +27,11 @@ class DestrPropGoToDecl extends GotoDeclarationHandler {
           .flatMap(psi => Option(psi.getParent))
           .flatMap(cast[JSDestructuringElement](_))
           .flatMap(psi => Option(psi.getInitializer)).itr
-          .flatMap(qual => search.findExprType(qual))
+          .flatMap(qual => exprCtx.findExprType(qual))
           .flatMap(qualT => {
             val keyTOpt = Option(varPsi.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            Mt.getKey(qualT, keyTOpt)
+            exprCtx.mt().getKey(qualT, keyTOpt)
           })
       })
       .flatMap(t => search.typeToDecl.get(t))

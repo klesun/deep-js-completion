@@ -5,7 +5,7 @@ import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.resolveTypeExpr
+import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.{parseTypePsi}
 import org.klesun.deep_js_completion.structures
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang.cast
@@ -60,22 +60,29 @@ object GenericRes {
       case _ => None
     }
   }
+}
+
+/**
+ * resolves typescript function signature
+ * use this to get return type knowing passed argument types through generics
+ */
+case class GenericRes(ctx: IExprCtx) {
 
   /** (arg: SomeCls<T>) => {} -> returns type of T, knowing the complete type of arg */
   private def getGenericTypeFromArg(argTypePsi: JSTypeDeclaration, getArgt: () => GenTraversableOnce[JSType], generic: String): GenTraversableOnce[JSType] = {
     argTypePsi match {
       case union: TypeScriptUnionOrIntersectionType =>
         union.getTypes.flatMap(subTypePsi =>
-          GenericRes.getGenericTypeFromArg(subTypePsi, getArgt, generic))
+          getGenericTypeFromArg(subTypePsi, getArgt, generic))
       case obj: TypeScriptObjectType =>
-        val getSubType = () => getArgt().itr.flatMap(t => Mt.getKey(t, None))
-        obj.getIndexSignatures.flatMap(sig => GenericRes.getGenericTypeFromArg(sig.getType, getSubType, generic))
+        val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
+        obj.getIndexSignatures.flatMap(sig => getGenericTypeFromArg(sig.getType, getSubType, generic))
       case sints: TypeScriptSingleType =>
         val fqn = sints.getQualifiedTypeName
         if (generic equals fqn) {
           getArgt()
         } else if ("Iterable" equals fqn) {
-          val getSubType = () => getArgt().itr.flatMap(t => Mt.getKey(t, None))
+          val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
           sints.getTypeArguments.headOption.itr
             .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
         } else {
@@ -131,13 +138,6 @@ object GenericRes {
 
     parseTypePsi(caretTypeExpr, genericsMut.toMap)
   }
-}
-
-/**
- * resolves typescript function signature
- * use this to get return type knowing passed argument types through generics
- */
-case class GenericRes(ctx: IExprCtx) {
 
   def resolveFuncArg(thist: Option[JSType], ctx: IExprCtx, argOrder: Int, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
     val result = tsFunc.getParameters.lift(argOrder)

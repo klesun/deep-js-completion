@@ -63,7 +63,7 @@ class AssRes(val ctx: IExprCtx) {
           if (elOrder > -1) Mkt.str(elOrder + "") else None
 
         val artit = resolvers.VarRes(ctx).resolveForInEl(arrLit)
-        artit.itr().flatMap(elt => Mt.getKey(elt, kit))
+        artit.itr().flatMap(elt => ctx.mt().getKey(elt, kit))
       case untyped =>
         //Console.println("zhopa unsupported assignment destination " + untyped.getClass + " " + untyped.getText)
         List[JSType]()

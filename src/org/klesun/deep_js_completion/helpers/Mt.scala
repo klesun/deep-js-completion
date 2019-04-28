@@ -80,10 +80,9 @@ object Mt {
     all(opts)
   }
 
-  private def getRecordKey(objT: JSRecordType, litVals: Iterable[String]): GenTraversableOnce[JSType] = {
+  private def getKeyFromMems(mems: GenTraversableOnce[TypeMember], litVals: Iterable[String]): GenTraversableOnce[JSType] = {
     val isNamed = (keyName: String) => !("" equals keyName) && !keyName.matches("\\d.*")
-    objT.getTypeMembers.asScala
-      .flatMap {
+    mems.itr.flatMap {
         case mem: PropertySignature => Option(mem.getType)
           .filter(t => litVals.isEmpty || litVals.exists(lit => lit equals mem.getMemberName))
           .filter(t => {
@@ -107,7 +106,11 @@ object Mt {
       }
   }
 
-  def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType]): GenTraversableOnce[JSType] = {
+  private def getRecordKey(objT: JSRecordType, litVals: Iterable[String]): GenTraversableOnce[JSType] = {
+    getKeyFromMems(objT.getTypeMembers.asScala, litVals)
+  }
+
+  private def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
     // TODO: should optimize to stop right after first
     //  "unknown" key type, like it's done in deep-assoc
     val keyTOpt = Mt.mergeTypes(keyTIt)
@@ -125,7 +128,13 @@ object Mt {
         tupResultOpt.orElse(arrFallback)
       case arrT: JSArrayTypeImpl => Option(arrT.getType)
       case objT: JSRecordType => getRecordKey(objT, litVals)
-      case typedef: JSType => getRecordKey(typedef.asRecordType(), litVals)
+      case typedef: JSType =>
+        if (proj.nonEmpty) {
+          val mems = getFlatMems(typedef, proj.get)
+          getKeyFromMems(mems, litVals)
+        } else {
+          getRecordKey(typedef.asRecordType(), litVals)
+        }
       case other => {
         //Console.println("Unsupported key qualifier type - " + other.getClass + " " + other)
         None
@@ -160,6 +169,7 @@ object Mt {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
         Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))
+      case rest => rest
       case rest => rest
     }
   }
@@ -239,5 +249,13 @@ object Mt {
     val keyt = new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY)
     val valt = JSDeepMultiType(valtit.mem())
     DeepIndexSignatureImpl(keyt, valt, psi)
+  }
+}
+
+case class Mt(
+  val proj: Option[Project]
+) {
+  def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType]): GenTraversableOnce[JSType] = {
+    Mt.getKey(arrT, keyTIt, proj)
   }
 }

@@ -224,13 +224,13 @@ case class ArgRes(ctx: IExprCtx) {
                 .filter(expr => argOrder == 0)
                 .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => Mt.getKey(arrt, None)).itr
+                .flatMap(arrt => ctx.mt().getKey(arrt, None)).itr
                 ++
               nit(ref.getQualifier)
                 .filter(expr => argOrder == 1)
                 .filter(expr => List("reduce").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => Mt.getKey(arrt, None)).itr
+                .flatMap(arrt => ctx.mt().getKey(arrt, None)).itr
                 ++
               nit(ref.getQualifier)
                 // func arg order does not matter, it may be 0 or 1, maybe something else as well
