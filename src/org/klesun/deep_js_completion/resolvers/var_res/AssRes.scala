@@ -39,9 +39,7 @@ class AssRes(val ctx: IExprCtx) {
       case indexing: JSIndexedPropertyAccessExpression =>
         Option(indexing.getIndexExpression)
           .filter(lit => usage equals indexing.getQualifier).itr()
-          // TODO: put a strict limit here so that it did not get
-          //  in 100500 levels depth just to resolve an integer key
-          .flatMap(lit => ctx.findExprType(lit))
+          .flatMap(lit => ctx.limitResolveDepth(10, lit))
           .map(keyt => {
             val valts = resolveAssignmentTo(indexing)
             val valT = JSDeepMultiType(valts.mem())

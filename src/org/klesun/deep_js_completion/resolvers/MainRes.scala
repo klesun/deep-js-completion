@@ -93,7 +93,7 @@ object MainRes {
           .flatMap(qual => ctx.findExprType(qual))
           .flatMap(arrT => {
             val keyTOpt = nit(indx.getIndexExpression)
-              .flatMap(qua => ctx.findExprType(qua))
+              .flatMap(lit => ctx.limitResolveDepth(10, lit))
             val result = ctx.mt().getKey(arrT, keyTOpt)
             result
           })
