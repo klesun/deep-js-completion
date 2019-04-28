@@ -76,6 +76,24 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideArrSpread() */
+    public function provideArrSpread($arg)
+    {
+        $arg[0][''];
+        return [
+            [$arg[0], ['cmd', 'type']],
+        ];
+    }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideObjSpread() */
+    public function provideObjSpread($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['area', 'pcc', 'recordLocator', 'canCreatePqErrors']],
+        ];
+    }
+
     /** @param $arg = require('ExactKeysUnitTest.js').provideArrayMerge() */
     public function provideArrayMerge($arg)
     {

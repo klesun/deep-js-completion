@@ -134,7 +134,14 @@ object MainRes {
             .flatMap(expr => ctx.findExprType(expr))
           Option(p.getName).map(n => Mt.mkProp(n, valtit, Some(p)))
         }).toList.asJava
-        Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, props))
+        val explKeysRec = new JSRecordTypeImpl(JSTypeSource.EMPTY, props)
+
+        val spreadTypes = obje.getPropertiesIncludingSpreads
+          .flatMap(cast[JSSpreadExpression](_))
+          .flatMap(spr => nit(spr.getExpression))
+          .flatMap(exp => ctx.findExprType(exp))
+
+        Some(explKeysRec).itr() ++ spreadTypes
       case bina: JSBinaryExpression =>
         val types = cnc(nit(bina.getLOperand), nit(bina.getROperand))
           .flatMap(op => ctx.findExprType(op))

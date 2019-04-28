@@ -146,6 +146,33 @@ exports.provideArrayMerge = () => {
     }
 };
 
+let noBuiltIn = val => val;
+
+exports.provideArrSpread = () => {
+    let cmdRecs = noBuiltIn([
+        {cmd: 'A10MAYJFKMNL', type: 'airAvailability'},
+        {cmd: '01N1*GK', type: 'sell'},
+        {cmd: '$BB0', type: 'priceItinerary'},
+    ]);
+    let copied = [...cmdRecs];
+    copied[0];
+    return copied;
+};
+
+exports.provideObjSpread = () => {
+    let sessionState = noBuiltIn({
+        area: 'A',
+        pcc: '2N3K',
+        recordLocator: 'QWE123',
+    });
+    let copied = {
+        ...sessionState,
+        canCreatePqErrors: ['No recent valid pricing'],
+    };
+    copied.a;
+    return copied;
+};
+
 exports.provideSelfDependency = () => {
     let $parsedData = {};
     let $result = {
