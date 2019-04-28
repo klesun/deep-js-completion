@@ -181,7 +181,8 @@ object Mt {
         case prop: PropertySignature =>
           keyt = new JSStringLiteralTypeImpl(prop.getMemberName, true, JSTypeSource.EMPTY)
           valt = prop.getType
-        case _ =>
+        case other =>
+          //Console.println("unknwon flat mem: " + other.getClass + " " + other)
       }
       DeepIndexSignatureImpl(keyt, valt, kpsi)
     })
@@ -199,9 +200,14 @@ object Mt {
   }
 
   def asGeneric(objt: JSType, project: Project): GenTraversableOnce[JSGenericTypeImpl] = {
+    val src = JSTypeSource.EMPTY
     Mt.flattenTypes(objt)
       .flatMap {
         case gen: JSGenericTypeImpl => Some(gen)
+        // from js doc
+        case plain: JSTypeImpl =>
+          val gent = new JSGenericTypeImpl(src, plain, new util.ArrayList[JSType]())
+          Some(gent)
         case arr: JSArrayType => Option(arr.asGenericType())
         case tupt: JSTupleTypeImpl =>
           val elt: JSType = JSDeepMultiType(tupt.getTypes.asScala.mem())
