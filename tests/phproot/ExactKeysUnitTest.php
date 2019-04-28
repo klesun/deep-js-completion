@@ -94,6 +94,21 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideCmdLog() */
+    public function provideCmdLog($arg)
+    {
+        $arg[''];
+        $arg['desc'][0][''];
+        $arg['copied'][0][''];
+        $arg['reversed'][0][''];
+        return [
+            [$arg, ['desc', 'copied', 'reversed']],
+            [$arg['desc'][0], ['desc', 'session_id','gds','type','is_mr','dt','cmd','duration','cmd_rq_id','area','record_locator','has_pnr','is_pnr_stored','output']],
+            [$arg['copied'][0], ['copied', 'session_id','gds','type','is_mr','dt','cmd','duration','cmd_rq_id','area','record_locator','has_pnr','is_pnr_stored','output']],
+            [$arg['reversed'][0], ['reversed', 'session_id','gds','type','is_mr','dt','cmd','duration','cmd_rq_id','area','record_locator','has_pnr','is_pnr_stored','output']],
+        ];
+    }
+
     /** @param $arg = require('ExactKeysUnitTest.js').provideObjInstructuring() */
     public function provideObjInstructuring($arg)
     {

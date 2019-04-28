@@ -7,14 +7,14 @@ import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
 import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
-import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
+import com.intellij.lang.javascript.psi.impl.{JSArrayLiteralExpressionImpl, JSLiteralExpressionImpl}
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import com.intellij.psi.stubs.StubElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -123,9 +123,17 @@ object MainRes {
             }
           }))
         )
-      case arr: JSArrayLiteralExpression =>
+      case arr: JSArrayLiteralExpressionImpl =>
         val typeTuple = arr.getExpressions
-          .flatMap(el => frs(ctx.findExprType(el), Some(JSUnknownType.JS_INSTANCE)))
+          .flatMap {
+            case spr: JSSpreadExpression =>
+              val tit = nit(spr.getExpression)
+                .flatMap(exp => ctx.findExprType(exp))
+                .flatMap(arrt => ctx.mt().getKey(arrt, None))
+              val elt = JSDeepMultiType(tit.mem())
+              Some(elt)
+            case el => frs(ctx.findExprType(el), Some(JSUnknownType.JS_INSTANCE))
+          }
           .toList.asJava
         Some(new JSTupleTypeImpl(JSTypeSource.EMPTY, typeTuple, true, -1))
       case obje: JSObjectLiteralExpression =>

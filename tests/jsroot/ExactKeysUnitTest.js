@@ -6,6 +6,7 @@ const ApoPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Apollo
 const SabPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Sabre/Pnr/PnrParser");
 const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeus/Pnr/PnrParser");
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
+const CmdLogs = require('../unv/grect/backend/Repositories/CmdLogs.js');
 
 exports.provideAsyncPromise = async () => {
     return Promise.resolve({
@@ -171,6 +172,20 @@ exports.provideObjSpread = () => {
     };
     copied.a;
     return copied;
+};
+
+exports.provideCmdLog = async () => {
+    let desc = await CmdLogs.getAll(123);
+    desc[0].c;
+    let copied = [...desc, undefined];
+    copied[0].c;
+    let reversed = copied.reverse();
+    reversed[0].c;
+    return {
+        desc: [...desc].concat([{desc: true}]),
+        copied: [...copied].concat([{copied: true}]),
+        reversed: [...reversed].concat([{reversed: true}]),
+    };
 };
 
 exports.provideObjInstructuring = () => {
