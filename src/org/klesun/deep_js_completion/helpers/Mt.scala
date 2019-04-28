@@ -232,13 +232,17 @@ object Mt {
 
   def unwrapPromise(promiset: JSType): It[JSType] = {
     flattenTypes(promiset)
-      .map(t => {
+      .flatMap(t => frs(
         cast[JSGenericTypeImpl](t)
           .filter(gene => List("Promise", "Bluebird")
             .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
-          .map(gene => gene.getArguments.asScala.lift(0).getOrElse(JSUnknownType.JS_INSTANCE))
-          .getOrElse(t)
-      })
+          .map(gene => gene.getArguments.asScala.lift(0).getOrElse(JSUnknownType.JS_INSTANCE)),
+        cast[JSTypeImpl](t)
+          .filter(gene => List("Promise")
+            .contains(gene.getTypeText(TypeTextFormat.CODE)))
+          .map(gene => JSUnknownType.JS_INSTANCE),
+        Some(t),
+      ))
   }
 
   def wrapPromise(value: JSType): JSType = {
