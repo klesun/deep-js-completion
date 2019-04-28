@@ -168,7 +168,7 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   // may be defined in a different file unlike resolveAssignment()
-  private def resolveFromMainDecl(psi: PsiElement): GenTraversableOnce[JSType] = {
+  private def resolveFromMainDecl(psi: PsiElement, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
     psi match {
       case para: JSParameter => ArgRes(ctx).resolve(para) ++ resolveMainDeclVar(para)
       case dest: JSVariable => resolveMainDeclVar(dest)
@@ -180,7 +180,7 @@ case class VarRes(ctx: IExprCtx) {
         if (shouldTypedefBeIgnored(tsFunc)) {
           None
         } else {
-          GenericRes(ctx).resolveFunc(tsFunc)
+          GenericRes(ctx).resolveFunc(tsFunc, qualMem)
         }
       }
       case func: JSFunction => resolveFunc(func)
@@ -218,9 +218,10 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {
+    val qualMem = nit(ref.getQualifier)
+      .flatMap(qual => ctx.findExprType(qual)).mem()
     (
-      nit(ref.getQualifier)
-        .flatMap(qual => ctx.findExprType(qual))
+      qualMem
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
             .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
@@ -235,7 +236,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(vari => resolveMainDeclVar(vari)))
       ++
       getDeclarations(ref).itr()
-        .flatMap(psi => resolveFromMainDecl(psi))
+        .flatMap(psi => resolveFromMainDecl(psi, qualMem))
       ++
       findRefUsages(ref).itr()
         .flatMap(usage => new AssRes(ctx).resolveAssignmentTo(usage))

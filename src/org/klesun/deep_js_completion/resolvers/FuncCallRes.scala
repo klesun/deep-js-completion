@@ -75,7 +75,7 @@ case class FuncCallRes(ctx: IExprCtx) {
   }
 
   def resolve(funcCall: JSCallExpression): GenTraversableOnce[JSType] = {
-    Option(funcCall.getMethodExpression).itr
+    nit(funcCall.getMethodExpression)
       .flatMap(expr => {
         val definedRts = ctx.findExprType(expr)
           .itr.flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxDirect(funcCall)))

@@ -147,10 +147,12 @@ case class GenericRes(ctx: IExprCtx) {
     result
   }
 
-  def resolveFunc(tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
+  def resolveFunc(tsFunc: TypeScriptFunctionSignature, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
+    val thist = Some(JSDeepMultiType(qualMem))
     Option(tsFunc.getReturnTypeElement)
       .map(caretTypeDef =>
-        JSDeepFunctionTypeImpl(tsFunc, ctx.subCtxEmpty().func(), callCtx =>
-          resolveTypeExpr(None, callCtx, caretTypeDef, tsFunc)))
+        JSDeepFunctionTypeImpl(tsFunc, ctx.subCtxEmpty().func(), callCtx => {
+          resolveTypeExpr(thist, callCtx, caretTypeDef, tsFunc)
+        }))
   }
 }
