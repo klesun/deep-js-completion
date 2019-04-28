@@ -146,7 +146,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
           .filter(prio => protos.contains(prio.getLookupString))
           .map(prio => prio.getDelegate)
-          .map(dele => PrioritizedLookupElement.withPriority(dele, DEEP_PRIO - 198))
+          .map(dele => PrioritizedLookupElement.withPriority(dele, DEEP_PRIO - 19998))
           .getOrElse(lookup)
         builtInSuggestions.add((isGuess || !onlyTyped, lookup))
       })
