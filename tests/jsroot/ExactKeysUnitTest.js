@@ -8,6 +8,29 @@ const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeu
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
 const CmdLogs = require('../unv/grect/backend/Repositories/CmdLogs.js');
 
+class OfficeCompletion
+{
+    constructor () {
+        this.state = {
+            formData : {
+                userOffices : [1, 5, 7],
+                advancePurchase : {
+                    units : "days",
+                    amount : 0
+                }
+            }
+            open : false
+        };
+    }
+
+    render () {
+        const {formData} = this.state;
+        const {advancePurchase} = formData;
+
+        console.log( formData.s ); // <== zdesj suggest (advancePurchase, userOffices)
+    }
+}
+
 exports.provideAsyncPromise = async () => {
     return Promise.resolve({
         zxc1: 123,

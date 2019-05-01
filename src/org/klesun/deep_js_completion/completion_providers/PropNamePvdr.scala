@@ -11,7 +11,7 @@ import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyM
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
-import com.intellij.lang.javascript.psi.{JSFunction, JSRecordType, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.{JSExpression, JSFunction, JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -34,7 +34,9 @@ object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
-  val DEEP_PRIO = 20000
+  val DEEP_PRIO = 2000
+  val PRIM_PRIO = 20
+  val PROTO_PRIO = -100000
 
   def getIcon = icon
 
@@ -75,7 +77,7 @@ object PropNamePvdr {
     var priority = DEEP_PRIO - i
     if (isBuiltIn) {
       lookup = lookup.withItemTextForeground(JBColor.GRAY)
-      priority = 0
+      priority = PRIM_PRIO
     }
     PrioritizedLookupElement.withPriority(lookup, priority)
   }
@@ -99,6 +101,87 @@ object PropNamePvdr {
       t.isInstanceOf[JSTupleType]
   }
 
+  private def resolveMems(qual: JSExpression, parameters: CompletionParameters): It[PropRec] = {
+    val depth = getMaxDepth(parameters.isAutoPopup)
+    val search = new SearchCtx(depth, project=Some(qual.getProject))
+
+    val funcCtx = FuncCtx(search)
+    val exprCtx = ExprCtx(funcCtx, qual, 0)
+
+    exprCtx.findExprType(qual).itr()
+      .flatMap(typ => getNamedProps(typ, qual.getProject)
+        .map(p => PropRec(p, isBuiltIn(typ))))
+  }
+
+  private def getQualifier(parameters: CompletionParameters): Option[JSExpression] = {
+    // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
+    // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
+    //val nullPsi = parameters.getPosition
+    Option(parameters.getOriginalPosition)
+      .flatMap(leaf => Option(parameters.getOriginalFile)
+        // original PSI points to different elements in `obj.<>prop,`, `obj.prop<>,` and `obj.<>,`, but
+        // in all these cases previous PSI is a leaf of the reference expression we want to resolve
+        .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
+      .flatMap(ref => Option(ref.getQualifier))
+      .filter(qual => {
+        // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
+        val qualEnd = qual.getTextOffset + qual.getTextLength
+        qualEnd < parameters.getOriginalPosition.getTextOffset
+      })
+      .filter(qual =>
+          // do not provide completion for them since they
+          // are trashed by deprecated Microsoft functions
+          !"document".equals(qual.getText) &&
+          !"window".equals(qual.getText))
+  }
+
+  /**
+   * the idea is to first show _typed_ options provided by WS, then hang for however
+    * long we like to resolve our deep keys, and only then to show the useless
+    * _anything_ options you would see if "Only Type-Based Completion" setting is off
+   */
+  private def processBuiltIns(
+    parameters: CompletionParameters,
+    result: CompletionResultSet,
+    jsConfig: JSRootConfiguration,
+  ) = {
+    var onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
+    val suggested = new mutable.HashSet[String]()
+    var builtInsLeft = new util.ArrayList[LookupElement]()
+    val showOption = (lookup: LookupElement) => {
+      result.addElement(lookup)
+      suggested.add(lookup.getLookupString)
+    }
+
+    result.runRemainingContributors(parameters, otherSourceResult => {
+      var lookup = otherSourceResult.getLookupElement
+      val protos = List("constructor", "hasOwnProperty", "isPrototypeOf",
+        "propertyIsEnumerable", "toLocaleString", "toString", "valueOf")
+      // 99.0 (group 94) - inferred type property completion
+      // 5.0 (group 6) - property completion guessed from usage
+      val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
+        .forall(pri => pri.getPriority < 99.0 || protos.contains(pri.getLookupString))
+
+      lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
+        .filter(prio => protos.contains(prio.getLookupString))
+        .map(prio => prio.getDelegate)
+        .map(dele => PrioritizedLookupElement.withPriority(dele, PROTO_PRIO))
+        .getOrElse(lookup)
+      if (isGuess || !onlyTyped) {
+        builtInsLeft.add(lookup)
+      } else {
+        showOption(lookup)
+      }
+    })
+    if (!onlyTyped && builtInsLeft.size() < 30) {
+      // if WS knows for sure what type var has, it will show only useful
+      // suggestions even if "Only Type-Based Completion" is set to false
+      builtInsLeft.forEach(b => showOption(b))
+      builtInsLeft = new util.ArrayList[LookupElement]()
+    }
+    (suggested, builtInsLeft)
+  }
+
 //  private def printExprTree(root: ExprCtx, depth: Int): Unit = {
 //    val indent = " " * depth
 //    Console.println(indent + SearchCtx.formatPsi(root.expr))
@@ -119,20 +202,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-    // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
-    // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
-    //val nullPsi = parameters.getPosition
-    val nullPsi = Option(parameters.getOriginalPosition)
-      .flatMap(leaf => Option(parameters.getOriginalFile)
-        // original PSI points to different elements in `obj.<>prop,`, `obj.prop<>,` and `obj.<>,`, but
-        // in all these cases previous PSI is a leaf of the reference expression we want to resolve
-        .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
-      .orNull
-    val project = if (nullPsi != null) nullPsi.getProject else null
-    val jsConfig = if (project != null) JSRootConfiguration.getInstance(project) else null
-    val onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
-
-    def getBuiltIns(): util.ArrayList[(Boolean, LookupElement)] = {
+    def getBuiltIns(onlyTyped: Boolean): util.ArrayList[(Boolean, LookupElement)] = {
       val builtInSuggestions = new util.ArrayList[(Boolean, LookupElement)]
       result.runRemainingContributors(parameters, otherSourceResult => {
         var lookup = otherSourceResult.getLookupElement
@@ -146,90 +216,54 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
         lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
           .filter(prio => protos.contains(prio.getLookupString))
           .map(prio => prio.getDelegate)
-          .map(dele => PrioritizedLookupElement.withPriority(dele, DEEP_PRIO - 19998))
+          .map(dele => PrioritizedLookupElement.withPriority(dele, PROTO_PRIO))
           .getOrElse(lookup)
         builtInSuggestions.add((isGuess || !onlyTyped, lookup))
       })
       builtInSuggestions
     }
 
-    def addsTypeInfo(ourKup: LookupElement, builtIns: util.ArrayList[(Boolean, LookupElement)]): Boolean = {
-      !builtIns.asScala.exists((tuple) => {
-        val (isGuess, builtInKup) = tuple
-        var memName = builtInKup.getLookupString
-        if (memName.endsWith("()")) {
-          memName = substr(memName, 0, -2)
-        }
-        val isBuiltInUseful = !isGuess && onlyTyped &&
-          (memName equals( ourKup.getLookupString))
-        isBuiltInUseful
-      })
-    }
-    val depth = getMaxDepth(parameters.isAutoPopup)
-    val search = new SearchCtx(depth, project=Option(parameters.getEditor.getProject))
-    val funcCtx = FuncCtx(search)
-    val exprCtx = ExprCtx(funcCtx, nullPsi, 0)
+    val qualOpt = getQualifier(parameters)
+    if (qualOpt.isEmpty) return
+    val qual = qualOpt.get
+
+    val jsConfig = JSRootConfiguration.getInstance(qual.getProject)
+    val (suggested, builtInsLeft) = processBuiltIns(parameters, result, jsConfig)
 
     val startTime = System.nanoTime
-    var typesGot = 0
-    var propsGot = 0
+    val mems = resolveMems(qual, parameters)
 
-    var types = nit(nullPsi)
-      .flatMap(ref => Option(ref.getQualifier))
-      .filter(qual => {
-        // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
-        val qualEnd = qual.getTextOffset + qual.getTextLength
-        qualEnd < parameters.getOriginalPosition.getTextOffset
-      })
-      .flatMap(qual => exprCtx.findExprType(qual))
-    types = types
-      .filter(t => {
-        if (typesGot == 0) {
-          result.addLookupAdvertisement("Resolved first type in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
-        }
-        typesGot = typesGot + 1
-        true
-      })
-    val mems = types
-      .flatMap(typ => getNamedProps(typ, nullPsi.getProject)
-        .filter(prop => {
-          if (propsGot == 0) {
-            result.addLookupAdvertisement("Resolved first key " + prop.getMemberName + " in " + ((System.nanoTime - startTime) / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
-          }
-          propsGot = propsGot + 1
-          true
-        })
-        .map(p => PropRec(p, isBuiltIn(typ))))
-
-    Console.println("Created property iterator within " + search.expressionsResolved + " expressions (" + typesGot + " types)")
-    val builtInSuggestions = getBuiltIns()
-
-    val suggested = new mutable.HashSet[String]()
+    val hasAny = mems.hasNext
+    var elapsed = System.nanoTime - startTime
+    if (hasAny) {
+      result.addLookupAdvertisement("Resolved first key in " + (elapsed / 1000000000.0))
+    } else {
+      result.addLookupAdvertisement("No keys resolved in " + (elapsed / 1000000000.0))
+    }
     mems
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
-      .filter(ourKup => addsTypeInfo(ourKup, builtInSuggestions))
       .foreach(ourKup => {
-        result.addElement(ourKup)
-        suggested.add(ourKup.getLookupString)
-      })
-
-    val elapsed = System.nanoTime - startTime
-    result.addLookupAdvertisement("Resolved all in " + (elapsed / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
-    Console.println("Resolved all in " + (elapsed / 1000000000.0) + " s. after " + search.expressionsResolved + " expressions")
-
-    val keptBuiltIns = builtInSuggestions.asScala
-      .flatMap(tuple => {
-        val (isGuess, builtInKup) = tuple
-        var memName = builtInKup.getLookupString
-        if (memName.endsWith("()")) {
-          memName = substr(memName, 0, -2)
-        }
-        if (suggested.contains(memName)) None else {
-          Some(builtInKup)
+        val asField = ourKup.getLookupString
+        val asFunc = asField + "()"
+        if (!suggested.contains(asField) && !suggested.contains(asFunc)) {
+          result.addElement(ourKup)
+          suggested.add(asField)
+          suggested.add(asFunc)
         }
       })
-    result.addAllElements(keptBuiltIns.asJava)
+
+    elapsed = System.nanoTime - startTime
+    result.addLookupAdvertisement("Resolved all in " + (elapsed / 1000000000.0))
+
+    // guessed built-in suggestions left
+    builtInsLeft.asScala
+      .foreach(builtInKup => {
+        val memName = builtInKup.getLookupString
+        if (!suggested.contains(memName)) {
+          result.addElement(builtInKup)
+        }
+      })
 
     //if (SearchCtx.DEBUG_OBJ.PRINT_PSI_TREE) {
     //  Console.println("========= tree ========")
