@@ -147,20 +147,27 @@ object PropNamePvdr {
   ) = {
     var onlyTyped = if (jsConfig != null) jsConfig.isOnlyTypeBasedCompletion else false
     val suggested = new mutable.HashSet[String]()
+
+    val builtIns = new util.ArrayList[LookupElement]()
+    result.runRemainingContributors(parameters, otherSourceResult => {
+      builtIns.add(otherSourceResult.getLookupElement)
+    })
+
     var builtInsLeft = new util.ArrayList[LookupElement]()
     val showOption = (lookup: LookupElement) => {
       result.addElement(lookup)
       suggested.add(lookup.getLookupString)
     }
 
-    result.runRemainingContributors(parameters, otherSourceResult => {
-      var lookup = otherSourceResult.getLookupElement
+    builtIns.forEach(lookupArg => {
+      var lookup = lookupArg
       val protos = List("constructor", "hasOwnProperty", "isPrototypeOf",
         "propertyIsEnumerable", "toLocaleString", "toString", "valueOf")
       // 99.0 (group 94) - inferred type property completion
       // 5.0 (group 6) - property completion guessed from usage
-      val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
-        .forall(pri => pri.getPriority < 99.0 || protos.contains(pri.getLookupString))
+      val isGuess = builtIns.size() > 60 ||
+        cast[PrioritizedLookupElement[LookupElement]](lookup)
+          .forall(pri => pri.getPriority < 99.0 || protos.contains(pri.getLookupString))
 
       lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
         .filter(prio => protos.contains(prio.getLookupString))
