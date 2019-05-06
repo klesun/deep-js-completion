@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.04.29.001</version>
+  <version>2019.05.07.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,20 +57,14 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Finally pushing all changes over past months from beta releases to main stream</li>
-  <li>Take this type into account when resolving ts generics</li>
-  <li>Resolve array spread properly</li>
-  <li>Do not look for private func usages if args are known</li>
-  <li>Support ...spread in object literal</li>
-  <li>Support just-class-name types in jsdoc</li>
-  <li>Use deep resolution when finding the function declaration for usage-based arg keys completion</li>
-  <li>Include @return jsdoc type to function result</li>
-  <li>#12 Resolve key before value in an assignment - So that it did not hang resolving some complex type of just one key when tere are dozens others</li>
-  <li>Optimize: fix and enable expression chain recursion detection</li>
-  <li>Optimize: remove duplicate types from resolution result</li>
-  <li>Optimize: Cache hashCode() in FuncCtx (Since there may be circular references in it)</li>
-  <li>#12 Fix: infinite recursion on flattenTypes()</li>
-  <li>Show string/number/array/etc... method options in the bottom (Since they are often trashy when it is not clear if type is either of them, or an object)</li>
+  <li>Typing: Do not miss class methods from private func usage based arg keys completion</li>
+  <li>Typing: Resolve this.constructor as the class</li>
+  <li>Optimize: Use ReferencesSearch when finding var assignments instead of scanning whole file</li>
+  <li>Optimize: do not resolve full type when it is used as d.ts generics</li>
+  <li>Typing: Support "|" (or) in d.ts return type</li>
+  <li>Fix: Do not interpret arr.shift and such properties as an element in the array</li>
+  <li>UI: Treat 60+ built-in suggestion as a guess even if "Only Type Based Completion" is on</li>
+  <li>Fix built-in option priority mess</li>
     ]]>
   </change-notes>
 
