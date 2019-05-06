@@ -188,6 +188,16 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideStaticMethodViaThis() */
+    public function provideStaticMethodViaThis($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['error', 'raw', 'parsed']],
+            [$arg['parsed'], ['netPrice']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================

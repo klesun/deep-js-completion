@@ -51,7 +51,7 @@ object VarRes {
     })
   }
 
-  def findVarUsages(decl: PsiElement, name: String): GenTraversableOnce[JSReferenceExpression] = {
+  def findVarUsages(decl: PsiElement): GenTraversableOnce[JSReferenceExpression] = {
     if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts")) ||
         Option(decl.getContainingFile).exists(f => f.getTextLength > 3000 * 64)
     ) {
@@ -73,8 +73,7 @@ object VarRes {
   }
 
   private def findRefUsages(ref: JSReferenceExpression): GenTraversableOnce[JSReferenceExpression] = {
-    nit(ref.resolve()).flatMap(decl => findVarUsages(decl, ref.getReferenceName))
-      .filter(usage => !usage.equals(ref))
+    nit(ref.resolve()).flatMap(decl => findVarUsages(decl))
   }
 }
 
@@ -215,6 +214,23 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(PathStrGoToDecl.getReferencedFileAnyDir)
   }
 
+  private def assertThisCtorRef(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {
+    if (ref.getText.equals("this.constructor")) {
+      nit(ref.getQualifier)
+        .flatMap(cast[JSThisExpression](_))
+        .flatMap(thisPsi => MainRes.getThisCls(thisPsi))
+        .flatMap(rec => {
+          if (rec._isStatic) {
+            None // not sure this.constructor would even be defined in a static call...
+          } else {
+            Some(JSDeepClassType(rec._clsPsi, ctx.subCtxEmpty()))
+          }
+        })
+    } else {
+      None
+    }
+  }
+
   def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {
     val qualMem = nit(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual)).mem()
@@ -239,6 +255,8 @@ case class VarRes(ctx: IExprCtx) {
       findRefUsages(ref).itr()
         .flatMap(usage => new AssRes(ctx)
           .resolveAssignmentTo(usage))
+      ,
+      assertThisCtorRef(ref)
     )
     tit
   }

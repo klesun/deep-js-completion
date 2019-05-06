@@ -29,10 +29,34 @@ class OfficeCompletion extends Component
     }
 
     render () {
+        const {state} = this;
         const {formData} = this.state;
+        this.state.f;
         const {advancePurchase} = formData;
 
         console.log( formData.s ); // <== zdesj suggest (advancePurchase, userOffices)
+    }
+}
+
+class ImportPqGalileoAction2
+{
+    static parsePricing(output) {
+        return {
+            raw: output,
+            parsed: {netPrice: '150.00'},
+        };
+    }
+
+    getPricing(output) {
+        let result;
+        if (4 <3) {
+            result = {error: 'lol'};
+        } else {
+            // should support case when static method is called via this.constructor
+            result = this.constructor.parsePricing(output);
+        }
+        result.r;
+        return result;
     }
 }
 
@@ -262,4 +286,9 @@ exports.provideArrPropNotEl = () => {
 /** @param pax = require('PnrParser.js').parse().passengers.passengerList[0] */
 let provideParsePnrOutOfMemory = (pax) => {
     pax.nameNumber;
+};
+
+exports.provideStaticMethodViaThis = () => {
+    let result = (new ImportPqGalileoAction2()).getPricing('OLOLO $B');
+    return result;
 };

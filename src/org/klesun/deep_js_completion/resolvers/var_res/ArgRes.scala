@@ -174,7 +174,7 @@ object ArgRes {
   }
 
   private def resolvePrivateFuncUsages(par: JSParameter, ctx: IExprCtx, argOrder: Int): It[JSType] = {
-    VarRes.findVarUsages(par, par.getName).itr()
+    VarRes.findVarUsages(par).itr()
         .flatMap(usage => Option(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))
@@ -271,7 +271,7 @@ case class ArgRes(ctx: IExprCtx) {
     } else {
       Option(func.getParent).itr
         .flatMap(cast[JSVariable](_))
-        .flatMap(vari => VarRes.findVarUsages(vari, vari.getName))
+        .flatMap(vari => VarRes.findVarUsages(vari))
         .flatMap(usage => Option(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))

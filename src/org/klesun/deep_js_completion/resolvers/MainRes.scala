@@ -34,7 +34,7 @@ object MainRes {
     arrow.++(classic)
   }
 
-  def resolveThisExpr(expr: JSThisExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
+  def getThisCls(expr: JSThisExpression) = {
     var parent = expr.getParent
     var clsOpt: Option[JSClass[StubElement[_]]] = None
     var isStatic = false
@@ -53,11 +53,19 @@ object MainRes {
       }
       parent = parent.getParent
     }
-    clsOpt.itr()
-      .map(cls => JSDeepClassType(cls, ctx.subCtxEmpty()))
-      .flatMap(clst =>
-        if (isStatic) Some(clst)
-        else clst.getNewInstType(ctx.subCtxEmpty()))
+    clsOpt.map(clsPsi => new {
+      val _isStatic = isStatic
+      val _clsPsi = clsPsi
+    })
+  }
+
+  def resolveThisExpr(expr: JSThisExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
+    getThisCls(expr).itr()
+      .flatMap(rec => {
+        val clst = JSDeepClassType(rec._clsPsi, ctx.subCtxEmpty())
+        if (rec._isStatic) Some(clst)
+        else clst.getNewInstType(ctx.subCtxEmpty())
+      })
   }
 
   def resolveNewExpr(newex: JSNewExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
@@ -66,7 +74,7 @@ object MainRes {
         .flatMap(cbArg => cast[JSFunction](cbArg))
         .flatMap(f => f.getParameters.lift(0))
         .flatMap(cbArg => cast[JSParameter](cbArg))
-        .itr.flatMap(par => VarRes.findVarUsages(par, par.getName))
+        .itr.flatMap(par => VarRes.findVarUsages(par))
         .flatMap(usage => Option(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))
