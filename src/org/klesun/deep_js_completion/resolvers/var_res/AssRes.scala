@@ -69,7 +69,8 @@ class AssRes(val ctx: IExprCtx) {
   }
 
   def resolveAssignmentTo(usage: JSExpression): GenTraversableOnce[JSType] = {
-    // not sure, but I guess there can't be circular references here
-    resolveAssignmentNoCirc(usage)
+    // not sure, but I guess there can't be circular references here unless there are mistakes in code
+    var tit = resolveAssignmentNoCirc(usage)
+    tit
   }
 }

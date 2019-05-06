@@ -143,10 +143,6 @@ class ExactKeysUnitTest
         ];
     }
 
-    // ========================
-    // following not implemented yet
-    // ========================
-
     /** @param $pnr = require('ExactKeysUnitTest.js').provideFfInfoStackOverflow() */
     public function provideFfInfoStackOverflow($pnr)
     {
@@ -181,4 +177,18 @@ class ExactKeysUnitTest
             [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber', 'success', 'parsedNumber', 'rawNumber', 'joinedFirstNames', 'ageGroup', 'age', 'dob', 'ptc', 'carrierText']],
         ];
     }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideArrPropNotEl() */
+    public function provideArrPropNotEl($arg)
+    {
+        $arg[''];
+        return [
+            [$arg['func'], ['canCall']],
+            [$arg['el'], ['cmd', 'output']],
+        ];
+    }
+
+    // ========================
+    // following not implemented yet
+    // ========================
 }

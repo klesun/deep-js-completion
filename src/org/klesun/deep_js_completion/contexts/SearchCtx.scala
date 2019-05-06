@@ -153,7 +153,7 @@ class SearchCtx(
         } else if (expressionsResolved >= 7500) {
             None
         } else if (isRecursion(exprCtx)) {
-            //Console.println("ololo recursion")
+            //Console.println("ololo recursion " + SearchCtx.formatPsi(expr))
             None
         } else {
             putToCache(exprCtx, expr, Iterator.empty.mem())

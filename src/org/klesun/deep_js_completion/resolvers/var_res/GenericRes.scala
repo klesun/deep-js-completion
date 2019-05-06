@@ -24,6 +24,8 @@ object GenericRes {
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
         val arrt = new JSArrayTypeImpl(JSDeepMultiType(elts.mem()), JSTypeSource.EMPTY)
         Some(arrt)
+      case interts: TypeScriptUnionOrIntersectionType => interts.getTypes
+          .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
       case arrts: TypeScriptTupleType =>
         val els = arrts.getElements
           .map(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
@@ -57,7 +59,9 @@ object GenericRes {
           ).toList.asJava
           Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
         }
-      case _ => None
+      case _ =>
+        //Console.println("unsupported return generic kind: " + typePsi.getClass + " " + typePsi.getText)
+        None
     }
   }
 }
@@ -93,7 +97,7 @@ case class GenericRes(ctx: IExprCtx) {
   }
 
   private def resolveTypeExpr(
-     thist: Option[JSType],
+     thisTit: GenTraversableOnce[JSType],
      callCtx: IExprCtx,
      caretTypeExpr: TypeScriptType,
      tsFunc: TypeScriptFunctionSignature,
@@ -101,7 +105,7 @@ case class GenericRes(ctx: IExprCtx) {
     val methGenericPsis = tsFunc.getTypeParameters
     val ifcGenericPsis = Option(tsFunc.getParent)
       .flatMap(objPsi => Option(objPsi.getParent))
-      .flatMap(cast[TypeScriptInterface](_)).itr
+      .flatMap(cast[TypeScriptInterface](_)).toList
       .flatMap(ifc => ifc.getTypeParameters)
 
     val args = tsFunc.getParameters
@@ -118,8 +122,9 @@ case class GenericRes(ctx: IExprCtx) {
 
     val genericsMut = collection.mutable.Map(genericsIm.toSeq: _*)
 
-    val ifcGenerics: It[(String, () => Array[JSType])] = thist
-      .itr.flatMap(thist => ifcGenericPsis.zipWithIndex
+    val ifcGenerics: It[(String, () => Array[JSType])] = thisTit.itr()
+      .flatMap(t => Mt.flattenTypes(t))
+      .flatMap(thist => ifcGenericPsis.zipWithIndex
         .flatMap({case (psi, order) => Option(psi.getName)
           .map(generic => (generic, () => {
             Mt.asGeneric(thist, tsFunc.getProject).itr
@@ -139,7 +144,7 @@ case class GenericRes(ctx: IExprCtx) {
     parseTypePsi(caretTypeExpr, genericsMut.toMap)
   }
 
-  def resolveFuncArg(thist: Option[JSType], ctx: IExprCtx, argOrder: Int, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
+  def resolveFuncArg(thist: GenTraversableOnce[JSType], ctx: IExprCtx, argOrder: Int, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
     val result = tsFunc.getParameters.lift(argOrder)
       .flatMap(argPsi => Option(argPsi.getTypeElement))
       .flatMap(cast[TypeScriptType](_)).itr

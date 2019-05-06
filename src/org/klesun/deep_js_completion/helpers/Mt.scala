@@ -113,9 +113,13 @@ object Mt {
   private def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
     val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
-    val litVals = litValsOpt.toIterable.flatten
+    val litVals = litValsOpt.toList.flatten
+    val canBeNum = litVals.isEmpty || litVals
+      .exists(v => "".equals(v)
+                || Try(v.toDouble).isSuccess)
+
     val elts = Mt.flattenTypes(arrT).flatMap {
-      case tupT: JSTupleTypeImpl =>
+      case tupT: JSTupleTypeImpl if canBeNum =>
         val arrFallback = mergeTypes(tupT.getTypes.asScala.itr)
         val tupResultOpt = litValsOpt.map(litVals => {
           val types = litVals
@@ -124,9 +128,10 @@ object Mt {
           mergeTypes(types).getOrElse(new JSUndefinedType(JSTypeSource.EMPTY))
         })
         tupResultOpt.orElse(arrFallback)
-      case arrT: JSArrayTypeImpl => Option(arrT.getType)
+      case arrT: JSArrayTypeImpl if canBeNum => Option(arrT.getType)
       case objT: JSRecordType => getRecordKey(objT, litVals)
       case typedef: JSType =>
+        // usually this is the class names used in jsdoc like Promise<String>
         if (proj.nonEmpty) {
           val mems = getFlatMems(typedef, proj.get)
           getKeyFromMems(mems, litVals)

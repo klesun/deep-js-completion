@@ -21,7 +21,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr.{getNamedProps, _}
+import org.klesun.deep_js_completion.completion_providers.PropNamePvdr._
 import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
@@ -209,27 +209,6 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-    def getBuiltIns(onlyTyped: Boolean): util.ArrayList[(Boolean, LookupElement)] = {
-      val builtInSuggestions = new util.ArrayList[(Boolean, LookupElement)]
-      result.runRemainingContributors(parameters, otherSourceResult => {
-        var lookup = otherSourceResult.getLookupElement
-        // 99.0 (group 94) - inferred type property completion
-        // 5.0 (group 6) - property completion guessed from usage
-        val isGuess = cast[PrioritizedLookupElement[LookupElement]](lookup)
-          .forall(pri => pri.getPriority < 99.0)
-
-        val protos = List("constructor", "hasOwnProperty", "isPrototypeOf",
-          "propertyIsEnumerable", "toLocaleString", "toString", "valueOf")
-        lookup = cast[PrioritizedLookupElement[LookupElement]](lookup)
-          .filter(prio => protos.contains(prio.getLookupString))
-          .map(prio => prio.getDelegate)
-          .map(dele => PrioritizedLookupElement.withPriority(dele, PROTO_PRIO))
-          .getOrElse(lookup)
-        builtInSuggestions.add((isGuess || !onlyTyped, lookup))
-      })
-      builtInSuggestions
-    }
-
     val qualOpt = getQualifier(parameters)
     if (qualOpt.isEmpty) return
     val qual = qualOpt.get
@@ -247,12 +226,14 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     } else {
       result.addLookupAdvertisement("No keys resolved in " + (elapsed / 1000000000.0))
     }
+    val deepOptions = new util.ArrayList[String]()
     mems
       .zipWithIndex
       .map({case (e,i) => makeLookup(e,i)})
       .foreach(ourKup => {
         val asField = ourKup.getLookupString
         val asFunc = asField + "()"
+        deepOptions.add(asField)
         if (!suggested.contains(asField) && !suggested.contains(asFunc)) {
           result.addElement(ourKup)
           suggested.add(asField)
@@ -261,7 +242,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       })
 
     elapsed = System.nanoTime - startTime
-    result.addLookupAdvertisement("Resolved all in " + (elapsed / 1000000000.0))
+    result.addLookupAdvertisement("Resolved all " + deepOptions.size() + " in " + (elapsed / 1000000000.0) + ": " + deepOptions.asScala.slice(0, 5).mkString(",") + "...")
 
     // guessed built-in suggestions left
     builtInsLeft.asScala

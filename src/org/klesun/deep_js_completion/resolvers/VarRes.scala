@@ -220,7 +220,7 @@ case class VarRes(ctx: IExprCtx) {
   def resolve(ref: JSReferenceExpression): GenTraversableOnce[JSType] = {
     val qualMem = nit(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual)).mem()
-    (
+    var tit = cnc(
       qualMem
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
@@ -228,18 +228,20 @@ case class VarRes(ctx: IExprCtx) {
           val result = ctx.mt().getKey(qualT, keyTOpt)
           result
         })
-      ++
+      ,
       Option(ref.getReferenceName).itr()
         .flatMap(varName => Option(ref.getQualifier).itr()
           .flatMap(assertAtModuleEpxr)
           .flatMap(file => findVarAt(file, varName))
           .flatMap(vari => resolveMainDeclVar(vari)))
-      ++
+      ,
       getDeclarations(ref).itr()
         .flatMap(psi => resolveFromMainDecl(psi, qualMem))
-      ++
+      ,
       findRefUsages(ref).itr()
-        .flatMap(usage => new AssRes(ctx).resolveAssignmentTo(usage))
+        .flatMap(usage => new AssRes(ctx)
+          .resolveAssignmentTo(usage))
     )
+    tit
   }
 }

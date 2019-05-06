@@ -238,6 +238,22 @@ exports.provideSelfDependency = () => {
     return $parsedData;
 };
 
+exports.provideArrPropNotEl = () => {
+    let cmdRecs = [
+        {cmd: '*R', output: 'INVLD \n><'},
+        {cmd: '$B', output: 'NO VALID FARE FOR INPUT CRITERIA \n><'},
+    ].map(a => a);
+
+    let el = cmdRecs.shift();
+    el.;
+
+    // should not suggest cmd/output as this is a property, not an element
+    cmdRecs.shift.c;
+    let func = cmdRecs.shift;
+    func.canCall = false;
+    return {func, el};
+};
+
 /** @param pax = require('PnrParser.js').parse().passengers.passengerList[0] */
 let provideParsePnrOutOfMemory = (pax) => {
     pax.nameNumber;
