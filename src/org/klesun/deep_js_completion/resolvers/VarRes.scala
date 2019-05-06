@@ -10,14 +10,15 @@ import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.stubs.StubElement
-import com.intellij.psi.{PsiElement, PsiFile}
+import com.intellij.psi.{PsiElement, PsiFile, PsiReference}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, AssRes, GenericRes}
 import org.klesun.deep_js_completion.structures.JSDeepClassType
-import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -51,26 +52,23 @@ object VarRes {
   }
 
   def findVarUsages(decl: PsiElement, name: String): GenTraversableOnce[JSReferenceExpression] = {
-    // maybe this could be used instead: JSScopeNamesUsages
     if (Option(decl.getContainingFile).forall(f => f.getName.endsWith(".d.ts")) ||
         Option(decl.getContainingFile).exists(f => f.getTextLength > 3000 * 64)
     ) {
       List()
     } else {
-      val scope: PsiElement = DeepJsLang.findParent[JSFunctionExpression](decl)
-        .getOrElse(decl.getContainingFile)
-      if (scope.getTextLength > 3000 * 64) {
-        // eliminate .min.js files and such - anything longer than ~ 3000 lines
-        List()
-      } else {
-        val t1 = System.nanoTime
-        val result = DeepJsLang.findChildren[JSReferenceExpression](scope)
-          .filter(usage => Objects.equals(usage.getReferenceName, name))
-          .filter(usage => !Objects.equals(usage, decl))
-          .filter(usage => Objects.equals(decl, usage.resolve()))
-        val duration = (System.nanoTime - t1) / 1e9d
-        result
+      val scope = GlobalSearchScope.fileScope(decl.getContainingFile)
+      val refs: GenTraversableOnce[PsiReference] = try {
+        ReferencesSearch.search(decl, scope, false).asScala
+      } catch {
+        // from my past experience with ReferencesSearch, it is
+        // likely to throw random exceptions and cause random hangs...
+        case _ => None
       }
+      refs.itr.map(ref => ref.getElement)
+        .filter(usage => !Objects.equals(usage, decl))
+        .flatMap(cast[JSReferenceExpression](_))
+        .filter(usage => Objects.equals(decl, usage.resolve()))
     }
   }
 

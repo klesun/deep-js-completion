@@ -101,7 +101,7 @@ exports.provideFfInfoStackOverflow = () => {
         $result['parsedData']['misc']['ffDataExists'] ||
         php.count((($result['parsedData'] || {})['frequentTraveler'] || {})['mileagePrograms'] || []) > 0;
 
-    $result.p;
+    $result.parsedData.misc.;
     return $result;
 };
 

@@ -242,7 +242,8 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
       })
 
     elapsed = System.nanoTime - startTime
-    result.addLookupAdvertisement("Resolved all " + deepOptions.size() + " in " + (elapsed / 1000000000.0) + ": " + deepOptions.asScala.slice(0, 5).mkString(",") + "...")
+    val deepOptionsUnq = deepOptions.asScala.toList.distinct
+    result.addLookupAdvertisement("Resolved all " + deepOptionsUnq.size + " in " + (elapsed / 1000000000.0) + ": " + deepOptionsUnq.slice(0, 5).mkString(",") + "...")
 
     // guessed built-in suggestions left
     builtInsLeft.asScala
