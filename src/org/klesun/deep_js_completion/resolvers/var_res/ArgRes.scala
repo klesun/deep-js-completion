@@ -150,7 +150,7 @@ object ArgRes {
   }
 
   private def resolveTsFuncArgArg(objt: Option[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, inlineFuncArgOrder: Int, argOrder: Int): GenTraversableOnce[JSType] = {
-    new GenericRes(ctx).resolveFuncArg(objt, ctx, inlineFuncArgOrder, tsFuncDecl)
+    new GenericRes(ctx).resolveFuncArg(objt.mem(), ctx, inlineFuncArgOrder, tsFuncDecl)
       .itr.flatMap(cast[JSFunctionTypeImpl](_))
       .flatMap(funct => funct.getParameters.asScala.lift(argOrder))
       .flatMap(arg => Option(arg.getType))

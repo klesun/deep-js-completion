@@ -1,4 +1,6 @@
 
+import {Component} from 'react';
+
 let php = require('./../unv/grect/backend/Transpiled/php.js');
 let php2 = require('../php.js');
 let php3 = require('../php3.js');
@@ -8,9 +10,10 @@ const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeu
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
 const CmdLogs = require('../unv/grect/backend/Repositories/CmdLogs.js');
 
-class OfficeCompletion
+class OfficeCompletion extends Component
 {
     constructor () {
+        super();
         this.state = {
             formData : {
                 userOffices : [1, 5, 7],
@@ -18,9 +21,11 @@ class OfficeCompletion
                     units : "days",
                     amount : 0
                 }
-            }
-            open : false
+            },
+            open : false,
         };
+        this.state.formData = 123;
+        this.state.formData;
     }
 
     render () {
