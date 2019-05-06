@@ -260,14 +260,17 @@ case class ArgRes(ctx: IExprCtx) {
     if (ctx.func().areArgsKnown()) {
       None
     } else {
-      Option(func.getParent).itr
-        .flatMap(cast[JSVariable](_))
-        .flatMap(vari => VarRes.findVarUsages(vari))
-        .flatMap(usage => Option(usage.getParent)
+      val usages = cnc(
+        nit(func.getParent)
+          .flatMap(cast[JSVariable](_))
+          .flatMap(vari => VarRes.findVarUsages(vari)),
+        VarRes.findVarUsages(func),
+      )
+      usages.flatMap(usage => nit(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
           .filter(call => usage eq call.getMethodExpression))
-        .flatMap(call => call.getArguments.lift(argOrder))
-        .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+          .flatMap(call => call.getArguments.lift(argOrder))
+          .flatMap(value => ctx.subCtxEmpty().findExprType(value))
     }
   }
 
