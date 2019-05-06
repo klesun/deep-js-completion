@@ -40,15 +40,6 @@ object ArgRes {
     result
   }
 
-  // for modules resolution - if module is a function - return
-  // this function, otherwise wrap the object in a function
-  private def ensureFunc(clsT: JSType): It[JSType] = {
-    Mt.flattenTypes(clsT).map(t => {t match {
-      case funcT: JSFunctionTypeImpl => funcT
-      case _ => new JSFunctionTypeImpl(JSTypeSource.EMPTY, List[JSParameterTypeDecorator]().asJava, clsT)
-    }}: JSFunctionTypeImpl)
-  }
-
   // based on https://expressjs.com/en/api.html#req, though I witnessed some of the described fields (protocol, cookies, signedCookies, fresh, stale) being absent...
   private def makeExpressRqType(): GenTraversableOnce[JSType] = {
     // probably would be good to use the definition in node_modules/express/lib/request.js one day...
@@ -336,21 +327,6 @@ case class ArgRes(ctx: IExprCtx) {
     types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
   }
 
-  private def getKlesunRequiresArgType(func: JSFunction): GenTraversableOnce[JSType] = nit(func.getParent)
-    .flatMap(cast[JSAssignmentExpression](_))
-    .flatMap(assi => Option(assi.getDefinitionExpression))
-    .flatMap(defi => Option(defi.getExpression))
-    .flatMap(cast[JSReferenceExpressionImpl](_))
-    .filter(ref => List("then").contains(ref.getReferencedName))
-    .flatMap(ref => Option(ref.getQualifier))
-    .flatMap(cast[JSCallExpression](_))
-    .filter(call => Option(call.getMethodExpression)
-      .map(e => e.getText).getOrElse("").equals("klesun.requires"))
-    .flatMap(call => call.getArguments.itr.lift(0))
-    .flatMap(arg => PathStrGoToDecl.getReferencedFileAnyDir(arg))
-    .flatMap(file => resolveRequireJsFormatDef(file))
-    .flatMap(clsT => ensureFunc(clsT))
-
   def getDocTagComment(docTag: JSDocTag) = {
     var next = docTag.getNextSibling
     val tokens = new ListBuffer[PsiElement]
@@ -463,7 +439,7 @@ case class ArgRes(ctx: IExprCtx) {
       ++ getCtxArgType(func, para)
       ++ getInlineFuncArgType(func, func.getParameters.indexOf(para))
       ++ getPrivateFuncArgType(func, func.getParameters.indexOf(para))
-      ++ getKlesunRequiresArgType(func))
+    )
     types
   }
 }
