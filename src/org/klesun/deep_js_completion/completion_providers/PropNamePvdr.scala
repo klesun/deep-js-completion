@@ -154,6 +154,7 @@ object PropNamePvdr {
     })
 
     var builtInsLeft = new util.ArrayList[LookupElement]()
+    val guessBuiltIns = new util.ArrayList[LookupElement]()
     val showOption = (lookup: LookupElement) => {
       result.addElement(lookup)
       suggested.add(lookup.getLookupString)
@@ -174,7 +175,9 @@ object PropNamePvdr {
         .map(prio => prio.getDelegate)
         .map(dele => PrioritizedLookupElement.withPriority(dele, PROTO_PRIO))
         .getOrElse(lookup)
-      if (isGuess || !onlyTyped) {
+      if (isGuess) {
+        guessBuiltIns.add(lookup)
+      } else if (!onlyTyped) {
         builtInsLeft.add(lookup)
       } else {
         showOption(lookup)
@@ -186,7 +189,7 @@ object PropNamePvdr {
       builtInsLeft.forEach(b => showOption(b))
       builtInsLeft = new util.ArrayList[LookupElement]()
     }
-    (suggested, builtInsLeft)
+    (suggested, builtInsLeft.asScala ++ guessBuiltIns.asScala)
   }
 
 //  private def printExprTree(root: ExprCtx, depth: Int): Unit = {
@@ -246,7 +249,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     result.addLookupAdvertisement("Resolved all " + deepOptionsUnq.size + " in " + (elapsed / 1000000000.0) + ": " + deepOptionsUnq.slice(0, 7).mkString(",") + "...")
 
     // guessed built-in suggestions left
-    builtInsLeft.asScala
+    builtInsLeft
       .foreach(builtInKup => {
         val memName = builtInKup.getLookupString
         if (!suggested.contains(memName)) {
