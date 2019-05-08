@@ -1,5 +1,6 @@
 package org.klesun.deep_js_completion.completion_providers
 
+import java.awt.Color
 import java.util
 
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
@@ -77,7 +78,7 @@ object PropNamePvdr {
       .withTypeText(typeStr, true)
     var priority = DEEP_PRIO - i
     if (isBuiltIn) {
-      lookup = lookup.withItemTextForeground(JBColor.GRAY)
+      lookup = lookup.withItemTextForeground(new JBColor(new Color(90, 90, 90), new Color(150, 150, 150)))
       priority = PRIM_PRIO
     }
     PrioritizedLookupElement.withPriority(lookup, priority)
