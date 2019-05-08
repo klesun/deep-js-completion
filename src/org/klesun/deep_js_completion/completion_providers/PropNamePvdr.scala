@@ -5,6 +5,7 @@ import java.util
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
+import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
@@ -212,6 +213,12 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
+    if (!parameters.getOriginalFile.getFileType.equals(JavaScriptFileType.INSTANCE)) {
+      // do not run this plugin in typescript, the language is
+      // fully typed itself, no need for additional _deep_ typing
+      return
+    }
+
     val qualOpt = getQualifier(parameters)
     if (qualOpt.isEmpty) return
     val qual = qualOpt.get
