@@ -42,10 +42,10 @@ object DeepAssocWrapper {
           phpt
         case tupt: JSTupleType =>
           val phpt = new DeepType(psi, PhpType.ARRAY)
-          val jsValTit = tupt.getTypes.asScala.flatMap(t => JsMt.flattenTypes(t))
+          val jsValTit = tupt.getTypes.asScala.itr().flatMap(t => JsMt.flattenTypes(t))
           val valTit: java.util.Iterator[DeepType] = jsValTit
             .map(t => jsToPhp(t, psi, depth + 1, nextOccs))
-            .itr().allowEndHasNext().asJava
+            .allowEndHasNext().asJava
           phpt.addKey(KeyType.integer(psi))
             .addType(() => new PhpMt(() => valTit))
           phpt

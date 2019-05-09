@@ -35,7 +35,7 @@ case class FuncCallRes(ctx: IExprCtx) {
     } else if ((obj.getText equals "Object") && (methName equals "assign")) {
       // IDEA actually has the built-in function generic return type mapping, but I'm
       // not able to get the info (getReturnType returns AnyType instead of A & B)
-      args.flatMap(arg => ctx.findExprType(arg))
+      args.itr().flatMap(arg => ctx.findExprType(arg))
     } else if ((obj.getText equals "Object") && (methName equals "entries")) {
       // d.ts has the generic for value, but not for key sadly
       args.lift(0).itr().flatMap(arg => ctx.findExprType(arg))

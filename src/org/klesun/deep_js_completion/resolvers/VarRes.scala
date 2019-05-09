@@ -99,7 +99,7 @@ case class VarRes(ctx: IExprCtx) {
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
     varst.getChildren.flatMap(cast[JSDocComment](_))
       .flatMap(doc => doc.getTags)
-      .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag))
+      .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag)).itr()
       .flatMap(txt => ArgRes(ctx.subCtxEmpty()).parseDocExpr(varst, txt)) ++
     resolveForInEl(varst).itr().flatMap(a => a)
   }
@@ -235,7 +235,7 @@ case class VarRes(ctx: IExprCtx) {
     val qualMem = nit(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual)).mem()
     var tit = cnc(
-      qualMem
+      qualMem.itr()
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
             .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))

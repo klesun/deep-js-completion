@@ -281,13 +281,6 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(ctx => if (para.isRest) Some(ctx.getSpreadArg) else ctx.getArg(order))
   }
 
-  private def resolveKlesunWhenLoadedSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {
-    PsiTreeUtil.findChildrenOfType(file, classOf[JSAssignmentExpression]).asScala
-      .find(assi => assi.getText.startsWith("klesun.whenLoaded")).itr
-      .flatMap(assi => Option(assi.getROperand)) // \(^o^)/
-      .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
-  }
-
   private def resolveRequireJsSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {
     PsiTreeUtil.findChildrenOfType(file, classOf[JSCallExpression]).asScala
       .find(assi => assi.getText.startsWith("define("))
@@ -299,7 +292,7 @@ case class ArgRes(ctx: IExprCtx) {
     val types = file.getChildren
       .flatMap(cast[JSExpressionStatement](_))
       .flatMap(_.getChildren)
-      .flatMap(cast[JSAssignmentExpression](_))
+      .flatMap(cast[JSAssignmentExpression](_)).itr()
       .flatMap(ass => nit(ass.getROperand)
         .flatMap(value => nit(ass.getLOperand)
           .flatMap(vari => {
@@ -324,10 +317,8 @@ case class ArgRes(ctx: IExprCtx) {
   }
 
   private def resolveRequireJsFormatDef(file: PsiFile): GenTraversableOnce[JSType] = {
-    val types = List[JSType]() ++
-      resolveKlesunWhenLoadedSupplierDef(file) ++
-      resolveRequireJsSupplierDef(file)
-    types.flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
+    val types = resolveRequireJsSupplierDef(file)
+    types.itr().flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
   }
 
   def getDocTagComment(docTag: JSDocTag) = {
@@ -365,7 +356,7 @@ case class ArgRes(ctx: IExprCtx) {
         case varSt: JSVarStatement =>
           varSt.getDeclarations
             .filter(own => varName.equals(own.getName))
-            .map(own => own.getInitializer)
+            .map(own => own.getInitializer).itr()
             .flatMap(expr => ctx.findExprType(expr))
         case func: JSFunctionDeclaration =>
           if (varName.equals(func.getName)) {

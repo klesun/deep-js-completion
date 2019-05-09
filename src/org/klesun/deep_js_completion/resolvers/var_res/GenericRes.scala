@@ -27,7 +27,7 @@ object GenericRes {
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
         val arrt = new JSArrayTypeImpl(JSDeepMultiType(elts.mem()), JSTypeSource.EMPTY)
         Some(arrt)
-      case interts: TypeScriptUnionOrIntersectionType => interts.getTypes
+      case interts: TypeScriptUnionOrIntersectionType => interts.getTypes.itr()
           .flatMap(eltPsi => GenericRes.parseTypePsi(eltPsi, generics))
       case arrts: TypeScriptTupleType =>
         val els = arrts.getElements
@@ -79,11 +79,11 @@ case class GenericRes(ctx: IExprCtx) {
   private def getGenericTypeFromArg(argTypePsi: JSTypeDeclaration, getArgt: () => GenTraversableOnce[JSType], generic: String): GenTraversableOnce[JSType] = {
     argTypePsi match {
       case union: TypeScriptUnionOrIntersectionType =>
-        union.getTypes.flatMap(subTypePsi =>
+        union.getTypes.itr().flatMap(subTypePsi =>
           getGenericTypeFromArg(subTypePsi, getArgt, generic))
       case obj: TypeScriptObjectType =>
         val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
-        obj.getIndexSignatures.flatMap(sig => getGenericTypeFromArg(sig.getType, getSubType, generic))
+        obj.getIndexSignatures.itr().flatMap(sig => getGenericTypeFromArg(sig.getType, getSubType, generic))
       case sints: TypeScriptSingleType =>
         val fqn = sints.getQualifiedTypeName
         if (generic equals fqn) {
@@ -115,7 +115,7 @@ case class GenericRes(ctx: IExprCtx) {
     val genericsIm: Map[String, () => It[JSType]] = methGenericPsis
       .flatMap(psi => Option(psi.getName))
       .map(generic => generic -> (() => {
-        args.zipWithIndex.flatMap({case (argPsi, i) => Option(argPsi.getTypeElement)
+        args.zipWithIndex.flatMap({case (argPsi, i) => nit(argPsi.getTypeElement)
           .flatMap(cast[TypeScriptType](_))
           .filter(argTypeDef => !argTypeDef.equals(caretTypeExpr))
           .itr.flatMap(tst => getGenericTypeFromArg(
