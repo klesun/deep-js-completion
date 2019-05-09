@@ -84,6 +84,15 @@ object DeepJsLang {
     }
   }
 
+  def frsOpt[T](opts: Option[T]*): Option[T] = {
+    for (opt <- opts) {
+      if (opt.nonEmpty) {
+        return opt
+      }
+    }
+    None
+  }
+
   def singleLine(text: String, length: Int): String = {
     val lines = text.split("\n").map(l => l.trim)
     substr(lines.mkString(" "), 0, length)

@@ -86,14 +86,14 @@ case class VarRes(ctx: IExprCtx) {
    * @param elDecl - either VarStatement, Variable (declared above) or destructuring array
    * @return - type of element of the iterated array
    */
-  def resolveForInEl(elDecl: PsiElement): GenTraversableOnce[JSType] = {
-    nit(elDecl.getParent)
+  def resolveForInEl(elDecl: PsiElement): Option[GenTraversableOnce[JSType]] = {
+    Option(elDecl.getParent)
       .flatMap(cast[JSForInStatement](_))
       .filter(st => !Objects.equals(elDecl, st.getCollectionExpression))
       .filter(st => st.isForEach)
       .flatMap(st => Option(st.getCollectionExpression))
-      .flatMap(arrexpr => ctx.findExprType(arrexpr))
-      .flatMap(arrt => ctx.mt().getKey(arrt, None))
+      .map(arrexpr => ctx.findExprType(arrexpr).itr()
+        .flatMap(arrt => ctx.mt().getKey(arrt, None)))
   }
 
   private def resolveVarSt(varst: JSVarStatement): GenTraversableOnce[JSType] = {
@@ -101,7 +101,7 @@ case class VarRes(ctx: IExprCtx) {
       .flatMap(doc => doc.getTags)
       .map(tag => ArgRes(ctx.subCtxEmpty()).getDocTagComment(tag))
       .flatMap(txt => ArgRes(ctx.subCtxEmpty()).parseDocExpr(varst, txt)) ++
-    resolveForInEl(varst)
+    resolveForInEl(varst).itr().flatMap(a => a)
   }
 
   private def resolveDestructEl(el: PsiElement): GenTraversableOnce[JSType] = {
@@ -254,7 +254,8 @@ case class VarRes(ctx: IExprCtx) {
       ,
       findRefUsages(ref).itr()
         .flatMap(usage => new AssRes(ctx)
-          .resolveAssignmentTo(usage))
+          .resolveAssignmentTo(usage)
+            .itr().flatMap(a => a))
       ,
       assertThisCtorRef(ref)
     )

@@ -292,3 +292,9 @@ exports.provideStaticMethodViaThis = () => {
     let result = (new ImportPqGalileoAction2()).getPricing('OLOLO $B');
     return result;
 };
+
+exports.provideWrongAssignmentDestination = () => {
+    let processed = {noPricingPart: 'ysyesyes'};
+    processed.pricingPart[0];
+    return processed;
+};

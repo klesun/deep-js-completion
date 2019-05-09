@@ -4,6 +4,7 @@ class ExactKeysUnitTest
     /** @param $arg = {asd1: 1, asd2: 2, asd3: 3} */
     public function provideSimpleObj($arg)
     {
+        $arg[''];
         return [
             [$arg, ['asd1', 'asd2', 'asd3']],
         ];
@@ -12,6 +13,7 @@ class ExactKeysUnitTest
     /** @param $arg = await require('ExactKeysUnitTest.js').provideAsyncPromise() */
     public function provideAsyncPromise($arg)
     {
+        $arg[''];
         return [
             [$arg, ['zxc1', 'zxc2', 'zxc3']],
         ];
@@ -33,7 +35,7 @@ class ExactKeysUnitTest
     public function provideParseApoPnr($pnr)
     {
         $pnr['dataExistsInfo'];
-        $pnr['passengers']['passengerList'][0][''];
+        $pnr['passengers']['passengerList'][0]['nameNumber']['absolute'];
         return [
             [$pnr, ['dataExistsInfo', 'headerData', 'passengers', 'itineraryData', 'foneData', 'adrsData', 'dlvrData', 'formOfPaymentData', 'tktgData', 'atfqData', 'ticketListData', 'ssrData', 'remarks', 'acknData']],
         ];
@@ -195,6 +197,15 @@ class ExactKeysUnitTest
         return [
             [$arg, ['error', 'raw', 'parsed']],
             [$arg['parsed'], ['netPrice']],
+        ];
+    }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideWrongAssignmentDestination() */
+    public function provideWrongAssignmentDestination($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['noPricingPart']],
         ];
     }
 
