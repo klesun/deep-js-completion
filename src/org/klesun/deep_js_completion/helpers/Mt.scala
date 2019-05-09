@@ -110,13 +110,18 @@ object Mt {
     getKeyFromMems(objT.getTypeMembers.asScala, litVals)
   }
 
+  private def isNumeric(str: String): Boolean = {
+    // Try(litVal.toDouble.toInt) eats 2 whole seconds on each
+    // tests run, possibly because of exception throwing overhead
+    str.matches("\\d*\\.?\\d+")
+  }
+
   private def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
     val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
     val litVals = litValsOpt.toList.flatten
     val canBeNum = litVals.isEmpty || litVals
-      .exists(v => "".equals(v)
-                || Try(v.toDouble).isSuccess)
+      .exists(v => "".equals(v) || isNumeric(v))
 
     val elts = Mt.flattenTypes(arrT).flatMap {
       case tupT: JSTupleTypeImpl if canBeNum =>
