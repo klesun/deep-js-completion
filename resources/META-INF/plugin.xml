@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.05.07.001</version>
+  <version>2019.05.09.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,14 +57,8 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Typing: Do not miss class methods from private func usage based arg keys completion</li>
-  <li>Typing: Resolve this.constructor as the class</li>
-  <li>Optimize: Use ReferencesSearch when finding var assignments instead of scanning whole file</li>
-  <li>Optimize: do not resolve full type when it is used as d.ts generics</li>
-  <li>Typing: Support "|" (or) in d.ts return type</li>
-  <li>Fix: Do not interpret arr.shift and such properties as an element in the array</li>
-  <li>UI: Treat 60+ built-in suggestion as a guess even if "Only Type Based Completion" is on</li>
-  <li>Fix built-in option priority mess</li>
+  <li>Make greyed prototype property options brighter</li>
+  <li>Do not suggest completion in typescript files</li>
     ]]>
   </change-notes>
 
