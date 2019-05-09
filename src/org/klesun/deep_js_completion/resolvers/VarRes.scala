@@ -220,10 +220,10 @@ case class VarRes(ctx: IExprCtx) {
         .flatMap(cast[JSThisExpression](_))
         .flatMap(thisPsi => MainRes.getThisCls(thisPsi))
         .flatMap(rec => {
-          if (rec._isStatic) {
+          if (rec.isStatic) {
             None // not sure this.constructor would even be defined in a static call...
           } else {
-            Some(JSDeepClassType(rec._clsPsi, ctx.subCtxEmpty()))
+            Some(JSDeepClassType(rec.clsPsi, ctx.subCtxEmpty()))
           }
         })
     } else {

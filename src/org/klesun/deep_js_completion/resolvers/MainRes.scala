@@ -21,6 +21,8 @@ import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.util.Try
 
+case class ThisCls (isStatic: Boolean, clsPsi: JSClass[StubElement[_]])
+
 object MainRes {
 
   def getReturns(func: PsiElement): It[JSExpression] = {
@@ -53,17 +55,14 @@ object MainRes {
       }
       parent = parent.getParent
     }
-    clsOpt.map(clsPsi => new {
-      val _isStatic = isStatic
-      val _clsPsi = clsPsi
-    })
+    clsOpt.map(clsPsi => ThisCls(isStatic, clsPsi))
   }
 
   def resolveThisExpr(expr: JSThisExpression, ctx: IExprCtx): GenTraversableOnce[JSType] = {
     getThisCls(expr).itr()
       .flatMap(rec => {
-        val clst = JSDeepClassType(rec._clsPsi, ctx.subCtxEmpty())
-        if (rec._isStatic) Some(clst)
+        val clst = JSDeepClassType(rec.clsPsi, ctx.subCtxEmpty())
+        if (rec.isStatic) Some(clst)
         else clst.getNewInstType(ctx.subCtxEmpty())
       })
   }
