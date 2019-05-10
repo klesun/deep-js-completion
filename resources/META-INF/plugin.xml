@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.05.09.001</version>
+  <version>2019.05.10.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,8 +57,8 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Make greyed prototype property options brighter</li>
-  <li>Do not suggest completion in typescript files</li>
+  <li>Fix: do not treat _any_ property reference as an assignment</li>
+  <li>Optimization fixes</li>
     ]]>
   </change-notes>
 
