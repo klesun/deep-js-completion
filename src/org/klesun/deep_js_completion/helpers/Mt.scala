@@ -39,29 +39,29 @@ object Mt {
   }
 
   def flattenTypes(t: JSType): It[JSType] = {
-    val occurrences = new util.HashSet[JSType]()
-    def internal(t: JSType): It[JSType] = {
-      if (occurrences.contains(t)) {
+    def internal(t: JSType, chain: Set[JSType]): It[JSType] = {
+      if (chain.contains(t)) {
+        // circular reference
         new It(None)
       } else {
-        occurrences.add(t)
+        val nextChain = chain + t
         val flattened: It[JSType] = t match {
           case mt: JSContextualUnionTypeImpl => {
-            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           }
           case mt: JSCompositeTypeImpl => {
-            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           }
           case mt: JSUnionOrIntersectionType =>
-            mt.getTypes.asScala.itr().flatMap(mt => internal(mt))
+            mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           case mt: JSDeepMultiType =>
-            mt.mit.itr().flatMap(mt => internal(mt))
+            mt.mit.itr().flatMap(mt => internal(mt, nextChain))
           case _ => Some(t).itr()
         }
         flattened
       }
     }
-    internal(t)
+    internal(t, Set())
   }
 
   private def getLiteralValueOpts(litT: JSType): It[Option[String]] = {
