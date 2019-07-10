@@ -8,7 +8,6 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureIm
 import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.types.primitives.JSUndefinedType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -130,7 +129,7 @@ object Mt {
           val types = litVals
             .flatMap(litVal => Try(litVal.toDouble.toInt).toOption)
             .flatMap(num => Option(tupT.getTypeByIndex(num)))
-          mergeTypes(types).getOrElse(new JSUndefinedType(JSTypeSource.EMPTY))
+          JSDeepMultiType(types.mem())
         })
         tupResultOpt.orElse(arrFallback)
       case arrT: JSArrayTypeImpl if canBeNum => Option(arrT.getType)
