@@ -44,7 +44,7 @@ object PropNamePvdr {
   def getIcon = icon
 
   private def getMaxDepth(isAutoPopup: Boolean) = {
-    if (isAutoPopup) 25 else 60
+    if (isAutoPopup) 35 else 120
   }
 
   private def makeLookup(propRec: PropRec, i: Int) = {
@@ -111,9 +111,12 @@ object PropNamePvdr {
     val funcCtx = FuncCtx(search)
     val exprCtx = ExprCtx(funcCtx, qual, 0)
 
-    exprCtx.findExprType(qual).itr()
+    val tit = exprCtx.findExprType(qual).itr()
       .flatMap(typ => getNamedProps(typ, qual.getProject)
         .map(p => PropRec(p, isBuiltIn(typ))))
+    tit.hasNext
+    Console.println("checked first member in " + search.expressionsResolved + " exprs")
+    tit
   }
 
   private def getQualifier(parameters: CompletionParameters): Option[JSExpression] = {
