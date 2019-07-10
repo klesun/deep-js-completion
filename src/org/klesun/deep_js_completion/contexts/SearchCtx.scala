@@ -166,7 +166,7 @@ class SearchCtx(
             if (SearchCtx.DEBUG) {
                 val postfix = " ||| " + singleLine(expr.getText, 350)
                 // TODO: one of types happens to be null sometimes - fix!
-                println(indent + "resolution: " + mit.itr().map(a => a + " " + a.getClass).toList + postfix)
+                println(indent + "resolution: " + mit.fst().map(a => "fst: " + a + " " + a.getClass) + postfix)
             }
 
             putToCache(exprCtx, expr, mit)

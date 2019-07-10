@@ -185,6 +185,16 @@ object DeepJsLang {
       streamOpt.get
     }
 
+    /** for debug mostly */
+    def fst(): Option[T] = {
+      val itr = this.itr()
+      if (itr.hasNext) {
+        Some(itr.next())
+      } else {
+        None
+      }
+    }
+
     override def iterator: Iterator[T] = {
       var torOpt: Option[Iterator[T]] = None
       val getSrc = () => {
