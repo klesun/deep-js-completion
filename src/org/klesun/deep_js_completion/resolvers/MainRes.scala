@@ -121,7 +121,7 @@ object MainRes {
                   // the parser des not seem to like {Promise<number>}, it only accepts Promise<number>
                   val plain = new JSTypeParser(typeText, JSTypeSource.EMPTY).parseParameterType(true)
                   val noBrac = new JSTypeParser(substr(typeText, 1, -1), JSTypeSource.EMPTY).parseParameterType(true)
-                  cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getInferredType))
+                  cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getType))
                 }),
               callCtx.findExprType(r)
             )

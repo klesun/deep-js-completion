@@ -391,7 +391,7 @@ case class ArgRes(ctx: IExprCtx) {
           val path = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           nit(caretPsi.getContainingFile)
-            .flatMap(f => PathStrGoToDecl.getReferencedFileStrict(path, f)).itr
+            .flatMap(f => PathStrGoToDecl.getRelativeFile(path, f)).itr
             .flatMap(file => List()
               ++ resolveCommonJsFormatDef(file)
               ++ resolveRequireJsFormatDef(file)

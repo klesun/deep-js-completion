@@ -1,8 +1,9 @@
 package org.klesun.deep_js_completion.entry
 
-import com.intellij.codeInsight.completion.PrefixMatcher
 import com.intellij.codeInsight.completion.impl.CamelHumpMatcher
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
+import com.intellij.json.psi.{JsonFile, JsonObject, JsonStringLiteral}
+import com.intellij.lang.javascript.library.JSLibraryManager
 import com.intellij.lang.javascript.psi.JSExpression
 import com.intellij.lang.javascript.psi.impl.JSLiteralExpressionImpl
 import com.intellij.openapi.actionSystem.DataContext
@@ -14,28 +15,31 @@ import com.intellij.psi.{PsiElement, PsiFile, PsiManager}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl._
 import org.klesun.lang.DeepJsLang._
 
-import scala.collection.JavaConverters._
 import scala.collection.GenTraversableOnce
+import scala.collection.JavaConverters._
 
 object PathStrGoToDecl {
-  def getReferencedFileStrict(relPath: String, caretFile: PsiFile): Option[PsiFile] = {
+  def getByFullPath(fullPathArg: String, proj: Project): Option[PsiFile] = {
+    val fullPath = fullPathArg + (if (fullPathArg.matches(".*\\.[a-zA-Z0-9]+$")) "" else ".js")
+    try {
+      Option(LocalFileSystem.getInstance.findFileByPath(fullPath))
+        .flatMap(f => Option(PsiManager.getInstance(proj).findFile(f)))
+    } catch {
+      case exc: Throwable => None
+    }
+  }
+
+  def getRelativeFile(relPath: String, caretFile: PsiFile): Option[PsiFile] = {
     Option(caretFile.getOriginalFile)
       .flatMap(f => Option(f.getContainingDirectory))
       .flatMap(f => Option(f.getVirtualFile))
-      .map(f => f.getPath + "/" + relPath + (if (relPath.matches(".*\\.[a-zA-Z0-9]+$")) "" else ".js"))
-      .flatMap(fullPath => {
-        try {
-          Option(LocalFileSystem.getInstance.findFileByPath(fullPath))
-        } catch {
-          case exc: Throwable => None
-        }
-      })
-      .flatMap(f => Option(PsiManager.getInstance(caretFile.getProject).findFile(f)))
+      .map(f => f.getPath + "/" + relPath)
+      .flatMap(fullPath => getByFullPath(fullPath, caretFile.getProject))
   }
 
   def getReferencedFileAnyDir(relPath: String, caretFile: PsiFile): GenTraversableOnce[PsiFile] = {
     if (relPath.startsWith("./") || relPath.startsWith("../")) {
-      getReferencedFileStrict(relPath, caretFile)
+      getRelativeFile(relPath, caretFile)
     } else if (relPath.endsWith(".es6")
             || relPath.endsWith(".js")
             || relPath.endsWith(".ts")
@@ -63,6 +67,35 @@ object PathStrGoToDecl {
         val relPath = Option(lit.getValue).map(_.toString).getOrElse("")
         nit(lit.getContainingFile)
           .flatMap(f => getReferencedFileAnyDir(relPath, f))
+      })
+  }
+
+  def getModuleFile(expr: JSExpression): GenTraversableOnce[PsiFile] = {
+    cast[JSLiteralExpressionImpl](expr).itr()
+      .flatMap(lit => {
+        var moduleName = Option(lit.getValue).map(_.toString).getOrElse("")
+        val projRoot = Option(expr.getProject.getBasePath).getOrElse("")
+        JSLibraryManager.getInstance(expr.getProject).getLibraryMappings.getAvailableValues
+          .asScala.itr().flatMap(libModel => {
+            val libRoot = projRoot + "/" + libModel.getName.replaceAll("^[^\\/]+\\/", "")
+            val modulePath = libRoot + "/" + moduleName
+            if (moduleName.contains("/")) {
+              // some specific file inside the lib is referenced
+              getByFullPath(modulePath, expr.getProject)
+            } else {
+              // main library file is referenced (specified in package.json)
+              val packJsonPath = modulePath + "/package.json"
+              getByFullPath(packJsonPath, expr.getProject)
+                .flatMap(cast[JsonFile](_))
+                .flatMap(json => Option(json.getTopLevelValue))
+                .flatMap(cast[JsonObject](_))
+                .flatMap(jsObj => Option(jsObj.findProperty("main")))
+                .flatMap(prop => Option(prop.getValue))
+                .flatMap(cast[JsonStringLiteral](_))
+                .map(lit => modulePath + "/" + lit.getValue)
+                .flatMap(fullPath => getByFullPath(fullPath, expr.getProject))
+            }
+          })
       })
   }
 }
