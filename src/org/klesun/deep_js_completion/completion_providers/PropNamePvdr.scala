@@ -6,6 +6,7 @@ import java.util
 import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProvider, CompletionResultSet, PrioritizedLookupElement}
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
+import com.intellij.lang.ecmascript6.ES6FileType
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
@@ -214,7 +215,9 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-    if (!parameters.getOriginalFile.getFileType.equals(JavaScriptFileType.INSTANCE)) {
+    if (!parameters.getOriginalFile.getFileType.equals(JavaScriptFileType.INSTANCE) &&
+        !parameters.getOriginalFile.getFileType.equals(ES6FileType.INSTANCE)
+    ) {
       // do not run this plugin in typescript, the language is
       // fully typed itself, no need for additional _deep_ typing
       return
