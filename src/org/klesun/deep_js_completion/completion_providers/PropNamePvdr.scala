@@ -44,7 +44,7 @@ object PropNamePvdr {
   def getIcon = icon
 
   private def getMaxDepth(isAutoPopup: Boolean) = {
-    if (isAutoPopup) 25 else 40
+    if (isAutoPopup) 25 else 60
   }
 
   private def makeLookup(propRec: PropRec, i: Int) = {
