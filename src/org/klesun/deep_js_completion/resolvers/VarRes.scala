@@ -3,11 +3,14 @@ package org.klesun.deep_js_completion.resolvers
 import java.util
 import java.util.Objects
 
+import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
+import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
+import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.search.GlobalSearchScope
@@ -16,9 +19,11 @@ import com.intellij.psi.stubs.StubElement
 import com.intellij.psi.{PsiElement, PsiFile, PsiReference}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
+import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.resolvers.MainRes.getReturns
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, AssRes, GenericRes}
-import org.klesun.deep_js_completion.structures.JSDeepClassType
+import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl}
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -157,11 +162,35 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   def resolveFunc(func: JSFunction): GenTraversableOnce[JSType] = {
-    MainRes.getReturns(func)
-      .filter(ret => !shouldTypedefBeIgnored(func))
-      .flatMap(expr => ctx.findExprType(expr))
+    val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
+      .exists(lst => lst.hasModifier(ModifierType.ASYNC))
+    val docFuncTit = nit(JSDocumentationUtils.findDocComment(func))
+      .flatMap(cast[JSDocCommentImpl](_))
+      .flatMap(tag => tag.getTags)
+      .filter(tag => "return".equals(tag.getName))
+      .flatMap(tag => Option(tag.getValue))
+      .map(tagVal => tagVal.getText)
+      .flatMap(typeText => {
+        // the parser does not seem to like {Promise<number>}, it only accepts Promise<number>
+        val plain = new JSTypeParser(typeText, JSTypeSource.EMPTY).parseParameterType(true)
+        val noBrac = new JSTypeParser(substr(typeText, 1, -1), JSTypeSource.EMPTY).parseParameterType(true)
+        cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getType))
+      })
       .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
         new util.ArrayList[JSParameterTypeDecorator](), rett))
+    val inferFuncTit = getReturns(func).map(r => {
+      JSDeepFunctionTypeImpl(func, ctx.func(), callCtx => {
+        val rett = callCtx.findExprType(r)
+        if (!isAsync) rett else rett.itr
+          .flatMap(t => Mt.unwrapPromise(t))
+          .map(t => Mt.wrapPromise(t))
+      })
+    })
+    if (shouldTypedefBeIgnored(func)) {
+      None
+    } else {
+      cnc(docFuncTit, inferFuncTit)
+    }
   }
 
   // may be defined in a different file unlike resolveAssignment()

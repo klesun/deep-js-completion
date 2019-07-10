@@ -2,19 +2,17 @@ package org.klesun.deep_js_completion.resolvers
 
 import java.util
 
-import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi.JSRecordType.TypeMember
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
 import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
 import com.intellij.lang.javascript.psi.impl.{JSArrayLiteralExpressionImpl, JSLiteralExpressionImpl}
-import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.PsiElement
 import com.intellij.psi.stubs.StubElement
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl, JSDeepMultiType}
+import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -104,32 +102,7 @@ object MainRes {
             val result = ctx.mt().getKey(arrT, keyTOpt)
             result
           })
-      case func: JSFunctionExpression =>
-        val returns = getReturns(func).mem()
-        Some(JSDeepFunctionTypeImpl(func, ctx.func(), callCtx =>
-          returns.itr().flatMap(r => {
-            val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
-              .exists(lst => lst.hasModifier(ModifierType.ASYNC))
-            val rett = cnc(
-              nit(JSDocumentationUtils.findDocComment(func))
-                .flatMap(cast[JSDocCommentImpl](_))
-                .flatMap(tag => tag.getTags)
-                .filter(tag => "return".equals(tag.getName))
-                .flatMap(tag => Option(tag.getValue))
-                .map(tagVal => tagVal.getText)
-                .flatMap(typeText => {
-                  // the parser des not seem to like {Promise<number>}, it only accepts Promise<number>
-                  val plain = new JSTypeParser(typeText, JSTypeSource.EMPTY).parseParameterType(true)
-                  val noBrac = new JSTypeParser(substr(typeText, 1, -1), JSTypeSource.EMPTY).parseParameterType(true)
-                  cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getType))
-                }),
-              callCtx.findExprType(r)
-            )
-            if (!isAsync) rett else {
-              rett.itr.flatMap(t => Mt.unwrapPromise(t)).map(t => Mt.wrapPromise(t))
-            }
-          }))
-        )
+      case func: JSFunctionExpression => VarRes(ctx).resolveFunc(func)
       case arr: JSArrayLiteralExpressionImpl =>
         val typeTuple = arr.getExpressions
           .flatMap {

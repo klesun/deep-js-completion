@@ -20,11 +20,11 @@ import scala.collection.JavaConverters._
 /**
  * could not find anything like this in built-ins surprisingly
  * built-in resolution returns JSLocalNamedType, gives
-  * you _any_ type when you call .asRecordType()
+ * you _any_ type when you call .asRecordType()
  */
 case class JSDeepClassType(
-  val clsPsi: JSClass[StubElement[_]],
-  val closureCtx: IExprCtx,
+  clsPsi: JSClass[StubElement[_]],
+  closureCtx: IExprCtx,
 ) extends JSType {
 
   def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = "Deep<" + clsPsi.getName + ">"
