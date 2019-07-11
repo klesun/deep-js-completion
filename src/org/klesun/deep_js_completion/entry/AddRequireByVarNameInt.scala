@@ -17,7 +17,7 @@ class AddRequireByVarNameInt extends IntentionAction {
 
   override def startInWriteAction(): Boolean = true
 
-  private def assertUndeclaredVar(project: Project, editor: Editor, psiFile: PsiFile): Option[JSReferenceExpression] = {
+  private def matchUndeclaredVarAsModule(project: Project, editor: Editor, psiFile: PsiFile): Option[String] = {
     val offset = editor.getCaretModel.getOffset
     // -1 and 0 because if caret is after last char of the var name, IDEA
     // highlights it, but findElementOfClassAtOffset does not match it
@@ -25,25 +25,31 @@ class AddRequireByVarNameInt extends IntentionAction {
       .flatMap(f =>  Option(PsiTreeUtil.findElementOfClassAtOffset(
         f, offset + searchShift, classOf[JSReferenceExpression], false
       )))
-      .filter(ref => ref.getQualifier == null)
+    ) .filter(ref => ref.getQualifier == null)
       .filter(ref => ref.resolve() == null)
-    ).headOption
+      .flatMap(ref => Option(ref.getReferenceName))
+      .headOption
+  }
+
+  private def findModuleByName(project: Project, psiFile: PsiFile, varName: String): List[String] = {
+    val scope = ProjectScope.getProjectScope(project)
+    FilenameIndex.getFilesByName(project, varName + ".js", scope)
+      .flatMap(f => Option(f.getVirtualFile))
+      .flatMap(vf => RequirePvdr.makeRelPath(psiFile, vf))
+      .toList
   }
 
   override def isAvailable(project: Project, editor: Editor, psiFile: PsiFile): Boolean = {
     // available if caret is put on a var, and this var is undeclared
-    assertUndeclaredVar(project, editor, psiFile).nonEmpty
+    matchUndeclaredVarAsModule(project, editor, psiFile)
+      .exists(varName => findModuleByName(project, psiFile, varName).nonEmpty)
   }
 
   override def invoke(project: Project, editor: Editor, psiFile: PsiFile): Unit = {
-    val invoked = assertUndeclaredVar(project, editor, psiFile)
-      .flatMap(ref => {
-        val varName = ref.getReferenceName
-        val scope = ProjectScope.getProjectScope(project)
-        FilenameIndex.getFilesByName(project, varName + ".js", scope)
-          .flatMap(f => Option(f.getVirtualFile))
-          .flatMap(vf => RequirePvdr.makeRelPath(psiFile, vf))
-          .toList.sortBy(relPath => relPath.length)
+    val invoked = matchUndeclaredVarAsModule(project, editor, psiFile)
+      .flatMap(varName => {
+        findModuleByName(project, psiFile, varName)
+          .sortBy(relPath => relPath.length)
           .headOption
           .map(relPath => {
             val reqSt = "const " + varName + " = require('" + relPath + "');\n"
