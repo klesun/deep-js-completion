@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.05.10.001</version>
+  <version>2019.07.11.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,8 +57,11 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Fix: do not treat _any_ property reference as an assignment</li>
-  <li>Optimization fixes</li>
+  <li>Suggest "Add require() by var name" intention</li>
+  <li>Fix: mind the async keyword in es6 class methods as well, not just in function expressions</li>
+  <li>Increase depth limit 2 times (In the php plugin this magic number is around 60, but since in js method reference itself is an expression, module definition is an expression, etc... the expression chain in same code becomes roughly 2 times longer - hence the increase)</li>
+  <li>Do not disable plugin in .es6 files</li>
+  <li>Resolve require() referencing a file in node_modules</li>
     ]]>
   </change-notes>
 
