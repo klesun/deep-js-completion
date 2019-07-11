@@ -19,7 +19,7 @@ import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiElement
+import com.intellij.psi.{PsiElement, PsiFile}
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.JBColor
 import com.intellij.util.ProcessingContext
@@ -119,20 +119,19 @@ object PropNamePvdr {
     tit
   }
 
-  private def getQualifier(parameters: CompletionParameters): Option[JSExpression] = {
+  def getQualifier(offset: Int, psiFile: PsiFile): Option[JSExpression] = {
     // getPosition() returns element in a _fake_ PSI file with "IntellijIdeaRulezzz " (mind the space in the end) added after the
     // со caret - this may corrupt the PSI tree and give different count of arguments in a function call for example, so no using it!
     //val nullPsi = parameters.getPosition
-    Option(parameters.getOriginalPosition)
-      .flatMap(leaf => Option(parameters.getOriginalFile)
-        // original PSI points to different elements in `obj.<>prop,`, `obj.prop<>,` and `obj.<>,`, but
-        // in all these cases previous PSI is a leaf of the reference expression we want to resolve
-        .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, leaf.getTextOffset - 1, classOf[JSReferenceExpression], false))))
+    Option(psiFile)
+      // original PSI points to different elements in `obj.<>prop,`, `obj.prop<>,` and `obj.<>,`, but
+      // in all these cases previous PSI is a leaf of the reference expression we want to resolve
+      .flatMap(f => Option(PsiTreeUtil.findElementOfClassAtOffset(f, offset - 1, classOf[JSReferenceExpression], false)))
       .flatMap(ref => Option(ref.getQualifier))
       .filter(qual => {
         // filter out cases when caret is _inside_ the qualifier - caret should always be to the right
         val qualEnd = qual.getTextOffset + qual.getTextLength
-        qualEnd < parameters.getOriginalPosition.getTextOffset
+        qualEnd < offset
       })
       .filter(qual =>
           // do not provide completion for them since they
@@ -141,10 +140,15 @@ object PropNamePvdr {
           !"window".equals(qual.getText))
   }
 
+  private def getQualifier(parameters: CompletionParameters): Option[JSExpression] = {
+    Option(parameters.getOriginalPosition)
+      .flatMap(psi => getQualifier(psi.getTextOffset, parameters.getOriginalFile))
+  }
+
   /**
    * the idea is to first show _typed_ options provided by WS, then hang for however
-    * long we like to resolve our deep keys, and only then to show the useless
-    * _anything_ options you would see if "Only Type-Based Completion" setting is off
+   * long we like to resolve our deep keys, and only then to show the useless
+   * _anything_ options you would see if "Only Type-Based Completion" setting is off
    */
   private def processBuiltIns(
     parameters: CompletionParameters,

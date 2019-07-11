@@ -75,6 +75,10 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.entry.DestrPropGoToDecl"/>
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.completion_providers.PropNamePvdr"/>
     <completion.confidence language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepJsCompletionConfidence" order="first"/>
+    <intentionAction>
+      <category>JavaScript/Module import</category>
+      <className>org.klesun.deep_js_completion.entry.AddRequireByVarNameInt</className>
+    </intentionAction>
   </extensions>
 
   <actions>

@@ -17,6 +17,7 @@ object RequirePvdr {
       val caretPath = Paths.get(caretFile.getCanonicalPath).getParent
       val requirePath = Paths.get(requireFile.getCanonicalPath)
       var relPath = caretPath.relativize(requirePath).toString
+      relPath = relPath.replace('\\', '/') // windows
       if (!relPath.startsWith(".")) {
         relPath = "./" + relPath
       }
