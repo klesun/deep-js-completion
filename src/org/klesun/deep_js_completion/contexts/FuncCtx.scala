@@ -77,6 +77,28 @@ case class FuncCtx(
     }
   }
 
+  def printDebug(level: Int = 0): Unit = {
+    val step = "  "
+    val ind = step * level
+    val nextInd = ind + step
+    Console.println("FuncCtx(")
+    Console.println(nextInd + "id=" + System.identityHashCode(this))
+    Console.println(nextInd + "uniqueRef=" + uniqueRef.map(ref => singleLine(ref.getText, 100)))
+    Console.print(nextInd + "parent=")
+    if (parent.nonEmpty) {
+      parent.get.printDebug(level + 1)
+    } else {
+      Console.println("None")
+    }
+    Console.print(nextInd + "parent=")
+    if (closureCtx.nonEmpty) {
+      closureCtx.flatMap(cast[FuncCtx](_)).get.printDebug(level + 1)
+    } else {
+      Console.println("None")
+    }
+    Console.println(ind + ")")
+  }
+
   override def hashCode(): Int = {
     if (hashCodeField.isEmpty) {
       val hashValues = getHashValues()
