@@ -298,3 +298,11 @@ exports.provideWrongAssignmentDestination = () => {
     processed.pricingPart[0];
     return processed;
 };
+
+exports.providePromiseAll = () => {
+    let calledPromises = [];
+    calledPromises.push(Promise.resolve({a: 5, b: 6}));
+    calledPromises.push(Promise.resolve({c: 5, d: 6}));
+    calledPromises[0].then(a => a.);
+    Promise.all(calledPromises).then(a => a[0].);
+};
