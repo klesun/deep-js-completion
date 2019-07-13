@@ -240,7 +240,7 @@ object DeepJsLang {
     private var disposed = false
 
     /** @debug */
-    val createdAt = if (Debug.DEBUG) Some(new RuntimeException("created here")) else None
+    val createdAt = if (Debug.DEBUG_DISPOSED_ITER) Some(new RuntimeException("created here")) else None
     var disposedAt: Option[Exception] = None
 
     override def hasNext: Boolean = {

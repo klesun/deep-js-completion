@@ -135,7 +135,7 @@ class SearchCtx(
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
 
-        if (Debug.PRINT_REAL_TIME_TREE) {
+        if (Debug.PRINT_RESOLVE_START) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
@@ -158,10 +158,14 @@ class SearchCtx(
             val builtIn = getWsType(expr).filter(t => !isAtCaret)
             var result = frs(resolved, builtIn)
             val mit = result.flatMap(t => Mt.flattenTypes(t)).unq().mem()
-            if (Debug.DEBUG) {
-                val postfix = " ||| " + singleLine(expr.getText, 350)
-                // TODO: one of types happens to be null sometimes - fix!
+
+            val postfix = " ||| " + singleLine(expr.getText, 350)
+            // TODO: one of types happens to be null sometimes - fix!
+            if (Debug.PRINT_RESOLVE_RESULT_FIRST) {
                 println(indent + "resolution: " + mit.fst().map(a => "fst: " + a + " " + a.getClass) + postfix)
+            }
+            if (Debug.PRINT_RESOLVE_RESULT_FULL) {
+                println(indent + "resolution: " + mit.map(a => a + " " + a.getClass).toList + postfix)
             }
 
             putToCache(exprCtx, expr, mit)
