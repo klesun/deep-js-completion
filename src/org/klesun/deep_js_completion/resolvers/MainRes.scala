@@ -129,7 +129,7 @@ object MainRes {
           .flatMap(spr => nit(spr.getExpression))
           .flatMap(exp => ctx.findExprType(exp))
 
-        Some(explKeysRec).itr() ++ spreadTypes
+        cnc(Some(explKeysRec), spreadTypes)
       case bina: JSBinaryExpression =>
         val types = cnc(nit(bina.getLOperand), nit(bina.getROperand))
           .flatMap(op => ctx.findExprType(op))
