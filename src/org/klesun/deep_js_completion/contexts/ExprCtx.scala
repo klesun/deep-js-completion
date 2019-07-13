@@ -38,7 +38,12 @@ case class ExprCtx(
     if (expr == null) {
       None
     } else {
-      funcCtx.getSearch.findExprType(expr, subExpr(expr, funcCtx))
+      // the flatMap trick creates an iterator that will actually resolve
+      // this expression only when you start iterating through the types - irreplaceable
+      // in object resolution where you will effectively need just one field
+      nit(true).flatMap(b => {
+        funcCtx.getSearch.findExprType(expr, subExpr(expr, funcCtx))
+      })
     }
   }
 
