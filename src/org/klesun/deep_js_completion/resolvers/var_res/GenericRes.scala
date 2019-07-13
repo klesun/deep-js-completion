@@ -1,11 +1,12 @@
 package org.klesun.deep_js_completion.resolvers.var_res
 
 import com.intellij.lang.javascript.psi.ecma6._
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.{parseTypePsi}
+import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.parseTypePsi
 import org.klesun.deep_js_completion.structures
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang.cast
@@ -92,10 +93,29 @@ case class GenericRes(ctx: IExprCtx) {
           val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
           sints.getTypeArguments.headOption.itr
             .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
+        } else if (
+          ("PromiseLike" equals fqn) ||
+          ("Promise" equals fqn) ||
+          ("Bluebird" equals fqn)
+        ) {
+          val getSubType = () => getArgt().itr.flatMap(t => Mt.unwrapPromise(t))
+          sints.getTypeArguments.headOption.itr
+            .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
         } else {
+          //Console.println("Unsupported generic type expr arg class - " + fqn + " - " + argTypePsi)
           None
         }
-      case _ => None
+      case tupts: TypeScriptTupleTypeImpl =>
+        val getSubType = (order: Int) => {
+          val keyt = new JSStringLiteralTypeImpl(order + "", true, JSTypeSource.EMPTY)
+          getArgt().itr().flatMap(t => ctx.mt().getKey(t, Some(keyt)))
+        }
+        tupts.getElements.zipWithIndex.itr().flatMap({
+          case (typePsi, i) => getGenericTypeFromArg(typePsi, () => getSubType(i), generic)
+        })
+      case _ =>
+        //Console.println("Unsupported generic type expr arg kind - " + argTypePsi.getClass + " - " + argTypePsi)
+        None
     }
   }
 
