@@ -4,11 +4,11 @@ import java.io.{PrintWriter, StringWriter}
 import java.util
 
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.contexts.SearchCtx
+import org.klesun.deep_js_completion.contexts.Debug
 
+import scala.collection.JavaConverters._
 import scala.collection.{AbstractIterable, GenTraversableOnce}
 import scala.reflect.{ClassTag, classTag}
-import scala.collection.JavaConverters._
 
 
 /** provides some core functions needed for IDEA plugin development */
@@ -240,7 +240,7 @@ object DeepJsLang {
     private var disposed = false
 
     /** @debug */
-    val createdAt = if (SearchCtx.DEBUG) Some(new RuntimeException("created here")) else None
+    val createdAt = if (Debug.DEBUG) Some(new RuntimeException("created here")) else None
     var disposedAt: Option[Exception] = None
 
     override def hasNext: Boolean = {

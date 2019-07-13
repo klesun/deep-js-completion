@@ -12,11 +12,6 @@ import org.klesun.lang.DeepJsLang._
 import scala.collection.{GenTraversableOnce, mutable}
 
 object SearchCtx {
-  val DEBUG = false
-  val DEBUG_OBJ = new {
-    val PRINT_REAL_TIME_TREE = false
-    val PRINT_PSI_TREE = false
-  }
   def formatPsi(element: PsiElement): String = {
     val line = element.getContainingFile.getText
       .slice(0, element.getTextOffset).split("\n").length
@@ -140,7 +135,7 @@ class SearchCtx(
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
 
-        if (SearchCtx.DEBUG_OBJ.PRINT_REAL_TIME_TREE) {
+        if (Debug.PRINT_REAL_TIME_TREE) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
 
@@ -163,7 +158,7 @@ class SearchCtx(
             val builtIn = getWsType(expr).filter(t => !isAtCaret)
             var result = frs(resolved, builtIn)
             val mit = result.flatMap(t => Mt.flattenTypes(t)).unq().mem()
-            if (SearchCtx.DEBUG) {
+            if (Debug.DEBUG) {
                 val postfix = " ||| " + singleLine(expr.getText, 350)
                 // TODO: one of types happens to be null sometimes - fix!
                 println(indent + "resolution: " + mit.fst().map(a => "fst: " + a + " " + a.getClass) + postfix)
