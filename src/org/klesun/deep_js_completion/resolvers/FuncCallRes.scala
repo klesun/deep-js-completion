@@ -4,13 +4,14 @@ import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.types._
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.Mt
+import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang._
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.collection.GenTraversableOnce
+import scala.collection.immutable.List
 
 /**
  * resolves type of a function call expression like:
@@ -48,6 +49,10 @@ case class FuncCallRes(ctx: IExprCtx) {
           val elt = JSDeepMultiType(elts.mem())
           new JSArrayTypeImpl(elt, JSTypeSource.EMPTY)
         })
+    } else if ((obj.getText equals "Promise") && (methName equals "reject")) {
+      // could keep track of type of passed exception at some point, but for now just
+      // not suggesting exception properties in successful promise shall be great
+      Mkt.inst("Promise", List())
     } else if (methName equals "then") {
       args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
           .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
