@@ -37,7 +37,7 @@ object PropNamePvdr {
 //  val imgURL = getClass.getResource("../icons/deep_16.png")
   val imgURL = getClass.getResource("../icons/deep_16_ruby2.png")
   val icon = new ImageIcon(imgURL)
-  val DEEP_PRIO = 2000
+  val DEEP_PRIO = 40000
   val PRIM_PRIO = 20
   val PROTO_PRIO = -100000
 
@@ -52,6 +52,7 @@ object PropNamePvdr {
       .flatMap(prop => Option(prop.getValue))
       .map(v => v.getText)
       .filter(str => !str.equals(name))
+      .map(str => str.replaceAll("\\s+", " "))
   }
 
   private def makeLookup(propRec: PropRec, i: Int) = {
