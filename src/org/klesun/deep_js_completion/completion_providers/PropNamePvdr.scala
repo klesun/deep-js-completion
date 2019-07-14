@@ -14,7 +14,7 @@ import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyM
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
-import com.intellij.lang.javascript.psi.{JSExpression, JSFunction, JSRecordType, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.{JSExpression, JSFunction, JSProperty, JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -47,10 +47,17 @@ object PropNamePvdr {
     if (isAutoPopup) 35 else 120
   }
 
+  private def formatKeyPsiValue(name: String, psi: PsiElement) = {
+    cast[JSProperty](psi)
+      .flatMap(prop => Option(prop.getValue))
+      .map(v => v.getText)
+      .filter(str => !str.equals(name))
+  }
+
   private def makeLookup(propRec: PropRec, i: Int) = {
     val prop = propRec.prop
     val isBuiltIn = propRec.isBuiltIn
-    val typeStr = Option(prop.getType)
+    var typeStr = Option(prop.getType)
       .map {
         case lit: JSPrimitiveLiteralType[_] =>
           val strVal = lit.getLiteral + ""
@@ -71,6 +78,12 @@ object PropNamePvdr {
     val name = prop.getMemberName
     val source = prop.getMemberSource
     val sourceElement = Option(source.getSingleElement).getOrElse(name)
+    if (typeStr.equals("?") || typeStr.equals("*|*|*")) {
+      val psiPreview = propRec.psi.flatMap(psi => formatKeyPsiValue(name, psi))
+      if (psiPreview.nonEmpty) {
+        typeStr = psiPreview.get
+      }
+    }
 
     var lookup = LookupElementBuilder.create(sourceElement, name)
       .withBoldness(!isBuiltIn)
@@ -79,18 +92,21 @@ object PropNamePvdr {
       .withTypeText(typeStr, true)
     var priority = DEEP_PRIO - i
     if (isBuiltIn) {
-      lookup = lookup.withItemTextForeground(new JBColor(new Color(90, 90, 90), new Color(150, 150, 150)))
+      val jbColor = new JBColor(new Color(90, 90, 90), new Color(150, 150, 150))
+      lookup = lookup.withItemTextForeground(jbColor)
       priority = PRIM_PRIO
     }
     PrioritizedLookupElement.withPriority(lookup, priority)
   }
 
-  def getNamedProps(typ: JSType, project: Project): It[PropertySignature] = {
+  def getNamedProps(typ: JSType, project: Project): It[PropRec] = {
     val mems = Mt.getProps(typ, project)
-    mems.itr().flatMap(idx => Mt
+    mems.itr()
+      .flatMap(idx => Mt
         .getAnyLiteralValues(idx.getMemberParameterType)
         .map(name => new PropertySignatureImpl(name, idx.getMemberType, false, new EmptyMemberSource))
-        .filter(prop => !prop.getMemberName.startsWith("[Symbol.")))
+        .filter(prop => !prop.getMemberName.startsWith("[Symbol."))
+        .map(p => PropRec(p, isBuiltIn(typ), idx.psi)))
   }
 
   private def isBuiltIn(t: JSType): Boolean = {
@@ -112,8 +128,7 @@ object PropNamePvdr {
     val exprCtx = ExprCtx(funcCtx, qual, 0)
 
     val tit = exprCtx.findExprType(qual).itr()
-      .flatMap(typ => getNamedProps(typ, qual.getProject)
-        .map(p => PropRec(p, isBuiltIn(typ))))
+      .flatMap(typ => getNamedProps(typ, qual.getProject))
     tit.hasNext
     Console.println("checked first member in " + search.expressionsResolved + " exprs")
     tit
@@ -214,6 +229,7 @@ object PropNamePvdr {
 case class PropRec(
   prop: PropertySignature,
   isBuiltIn: Boolean,
+  psi: Option[PsiElement],
 )
 
 class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDeclarationHandler {

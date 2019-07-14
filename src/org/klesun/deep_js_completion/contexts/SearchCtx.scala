@@ -4,7 +4,6 @@ import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
-import org.klesun.deep_js_completion.completion_providers.PropNamePvdr
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.lang.DeepJsLang._
@@ -55,14 +54,6 @@ class SearchCtx(
       val funcCtx = FuncCtx(this)
       val exprCtx = ExprCtx(funcCtx, expr, 0)
       findExprType(expr, exprCtx)
-    }
-
-    private def hasTypeInfo(t: JSType): Boolean = {
-        val props = project.itr.flatMap(project => {
-            PropNamePvdr.getNamedProps(t, project)
-        })
-        // causes infinite recursion when it gets to normFunc() in php.js
-        props.hasNext
     }
 
     private def takeFromCache(ctx: IExprCtx, expr: JSExpression): Option[MemIt[JSType]] = {
