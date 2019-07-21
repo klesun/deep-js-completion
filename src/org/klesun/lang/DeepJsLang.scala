@@ -287,7 +287,7 @@ object DeepJsLang {
     }
     override def map[Tnew](f: T => Tnew): It[Tnew] = {
       dispose()
-      new It(values.toIterator.map(f))
+      new It(values.toIterator.map(f)).allowEndHasNext(allowEndHasNextFlag)
     }
     override def flatMap[Tnew](f: T => GenTraversableOnce[Tnew]): It[Tnew] = {
       dispose()
@@ -324,8 +324,8 @@ object DeepJsLang {
      * should not be needed in deep-js code, but deep-assoc, which uses it, has
      * MemIt implementation that may ping hasNext() multiple times for same value
      */
-    def allowEndHasNext() = {
-      allowEndHasNextFlag = true
+    def allowEndHasNext(flag: Boolean) = {
+      allowEndHasNextFlag = flag
       this
     }
   }

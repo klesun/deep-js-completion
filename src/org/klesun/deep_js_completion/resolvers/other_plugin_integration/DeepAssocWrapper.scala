@@ -1,5 +1,7 @@
 package org.klesun.deep_js_completion.resolvers.other_plugin_integration
 
+import java.lang.NoSuchMethodError
+
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
 import com.intellij.lang.javascript.psi.{JSFunction, JSType}
@@ -7,7 +9,7 @@ import com.intellij.psi.PsiElement
 import com.jetbrains.php.lang.psi.resolve.types.PhpType
 import org.klesun.deep_assoc_completion.helpers.{Mt => PhpMt}
 import org.klesun.deep_assoc_completion.resolvers.other_plugin_integration.DeepAssocApi
-import org.klesun.deep_assoc_completion.structures.{DeepType, KeyType}
+import org.klesun.deep_assoc_completion.structures.{Build, DeepType, Key, KeyType}
 import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
 import org.klesun.deep_js_completion.helpers.{Mt => JsMt}
 import org.klesun.deep_js_completion.resolvers.other_plugin_integration.DeepAssocWrapper._
@@ -18,12 +20,7 @@ import org.klesun.lang.DeepJsLang._
 import scala.collection.JavaConverters._
 
 object DeepAssocWrapper {
-  def jsToPhp(jst: JSType, psi: PsiElement, depth: Integer = 0, occs: Set[JSType] = Set()): DeepType = {
-    val nextOccs = occs ++ Set(jst)
-    if (occs.contains(jst)) {
-      // when some of string members are of type string themselves
-      new DeepType(psi, PhpType.UNSET)
-    } else {
+  def jsToPhpUnsafe(jst: JSType, psi: PsiElement, depth: Integer = 0, nextOccs: Set[JSType] = Set()): DeepType = {
       jst match {
         case lit: JSPrimitiveLiteralType[Any] =>
           new DeepType(psi, PhpType.STRING, lit.getLiteral + "")
@@ -33,40 +30,59 @@ object DeepAssocWrapper {
         case boot: JSFunction => new DeepType(psi, PhpType.CALLABLE)
         case boot: JSDeepFunctionTypeImpl => new DeepType(psi, PhpType.CALLABLE)
         case arrt: JSArrayType =>
-          val phpt = new DeepType(psi, PhpType.ARRAY)
           val valTit: java.util.Iterator[DeepType] = JsMt.flattenTypes(arrt.getType)
-            .map(t => jsToPhp(t, psi, depth + 1, nextOccs))
-            .itr().allowEndHasNext().asJava
-          phpt.addKey(KeyType.integer(psi))
+            .map(t => jsToPhpSafe(t, psi, depth + 1, nextOccs))
+            .itr().allowEndHasNext(true).asJava
+          val keyEntry =  new Key(KeyType.integer(psi))
             .addType(() => new PhpMt(() => valTit))
-          phpt
+          new Build(psi, PhpType.ARRAY)
+            .keys(List(keyEntry).asJava)
+            .get()
         case tupt: JSTupleType =>
-          val phpt = new DeepType(psi, PhpType.ARRAY)
-          val jsValTit = tupt.getTypes.asScala.itr().flatMap(t => JsMt.flattenTypes(t))
+          val jsValTit = tupt.getTypes.asScala.itr()
+            .allowEndHasNext(true).flatMap(t => JsMt.flattenTypes(t))
           val valTit: java.util.Iterator[DeepType] = jsValTit
-            .map(t => jsToPhp(t, psi, depth + 1, nextOccs))
-            .allowEndHasNext().asJava
-          phpt.addKey(KeyType.integer(psi))
+            .map(t => jsToPhpSafe(t, psi, depth + 1, nextOccs))
+            .allowEndHasNext(true).asJava
+          val keyEntry = new Key(KeyType.integer(psi))
             .addType(() => new PhpMt(() => valTit))
-          phpt
+          new Build(psi, PhpType.ARRAY)
+            .keys(List(keyEntry).asJava)
+            .get()
         case _ =>
-          val props = JsMt.getProps(jst, psi.getProject)
+          val props = JsMt.getProps(jst, psi.getProject).allowEndHasNext(true)
           val phpt = new DeepType(psi, PhpType.ARRAY)
-          props.foreach(prop => {
+          val keyEntries = props.map(prop => {
             var kpsi = prop.psi.getOrElse(psi)
             var keyt = prop.getMemberParameterType
             var valt = prop.getMemberType
             val keyTit = JsMt.flattenTypes(keyt)
-              .map(t => jsToPhp(t, kpsi, depth + 1, nextOccs))
-              .itr().allowEndHasNext().asJava
+              .map(t => jsToPhpSafe(t, kpsi, depth + 1, nextOccs))
+              .itr().allowEndHasNext(true).asJava
             val kt = KeyType.mt(() => keyTit, kpsi)
             val valTit: java.util.Iterator[DeepType] = JsMt.flattenTypes(valt)
-              .map(t => jsToPhp(t, psi, depth + 1, nextOccs))
-              .itr().allowEndHasNext().asJava
-            phpt.addKey(kt)
+              .map(t => jsToPhpSafe(t, psi, depth + 1, nextOccs))
+              .itr().allowEndHasNext(true).asJava
+            new Key(kt)
               .addType(() => new PhpMt(() => valTit))
-          })
-          phpt
+          }).asJava
+          new Build(psi, PhpType.ARRAY)
+            .keys(() => keyEntries)
+            .get()
+    }
+  }
+
+  def jsToPhpSafe(jst: JSType, psi: PsiElement, depth: Integer = 0, occs: Set[JSType] = Set()): DeepType = {
+    if (occs.contains(jst)) {
+      // when some of string members are of type string themselves
+      new DeepType(psi, PhpType.UNSET)
+    } else try {
+      jsToPhpUnsafe(jst, psi, depth, occs ++ Set(jst))
+    } catch {
+      // if other plugin signature changes during refactoring
+      case exc: LinkageError => {
+        Console.println("deep-assoc API signatures changed - " + exc)
+        new DeepType(psi, PhpType.UNSET)
       }
     }
   }
@@ -90,11 +106,11 @@ class DeepAssocWrapper {
       val funcCtx = FuncCtx(jsSearch)
       val jsCtx = ExprCtx(funcCtx, psi, 0)
 
-      val jsTit = ArgRes(jsCtx).parseDocExpr(psi, str).itr()
+      val jsTit = ArgRes(jsCtx).parseDocExpr(psi, str).itr().allowEndHasNext(true)
       () => jsTit
         .flatMap(t => JsMt.flattenTypes(t))
-        .map((jst: JSType) => jsToPhp(jst, psi))
-        .itr().allowEndHasNext().asJava
+        .map((jst: JSType) => jsToPhpSafe(jst, psi))
+        .itr().allowEndHasNext(true).asJava
     })
 
     Console.println("end registerDeepTypeProviders()")
