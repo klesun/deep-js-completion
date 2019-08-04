@@ -10,6 +10,8 @@ import scala.collection.JavaConverters._
 import scala.collection.{AbstractIterable, GenTraversableOnce}
 import scala.reflect.{ClassTag, classTag}
 
+class ExplicitNull extends Throwable("not exception - used in normal program flow", null, false, false) {
+}
 
 /** provides some core functions needed for IDEA plugin development */
 object DeepJsLang {
@@ -167,6 +169,11 @@ object DeepJsLang {
     }
     def mem(): MemIt[T] = {
       new MemIt[T](base)
+    }
+    /** stands for "Unwrap Explicit Null Check" */
+    @throws(classOf[ExplicitNull])
+    def unl(): T = {
+      notNone(base)
     }
   }
 
@@ -343,6 +350,28 @@ object DeepJsLang {
     itr(Option(value))
   }
 
+  /**
+   * I am sick of if `opt.isEmpty() return else doStuff(opt.get())` checks - notNull() function is intended to
+   * assert not null value in one line and throw a special no-stack-trace exception to be caught by Option.map()
+   */
+  @throws(classOf[ExplicitNull])
+  def notNull[T](value: T): T = {
+    if (value == null) {
+      throw new ExplicitNull
+    } else {
+      value
+    }
+  }
+
+  @throws(classOf[ExplicitNull])
+  def notNone[T](opt: Option[T]): T = {
+    if (opt.isEmpty) {
+      throw new ExplicitNull
+    } else {
+      opt.get
+    }
+  }
+
   /** "FaLlBack" - return first non-empty iterator from the passed values */
   def frs[T](suppliers: GenTraversableOnce[T]*): It[T] = {
     itr(suppliers)
@@ -350,5 +379,17 @@ object DeepJsLang {
       .filter(v => v.hasNext)
       .lift(0).itr()
       .flatMap(tor => tor)
+  }
+
+  def getPrevSiblings(psi: PsiElement): GenTraversableOnce[PsiElement] = {
+    var prev = psi.getPrevSibling
+    new Iterator[PsiElement] {
+      override def hasNext: Boolean = prev != null
+      override def next(): PsiElement = {
+        val tmp = prev
+        prev = prev.getPrevSibling
+        tmp
+      }
+    }
   }
 }
