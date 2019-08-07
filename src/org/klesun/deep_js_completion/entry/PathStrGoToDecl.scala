@@ -75,9 +75,13 @@ object PathStrGoToDecl {
       .flatMap(lit => {
         var moduleName = Option(lit.getValue).map(_.toString).getOrElse("")
         val projRoot = Option(expr.getProject.getBasePath).getOrElse("")
-        JSLibraryManager.getInstance(expr.getProject).getLibraryMappings.getAvailableValues
-          .asScala.itr().flatMap(libModel => {
-            val libRoot = projRoot + "/" + libModel.getName.replaceAll("^[^\\/]+\\/", "")
+        val libRootRelPaths = JSLibraryManager.getInstance(expr.getProject)
+          .getLibraryMappings.getAvailableValues.asScala
+          .map(libModel => libModel.getName.replaceAll("^[^\\/]+\\/", ""))
+          .toList.++(List("node_modules"))
+
+        libRootRelPaths.flatMap(libRootRelPath => {
+            val libRoot = projRoot + "/" + libRootRelPath
             val modulePath = libRoot + "/" + moduleName
             if (moduleName.contains("/")) {
               // some specific file inside the lib is referenced

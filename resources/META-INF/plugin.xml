@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.08.04.001</version>
+  <version>2019.08.07.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -57,8 +57,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Provide path completion when you concat a string with __dirname</li>
-  <li>Make require() path completion work with Capital Letters</li>
+  <li>Always try resolving {projectRoot}/node_modules as library root even when it is not marked as one (judging by discussions in the net it's not marked on purpose, since normal indexing would take forever)</li>
     ]]>
   </change-notes>
 
@@ -76,6 +75,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     <gotoDeclarationHandler implementation="org.klesun.deep_js_completion.completion_providers.PropNamePvdr"/>
     <completion.confidence language="JavaScript" implementationClass="org.klesun.deep_js_completion.entry.DeepJsCompletionConfidence" order="first"/>
     <intentionAction>
+      <descriptionDirectoryName>AddRequireByVarNameInt</descriptionDirectoryName>
       <category>JavaScript/Module import</category>
       <className>org.klesun.deep_js_completion.entry.AddRequireByVarNameInt</className>
     </intentionAction>
