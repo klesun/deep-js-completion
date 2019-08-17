@@ -306,3 +306,14 @@ exports.providePromiseAll = () => {
     //calledPromises[0].then(a => a.);
     Promise.all(calledPromises).then(a => a[0].);
 };
+
+exports.provideEvery = () => {
+    let comments = noBuiltIn([
+        {text: 'OMG', author: 'vasya'},
+        {text: 'lol', author: 'misha'},
+    ]);
+    comments.every(rec => {
+        // should suggest: text, author
+        rec.t;
+    });
+};

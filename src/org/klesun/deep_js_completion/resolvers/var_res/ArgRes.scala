@@ -40,106 +40,6 @@ object ArgRes {
     result
   }
 
-  // based on https://expressjs.com/en/api.html#req, though I witnessed some of the described fields (protocol, cookies, signedCookies, fresh, stale) being absent...
-  private def makeExpressRqType(): GenTraversableOnce[JSType] = {
-    // probably would be good to use the definition in node_modules/express/lib/request.js one day...
-    val extension = Mkt.assoc(List(
-      ("body", () => Mkt.assoc(List(
-        ("start", () => Mkt.str("3")),
-        ("length", () => Mkt.str("25")),
-        ("order", () => Mkt.str("dt desc")),
-      ))),
-      ("app", () => Some(JSDeepModuleTypeImpl("express", EInstType.Called))),
-      ("baseUrl", () => Mkt.str("")),
-      ("hostname", () => Mkt.str("example.com:3000")),
-      ("ip", () => Mkt.str("127.0.0.1")),
-      ("ips", () => Mkt.arr(Mkt.str("client", "proxy1", "proxy2"))),
-      ("method", () => Mkt.str("GET", "POST", "OPTIONS", "PUT", "DELETE", "CONNECT", "TRACE", "PATCH")),
-      ("originalUrl", () => Mkt.str("/search?q=something")),
-      ("params", () => Mkt.assoc(List(
-        ("dir1", () => Mkt.str("user")),
-        ("dir2", () => Mkt.str("add")),
-        ("file", () => Mkt.str("role")),
-      ))),
-      ("path", () => Mkt.str("/user/add/role")),
-      ("protocol", () => Mkt.str("http", "https", "")),
-      ("query", () => Mkt.assoc(List(
-        ("order", () => Mkt.str("desc")),
-        ("color", () => Mkt.str("blue")),
-        ("type", () => Mkt.str("converse")),
-      ))),
-      ("route", () => Mkt.assoc(List(
-        ("path", () => Mkt.str("/user/:id?")),
-        ("stack", () => Mkt.arr(Mkt.assoc(List(
-          ("handle", () => Mkt.func()),
-          ("name", () => Mkt.str("userIdHandler")),
-          ("params", () => Mkt.any()),
-          ("path", () => Mkt.any()),
-          ("keys", () => Mkt.arr(List())),
-          ("regexp", () => Mkt.regexp()),
-          ("method", () => Mkt.str("get", "post")),
-        )))),
-        ("methods", () => Mkt.assoc(List(
-          ("get", () => Mkt.bool()),
-          ("post", () => Mkt.bool()),
-        ))),
-      ))),
-      // did not see following in the actual output, even though they are documented...
-      ("secure", () => Mkt.bool()),
-      ("cookies", () => Mkt.assoc(List(
-        ("PHPSESSID", () => Mkt.str("qwe213zxcasd")),
-        ("CONSENT", () => Mkt.str("YES+US.en+20150628-20-0")),
-      ))),
-      ("signedCookies", () => Mkt.assoc(List(
-        ("user", () => Mkt.str("tobi")),
-      ))),
-      ("fresh", () => Mkt.bool()),
-      ("stale", () => Mkt.bool()),
-      ("subdomains", () => Mkt.arr(Mkt.str("ferrets", "tobi"))),
-      ("xhr", () => Mkt.bool()),
-      ("accepts", () => Mkt.func()),
-      ("acceptsCharsets", () => Mkt.func()),
-      ("acceptsEncodings", () => Mkt.func()),
-      ("acceptsLanguages", () => Mkt.func()),
-      ("get", () => Mkt.func()),
-      ("is", () => Mkt.func()),
-      ("range", () => Mkt.func()),
-    ))
-    extension ++ Mkt.inst("http.IncomingMessage")
-  }
-
-  private def makeExpressRsType(): GenTraversableOnce[JSType] = {
-    // probably would be good to use the definition in node_modules/express/lib/response.js one day...
-    val extension = Mkt.assoc(List(
-      ("send", () => Mkt.func()),
-      ("sendStatus", () => Mkt.func()),
-      ("setHeader", () => Mkt.func()), // not documented for some reason
-      ("append", () => Mkt.func()),
-      ("attachment", () => Mkt.func()),
-      ("app", () => Some(JSDeepModuleTypeImpl("express", EInstType.Called))),
-      ("headersSent", () => Mkt.bool()),
-      ("locals", () => Mkt.assoc(List())),
-      ("cookie", () => Mkt.func()),
-      ("clearCookie", () => Mkt.func()),
-      ("download", () => Mkt.func()),
-      ("end", () => Mkt.func()),
-      ("format", () => Mkt.func()),
-      ("get", () => Mkt.func()),
-      ("json", () => Mkt.func()),
-      ("jsonp", () => Mkt.func()),
-      ("links", () => Mkt.func()),
-      ("location", () => Mkt.func()),
-      ("redirect", () => Mkt.func()),
-      ("render", () => Mkt.func()),
-      ("sendFile", () => Mkt.func()),
-      ("set", () => Mkt.func()),
-      ("status", () => Mkt.func()),
-      ("type", () => Mkt.func()),
-      ("vary", () => Mkt.func()),
-    ))
-    extension ++ Mkt.inst("http.ServerResponse")
-  }
-
   private def resolveTsFuncArgArg(objt: Option[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, inlineFuncArgOrder: Int, argOrder: Int): GenTraversableOnce[JSType] = {
     new GenericRes(ctx).resolveFuncArg(objt.mem(), ctx, inlineFuncArgOrder, tsFuncDecl)
       .itr.flatMap(cast[JSFunctionTypeImpl](_))
@@ -222,25 +122,6 @@ case class ArgRes(ctx: IExprCtx) {
                 .filter(expr => List("reduce").contains(ref.getReferencedName))
                 .flatMap(expr => ctx.findExprType(expr))
                 .flatMap(arrt => ctx.mt().getKey(arrt, None)).itr
-                ++
-              nit(ref.getQualifier)
-                // func arg order does not matter, it may be 0 or 1, maybe something else as well
-                .filter(expr => List("use", "get", "post").contains(ref.getReferencedName))
-                .flatMap(expr => ctx.findExprType(expr)).itr
-                .flatMap(t => Mt.flattenTypes(t))
-                .flatMap(cast[JSDeepModuleTypeImpl](_))
-                .filter(modt => ("express" equals modt.name) && (modt.instType equals EInstType.Called))
-                .flatMap(arrt => {
-                  if (argOrder == 0) {
-                    // request obj
-                    makeExpressRqType()
-                  } else if (argOrder == 1) {
-                    // response obj
-                    makeExpressRsType()
-                  } else {
-                    None
-                  }
-                }: GenTraversableOnce[JSType])
                 ++
                 nit(ref.getQualifier)
                   .filter(expr => argOrder == 0)
