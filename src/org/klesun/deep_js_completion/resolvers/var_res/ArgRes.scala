@@ -100,24 +100,12 @@ case class ArgRes(ctx: IExprCtx) {
                 .flatMap(obj => ctx.findExprType(obj)).mem()
               val outerCallCtx = ctx.subCtxDirect(call)
 
-              (getFuncParam(inlineFuncArgOrder, ref).flatMap(rec => {
+              getFuncParam(inlineFuncArgOrder, ref).flatMap(rec => {
                 val privateTit = resolvePrivateFuncUsages(rec.par, ctx.subCtxEmpty(), argOrder)
                 val genTit = cast[TypeScriptFunctionSignatureImpl](rec.func).itr()
                   .flatMap(tsFunc => resolveTsFuncArgArg(objt, tsFunc, outerCallCtx, rec.par, argOrder))
                 cnc(privateTit, genTit)
               })
-
-              // following built-in functions are hardcoded and probably
-              // are not needed once generic parsing works properly...
-              // should check and remove each of them one by one from here
-
-                ++
-                nit(ref.getQualifier)
-                  .filter(expr => argOrder == 0)
-                  .filter(expr => List("then").contains(ref.getReferencedName))
-                  .flatMap(expr => ctx.findExprType(expr))
-                  .flatMap(promiset => Mt.unwrapPromise(promiset))
-              )
             })
           )
         )
