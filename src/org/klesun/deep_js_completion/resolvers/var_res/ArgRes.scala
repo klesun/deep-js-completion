@@ -111,18 +111,6 @@ case class ArgRes(ctx: IExprCtx) {
               // are not needed once generic parsing works properly...
               // should check and remove each of them one by one from here
 
-              ++
-              nit(ref.getQualifier)
-                .filter(expr => argOrder == 0)
-                .filter(expr => List("forEach", "map", "filter", "sort").contains(ref.getReferencedName))
-                .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => ctx.mt().getKey(arrt, None)).itr
-                ++
-              nit(ref.getQualifier)
-                .filter(expr => argOrder == 1)
-                .filter(expr => List("reduce").contains(ref.getReferencedName))
-                .flatMap(expr => ctx.findExprType(expr))
-                .flatMap(arrt => ctx.mt().getKey(arrt, None)).itr
                 ++
                 nit(ref.getQualifier)
                   .filter(expr => argOrder == 0)

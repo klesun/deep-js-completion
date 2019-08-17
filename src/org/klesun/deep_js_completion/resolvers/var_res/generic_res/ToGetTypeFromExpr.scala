@@ -56,7 +56,7 @@ case class ToGetTypeFromExpr(
       sints.getTypeArguments.headOption.itr
         .flatMap(eldec => apply(eldec, getSubType))
     } else {
-      Console.println("Unsupported generic type expr arg class - " + fqn + " - " + sints)
+      //Console.println("Unsupported generic type expr arg class - " + fqn + " - " + sints)
       None
     }
   }
