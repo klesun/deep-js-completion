@@ -10,6 +10,9 @@ const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeu
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
 const CmdLogs = require('../unv/grect/backend/Repositories/CmdLogs.js');
 
+
+const _ = require('lodash');
+
 class OfficeCompletion extends Component
 {
     constructor () {
@@ -318,4 +321,17 @@ exports.provideArgFromTsGeneric = () => {
         fromEvery = rec;
     });
     return fromEvery;
+};
+
+exports.provideLodash = () => {
+    let noBuildIn = a => a;
+    let projects = noBuildIn([
+        {name: 'GDS Direct', lead: 'klesun'},
+        {name: 'CMS', lead: 'nosov'},
+    ]);
+    let mapped = _.map(projects, p => {
+        p.n;
+        return {...p, data: Math.random()};
+    });
+    mapped[0].data;
 };
