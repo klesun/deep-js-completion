@@ -1,7 +1,7 @@
 package org.klesun.deep_js_completion.resolvers.var_res
 
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
+import com.intellij.lang.javascript.psi.ecma6.impl.{TypeScriptArrayTypeImpl, TypeScriptTupleTypeImpl}
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.{JSParameter, JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
@@ -93,6 +93,22 @@ case class GenericRes(ctx: IExprCtx) {
           val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
           sints.getTypeArguments.headOption.itr
             .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
+        } else if ("ArrayIterator" equals fqn) {
+          // lodash; possibly should resolve these custom lib types rather than hardcode them...
+          // getArgt() holds the type of the passed function
+          val getArgMit = () => getArgt().mem()
+          val getArgType = () => {
+            // should probably store argument declaration types in deep js function as well... but not sure
+            None
+            //getArgMit().itr.flatMap(t => Mt.getArgType(t, ctx, 0))
+          }: GenTraversableOnce[JSType]
+          val getRetType = () => getArgMit().itr.flatMap(t => Mt.getReturnType(t, ctx))
+          cnc(
+            sints.getTypeArguments.lift(0).itr()
+              .flatMap(argdec => getGenericTypeFromArg(argdec, getArgType, generic)),
+            sints.getTypeArguments.lift(1).itr()
+              .flatMap(retdec => getGenericTypeFromArg(retdec, getRetType, generic)),
+          )
         } else if (
           ("PromiseLike" equals fqn) ||
           ("Promise" equals fqn) ||
@@ -105,6 +121,10 @@ case class GenericRes(ctx: IExprCtx) {
           //Console.println("Unsupported generic type expr arg class - " + fqn + " - " + argTypePsi)
           None
         }
+      case arrts: TypeScriptArrayTypeImpl =>
+        val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
+        Option(arrts.getType).itr
+          .flatMap(eldec => getGenericTypeFromArg(eldec, getSubType, generic))
       case tupts: TypeScriptTupleTypeImpl =>
         val getSubType = (order: Int) => {
           val keyt = new JSStringLiteralTypeImpl(order + "", true, JSTypeSource.EMPTY)
