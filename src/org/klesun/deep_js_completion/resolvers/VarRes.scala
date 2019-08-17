@@ -186,10 +186,14 @@ case class VarRes(ctx: IExprCtx) {
           .map(t => Mt.wrapPromise(t))
       }, Some(ctx.func()))
     })
+    val wsTit = Option(func.getReturnType).map(rett => {
+      new JSFunctionTypeImpl(JSTypeSource.EMPTY,
+        new util.ArrayList[JSParameterTypeDecorator](), rett)
+    })
     if (shouldTypedefBeIgnored(func)) {
       None
     } else {
-      cnc(docFuncTit, inferFuncTit)
+      cnc(docFuncTit, inferFuncTit, wsTit)
     }
   }
 

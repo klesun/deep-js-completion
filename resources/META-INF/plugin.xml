@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.08.07.001</version>
+  <version>2019.08.17.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -23,6 +23,7 @@ For example, arguments of functions like <code>map</code>, <code>filter</code>, 
 <code>sort</code> and functions defined by user won’t get completion.
 </p>
 <p>
+
 So, that’s why I’m writing this plugin - to make it possible to code in js as comfortable as you
 would in some static-typed language with the help of type inference and doc-comments (<a href="https://github.com/klesun/deep-js-completion/issues/10">format</a>).</p>
 <p>
