@@ -17,8 +17,8 @@ import scala.collection.GenTraversableOnce
   */
 case class JSDeepFunctionTypeImpl(
   val funcPsi: JSFunction, // to distinct what args belong to _this context_ during resolution
-  val closureCtx: IFuncCtx,
   val returnTypeGetter: IExprCtx => GenTraversableOnce[JSType],
+  val closureCtx: Option[IFuncCtx] = None,
 ) extends JSTypeBaseImpl(JSTypeSource.EMPTY) {
 
   override def copyTypeHierarchy(function: util.Function[JSType, JSType]): JSType = this
@@ -47,6 +47,8 @@ case class JSDeepFunctionTypeImpl(
 //  }
 
   def getReturnType(ctx: IExprCtx): GenTraversableOnce[JSType] = {
-    returnTypeGetter(ctx.withClosure(funcPsi, closureCtx))
+    val finalCtx = closureCtx.map(closureCtx => ctx.withClosure(funcPsi, closureCtx))
+      .getOrElse(ctx)
+    returnTypeGetter(finalCtx)
   }
 }

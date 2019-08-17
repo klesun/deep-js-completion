@@ -307,13 +307,15 @@ exports.providePromiseAll = () => {
     Promise.all(calledPromises).then(a => a[0].);
 };
 
-exports.provideEvery = () => {
+exports.provideArgFromTsGeneric = () => {
     let comments = noBuiltIn([
         {text: 'OMG', author: 'vasya'},
         {text: 'lol', author: 'misha'},
     ]);
+    let fromEvery = null;
     comments.every(rec => {
         // should suggest: text, author
-        rec.t;
+        fromEvery = rec;
     });
+    return fromEvery;
 };

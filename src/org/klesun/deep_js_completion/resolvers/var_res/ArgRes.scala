@@ -40,8 +40,8 @@ object ArgRes {
     result
   }
 
-  private def resolveTsFuncArgArg(objt: Option[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, inlineFuncArgOrder: Int, argOrder: Int): GenTraversableOnce[JSType] = {
-    new GenericRes(ctx).resolveFuncArg(objt.mem(), ctx, inlineFuncArgOrder, tsFuncDecl)
+  private def resolveTsFuncArgArg(objt: MemIt[JSType], tsFuncDecl: TypeScriptFunctionSignatureImpl, ctx: IExprCtx, par: JSParameter, argOrder: Int): GenTraversableOnce[JSType] = {
+    new GenericRes(ctx).resolveFuncArg(objt, ctx, par, tsFuncDecl)
       .itr.flatMap(cast[JSFunctionTypeImpl](_))
       .flatMap(funct => funct.getParameters.asScala.lift(argOrder))
       .flatMap(arg => Option(arg.getType))
@@ -50,10 +50,6 @@ object ArgRes {
   private def findReferencedFunc(funcVarDecl: PsiElement): Option[JSFunction] = {
     // TODO: add circular references check... and implementation
     funcVarDecl match {
-      // TODO: test and uncomment
-      //case tsFuncDecl: TypeScriptFunctionSignatureImpl => {
-      //  resolveTsFuncArgArg(objt, tsFuncDecl, outerCallCtx, inlineFuncArgOrder, argOrder)
-      //}
       case varDef: JSDefinitionExpression =>
         Option(varDef.getParent)
           .flatMap(cast[JSAssignmentExpression](_))
@@ -76,7 +72,7 @@ object ArgRes {
 
 case class ArgRes(ctx: IExprCtx) {
 
-  private def getFuncParam(paramOrder: Int, ref: JSReferenceExpressionImpl): It[JSParameter] = {
+  private def getFuncParam(paramOrder: Int, ref: JSReferenceExpressionImpl) = {
     val wsFuncDefs = nit(ref.resolve())
       .flatMap(funcVarDecl => findReferencedFunc(funcVarDecl))
 
@@ -86,7 +82,8 @@ case class ArgRes(ctx: IExprCtx) {
 
     cnc(wsFuncDefs, deepFuncDefs)
       .flatMap(callerFunc => callerFunc.getParameters.lift(paramOrder)
-        .flatMap(callerArg => cast[JSParameter](callerArg)))
+        .flatMap(callerArg => cast[JSParameter](callerArg))
+        .map(parArg => new {val par = parArg; val func = callerFunc}))
   }
 
   private def getInlineFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
@@ -100,11 +97,15 @@ case class ArgRes(ctx: IExprCtx) {
             .flatMap(cast[JSReferenceExpressionImpl](_))
             .flatMap(ref => {
               val objt = nit(ref.getQualifier)
-                .flatMap(obj => ctx.findExprType(obj))
+                .flatMap(obj => ctx.findExprType(obj)).mem()
               val outerCallCtx = ctx.subCtxDirect(call)
 
-              (getFuncParam(inlineFuncArgOrder, ref).flatMap(par =>
-                resolvePrivateFuncUsages(par, ctx.subCtxEmpty(), argOrder))
+              (getFuncParam(inlineFuncArgOrder, ref).flatMap(rec => {
+                val privateTit = resolvePrivateFuncUsages(rec.par, ctx.subCtxEmpty(), argOrder)
+                val genTit = cast[TypeScriptFunctionSignatureImpl](rec.func).itr()
+                  .flatMap(tsFunc => resolveTsFuncArgArg(objt, tsFunc, outerCallCtx, rec.par, argOrder))
+                cnc(privateTit, genTit)
+              })
 
               // following built-in functions are hardcoded and probably
               // are not needed once generic parsing works properly...

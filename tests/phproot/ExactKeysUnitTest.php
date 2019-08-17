@@ -176,7 +176,7 @@ class ExactKeysUnitTest
         $apoPnr['passengers']['passengerList'][0][''];
         return [
             [$apoPnr['passengers'], ['passengerList', 'pnrIsCurrentlyInUse', 'reservationInfo', 'shopInfo', 'agentName']],
-            [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber', 'success', 'parsedNumber', 'rawNumber', 'joinedFirstNames', 'ageGroup', 'age', 'dob', 'ptc', 'carrierText']],
+            [$apoPnr['passengers']['passengerList'][0], ['lastName', 'firstName', 'nameNumber', 'success', 'parsedNumber', 'rawNumber', 'joinedFirstNames', 'ageGroup', 'age', 'dob', 'ptc', 'carrierText', 'remark']],
         ];
     }
 
@@ -206,6 +206,15 @@ class ExactKeysUnitTest
         $arg[''];
         return [
             [$arg, ['noPricingPart']],
+        ];
+    }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideArgFromTsGeneric() */
+    public function provideArgFromTsGeneric($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['author', 'text']],
         ];
     }
 

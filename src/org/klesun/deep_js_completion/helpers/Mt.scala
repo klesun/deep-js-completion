@@ -115,14 +115,14 @@ object Mt {
     str.matches("\\d*\\.?\\d+")
   }
 
-  private def getKey(arrT: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
+  private def getKey(objt: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
     val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
     val litVals = litValsOpt.toList.flatten
     val canBeNum = litVals.isEmpty || litVals
       .exists(v => "".equals(v) || isNumeric(v))
 
-    val elts = Mt.flattenTypes(arrT).flatMap {
+    val elts = Mt.flattenTypes(objt).flatMap {
       case tupT: JSTupleTypeImpl if canBeNum =>
         val arrFallback = mergeTypes(tupT.getTypes.asScala.itr)
         val tupResultOpt = litValsOpt.map(litVals => {
@@ -136,6 +136,7 @@ object Mt {
       case objT: JSRecordType => getRecordKey(objT, litVals)
       case typedef: JSType =>
         // usually this is the class names used in jsdoc like Promise<String>
+        // but keep in mind that everything that did not match above will get here
         if (proj.nonEmpty) {
           val mems = getFlatMems(typedef, proj.get)
           getKeyFromMems(mems, litVals)
@@ -175,8 +176,8 @@ object Mt {
     mems.itr().map {
       case sig: TypeScriptFunctionSignatureImpl =>
         // it implements both PsiElement and TypeMember interfaces at same time
-        Mt.mkProp(sig.getMemberName, Option(sig.getType), Some(sig))
-      case rest => rest
+        val deepFunc = JSDeepFunctionTypeImpl(sig, ctx => Option(sig.getType))
+        Mt.mkProp(sig.getMemberName, Some(deepFunc), Some(sig))
       case rest => rest
     }
   }

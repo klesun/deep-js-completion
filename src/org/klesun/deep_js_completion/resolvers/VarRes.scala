@@ -179,12 +179,12 @@ case class VarRes(ctx: IExprCtx) {
       .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
         new util.ArrayList[JSParameterTypeDecorator](), rett))
     val inferFuncTit = getReturns(func).map(r => {
-      JSDeepFunctionTypeImpl(func, ctx.func(), callCtx => {
+      JSDeepFunctionTypeImpl(func, callCtx => {
         val rett = callCtx.findExprType(r)
         if (!isAsync) rett else rett.itr
           .flatMap(t => Mt.unwrapPromise(t))
           .map(t => Mt.wrapPromise(t))
-      })
+      }, Some(ctx.func()))
     })
     if (shouldTypedefBeIgnored(func)) {
       None
@@ -222,7 +222,7 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
-  private def getDeclarations(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
+  private def getDeclarationsFromWs(ref: JSReferenceExpression): GenTraversableOnce[PsiElement] = {
     val isProp = ref.getQualifier != null
     // it would be nice to always use es2018 instead of es2015 somehow
     val psis = Option(ref.resolve()).itr
@@ -278,7 +278,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(file => findVarAt(file, varName))
           .flatMap(vari => resolveMainDeclVar(vari)))
       ,
-      getDeclarations(ref).itr()
+      getDeclarationsFromWs(ref).itr()
         .flatMap(psi => resolveFromMainDecl(psi, qualMem))
       ,
       findRefUsages(ref).itr()

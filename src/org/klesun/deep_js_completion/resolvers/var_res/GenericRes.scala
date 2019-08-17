@@ -3,7 +3,7 @@ package org.klesun.deep_js_completion.resolvers.var_res
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
+import com.intellij.lang.javascript.psi.{JSParameter, JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.GenericRes.parseTypePsi
@@ -155,9 +155,8 @@ case class GenericRes(ctx: IExprCtx) {
     parseTypePsi(caretTypeExpr, genericsMut)
   }
 
-  def resolveFuncArg(thist: MemIt[JSType], ctx: IExprCtx, argOrder: Int, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
-    val result = tsFunc.getParameters.lift(argOrder)
-      .flatMap(argPsi => Option(argPsi.getTypeElement))
+  def resolveFuncArg(thist: MemIt[JSType], ctx: IExprCtx, argPsi: JSParameter, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {
+    val result = Option(argPsi.getTypeElement)
       .flatMap(cast[TypeScriptType](_)).itr
       .flatMap(caretTypeDef => resolveTypeExpr(thist, ctx, caretTypeDef, tsFunc))
     result
@@ -166,8 +165,8 @@ case class GenericRes(ctx: IExprCtx) {
   def resolveFunc(tsFunc: TypeScriptFunctionSignature, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
     Option(tsFunc.getReturnTypeElement)
       .map(caretTypeDef =>
-        JSDeepFunctionTypeImpl(tsFunc, ctx.subCtxEmpty().func(), callCtx => {
+        JSDeepFunctionTypeImpl(tsFunc, callCtx => {
           resolveTypeExpr(qualMem, callCtx, caretTypeDef, tsFunc)
-        }))
+        }, Some(ctx.subCtxEmpty().func())))
   }
 }
