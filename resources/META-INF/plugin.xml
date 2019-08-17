@@ -57,7 +57,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Always try resolving {projectRoot}/node_modules as library root even when it is not marked as one (judging by discussions in the net it's not marked on purpose, since normal indexing would take forever)</li>
+  <li>Resolve arg in an anonymous function passed to somewhere with generics using generics. (Instead of hardcoded logic for map/filter/forEach/reduce/etc...)</li>
     ]]>
   </change-notes>
 
