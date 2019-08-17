@@ -14,14 +14,12 @@ import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import org.klesun.lang.DeepJsLang._
 
-case class ToGetTypeOfGeneric(
+case class ToGetTypeFromExpr(
   ctx: IExprCtx,
   generic: String,
+  /** not sure it should be passed here... */
   genericsSrc: collection.mutable.Map[String, () => MemIt[JSType]],
 ) {
-  val generics = collection.mutable.Map[String, () => MemIt[JSType]]() ++= genericsSrc
-  generics.remove(generic)
-
   def applyToSingleType(
     sints: TypeScriptSingleType,
     getArgt: () => GenTraversableOnce[JSType],
@@ -38,7 +36,7 @@ case class ToGetTypeOfGeneric(
       // getArgt() holds the type of the passed function
       val getArgMit = () => getArgt().mem()
       val getArgType = () => {
-        // should probably store argument declaration types in deep js function as well... but not sure
+        // should probably store argument declaration types in deep js function as well... but not sure, no relevant cases
         None
         //getArgMit().itr.flatMap(t => Mt.getArgType(t, ctx, 0))
       }: GenTraversableOnce[JSType]
@@ -58,7 +56,7 @@ case class ToGetTypeOfGeneric(
       sints.getTypeArguments.headOption.itr
         .flatMap(eldec => apply(eldec, getSubType))
     } else {
-      //Console.println("Unsupported generic type expr arg class - " + fqn + " - " + sints)
+      Console.println("Unsupported generic type expr arg class - " + fqn + " - " + sints)
       None
     }
   }

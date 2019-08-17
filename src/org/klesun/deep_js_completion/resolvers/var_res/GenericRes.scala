@@ -4,7 +4,7 @@ import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.{JSParameter, JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.var_res.generic_res.{ToGetTypeOfGeneric, ToGetTypeOfResult}
+import org.klesun.deep_js_completion.resolvers.var_res.generic_res.{ToGetTypeFromExpr, ToGetTypeOfExpr}
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang.cast
 
@@ -43,7 +43,7 @@ case class GenericRes(ctx: IExprCtx)
         args.zipWithIndex.flatMap({case (argPsi, i) => nit(argPsi.getTypeElement)
           .flatMap(cast[TypeScriptType](_))
           .filter(argTypeDef => !argTypeDef.equals(caretTypeExpr))
-          .itr.flatMap(tst => ToGetTypeOfGeneric(ctx, generic, genericsMut).apply(
+          .itr.flatMap(tst => ToGetTypeFromExpr(ctx, generic, genericsMut).apply(
             tst, () => callCtx.func().getArg(i))
           )}).mem()
       }
@@ -58,7 +58,7 @@ case class GenericRes(ctx: IExprCtx)
       }
     }})
 
-    ToGetTypeOfResult(genericsMut).apply(caretTypeExpr)
+    ToGetTypeOfExpr(genericsMut).apply(caretTypeExpr)
   }
 
   def resolveFuncArg(thist: MemIt[JSType], ctx: IExprCtx, argPsi: JSParameter, tsFunc: TypeScriptFunctionSignature): GenTraversableOnce[JSType] = {

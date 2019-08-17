@@ -1,8 +1,11 @@
 package org.klesun.deep_js_completion.resolvers.var_res.generic_res
 
+import com.intellij.lang.javascript.ecmascript6.TypeScriptQualifiedNameResolver
 import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.ecma6._
+import com.intellij.lang.javascript.psi.resolve.{JSClassResolver, JSResolveUtil}
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.psi.search.EverythingGlobalScope
 import org.klesun.deep_js_completion.structures
 import org.klesun.deep_js_completion.structures.JSDeepMultiType
 import org.klesun.lang.DeepJsLang.{MemIt, cast, nit}
@@ -11,12 +14,18 @@ import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import org.klesun.lang.DeepJsLang._
 
-case class ToGetTypeOfResult(
+case class ToGetTypeOfExpr(
   generics: collection.mutable.Map[String, () => MemIt[JSType]],
 ) {
+  def applyToFuncData(argtypes: List[JSParameterTypeDecorator], rettypes: GenTraversableOnce[JSType]): GenTraversableOnce[JSType] = {
+    val rett: JSType = JSDeepMultiType(rettypes.mem())
+    val src: JSTypeSource = JSTypeSource.EMPTY
+    val funct = new JSFunctionTypeImpl(src, argtypes.asJava, rett)
+    Some(funct)
+  }
+
   def applyToFunc(functs: TypeScriptFunctionType): GenTraversableOnce[JSType] = {
     val rettypes = apply(functs.getReturnTypeElement)
-    val rett: JSType = JSDeepMultiType(rettypes.mem())
     val argtypes = functs.getParameters.map(arg => {
       val argtypes = Option(arg.getTypeElement)
         .flatMap(cast[TypeScriptType](_)).itr
@@ -24,11 +33,7 @@ case class ToGetTypeOfResult(
       val argt = JSDeepMultiType(argtypes.mem())
       new JSParameterTypeDecoratorImpl(argt, arg.isOptional, arg.isRest, true)
     })
-    val src: JSTypeSource = JSTypeSource.EMPTY
-    val argts: java.util.List[JSParameterTypeDecorator] = argtypes.toList
-      .map(a => a.asInstanceOf[JSParameterTypeDecorator]).asJava
-    val funct = new JSFunctionTypeImpl(src, argts, rett)
-    Some(funct)
+    applyToFuncData(argtypes.toList, rettypes)
   }
 
   /**
@@ -55,6 +60,16 @@ case class ToGetTypeOfResult(
         val fqn = sints.getQualifiedTypeName
         if (generics.contains(fqn)) {
           generics(fqn).apply()
+        } else if (fqn equals "ArrayIterator") {
+          // I tried resolving it by _.ArrayIterator FQN, but lodash uses pretty unique namespace
+          // declaration "../index" syntax which is apparently not resolved correctly by IDEA
+          // should probably resolve the FQN in normal libraries
+          val argtypes = sints.getTypeArguments.lift(0).map(gena => {
+            val argt = JSDeepMultiType(apply(gena).mem())
+            new JSParameterTypeDecoratorImpl(argt, false, false, true)
+          }).toList
+          val retts = sints.getTypeArguments.lift(1).itr.flatMap(apply)
+          applyToFuncData(argtypes, retts)
         } else {
           val clsType = JSTypeUtils.createType(sints.getQualifiedTypeName, JSTypeSource.EMPTY)
           val clsGenerics: java.util.List[JSType] = sints.getTypeArguments.map(
