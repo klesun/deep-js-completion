@@ -131,7 +131,9 @@ class SearchCtx(
         }
 
         expressionsResolved += 1
-        val fromCache = takeFromCache(exprCtx, expr)
+        // I dunno why key resolution affects the completion
+        // without this check, possibly some iterator is reused twice...
+        val fromCache = if (exprCtx.doNotCache) None else takeFromCache(exprCtx, expr)
         if (fromCache.nonEmpty) {
           fromCache.get
         } else if (exprCtx.depth > maxDepth) {
