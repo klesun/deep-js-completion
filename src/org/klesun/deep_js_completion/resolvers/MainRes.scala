@@ -102,7 +102,7 @@ object MainRes {
             val result = ctx.mt().getKey(arrT, keyTOpt)
             result
           })
-      case func: JSFunctionExpression => VarRes(ctx).resolveFunc(func)
+      case func: JSFunctionExpression => FuncRes(ctx).resolve(func)
       case arr: JSArrayLiteralExpressionImpl =>
         val typeTuple = arr.getExpressions
           .flatMap {

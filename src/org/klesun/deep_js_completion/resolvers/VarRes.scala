@@ -154,49 +154,6 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
-  private def shouldTypedefBeIgnored(tsFunc: JSFunction): Boolean = {
-    // es2015 d.ts has some weird return type - Promise<TResult1 | TResult2>,
-    // it results in irrelevant options, so I'm overriding it here
-    ("then" equals tsFunc.getName) &&
-      List("lib.es2015.promise.d.ts", "lib.es5.d.ts").contains(tsFunc.getContainingFile.getName)
-  }
-
-  def resolveFunc(func: JSFunction): GenTraversableOnce[JSType] = {
-    val isAsync = func.getChildren.flatMap(cast[JSAttributeList](_))
-      .exists(lst => lst.hasModifier(ModifierType.ASYNC))
-    val docFuncTit = nit(JSDocumentationUtils.findDocComment(func))
-      .flatMap(cast[JSDocCommentImpl](_))
-      .flatMap(tag => tag.getTags)
-      .filter(tag => "return".equals(tag.getName))
-      .flatMap(tag => Option(tag.getValue))
-      .map(tagVal => tagVal.getText)
-      .flatMap(typeText => {
-        // the parser does not seem to like {Promise<number>}, it only accepts Promise<number>
-        val plain = new JSTypeParser(typeText, JSTypeSource.EMPTY).parseParameterType(true)
-        val noBrac = new JSTypeParser(substr(typeText, 1, -1), JSTypeSource.EMPTY).parseParameterType(true)
-        cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getType))
-      })
-      .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
-        new util.ArrayList[JSParameterTypeDecorator](), rett))
-    val inferFuncTit = getReturns(func).map(r => {
-      JSDeepFunctionTypeImpl(func, callCtx => {
-        val rett = callCtx.findExprType(r)
-        if (!isAsync) rett else rett.itr
-          .flatMap(t => Mt.unwrapPromise(t))
-          .map(t => Mt.wrapPromise(t))
-      }, Some(ctx.func()))
-    })
-    val wsTit = Option(func.getReturnType).map(rett => {
-      new JSFunctionTypeImpl(JSTypeSource.EMPTY,
-        new util.ArrayList[JSParameterTypeDecorator](), rett)
-    })
-    if (shouldTypedefBeIgnored(func)) {
-      None
-    } else {
-      cnc(docFuncTit, inferFuncTit, wsTit)
-    }
-  }
-
   // may be defined in a different file unlike resolveAssignment()
   private def resolveFromMainDecl(psi: PsiElement, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
     psi match {
@@ -207,13 +164,13 @@ case class VarRes(ctx: IExprCtx) {
       case prop: JSDefinitionExpression => nit(prop.getExpression)
         .flatMap(expr => ctx.findExprType(expr))
       case tsFunc: TypeScriptFunctionSignature => {
-        if (shouldTypedefBeIgnored(tsFunc)) {
+        if (FuncRes.shouldTypedefBeIgnored(tsFunc)) {
           None
         } else {
           GenericRes(ctx).resolveFunc(tsFunc, qualMem)
         }
       }
-      case func: JSFunction => resolveFunc(func)
+      case func: JSFunction => FuncRes(ctx).resolve(func)
       case cls: JSClass[StubElement[_]] =>
         cast[JSClass[StubElement[_]]](cls)
           .map(cls => {

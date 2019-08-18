@@ -11,7 +11,7 @@ import com.intellij.util
 import com.intellij.util.ProcessingContext
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.VarRes
+import org.klesun.deep_js_completion.resolvers.{FuncRes, VarRes}
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -41,7 +41,7 @@ case class JSDeepClassType(
           .exists(lst => lst.hasModifier(ModifierType.STATIC))
         isStatic equals static
       })
-      .map(m => Mt.mkProp(m.getName, VarRes(declCtx).resolveFunc(m), Some(m)))
+      .map(m => Mt.mkProp(m.getName, FuncRes(declCtx).resolve(m), Some(m)))
   }
 
   def getNewInstType(newCtx: IExprCtx): GenTraversableOnce[JSType] = {
