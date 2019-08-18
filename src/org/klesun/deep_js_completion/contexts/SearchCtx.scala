@@ -139,10 +139,11 @@ class SearchCtx(
         } else if (expressionsResolved >= 7500) {
             None
         } else if (isRecursion(exprCtx)) {
-            //Console.println("ololo recursion " + SearchCtx.formatPsi(expr))
             None
         } else {
-            putToCache(exprCtx, expr, Iterator.empty.mem())
+            if (!exprCtx.doNotCache) {
+              putToCache(exprCtx, expr, Iterator.empty.mem())
+            }
             val resolved = MainRes.resolveIn(expr, exprCtx).itr
             // no point getting built-in type here, IDEA will show it itself
             val isAtCaret = exprCtx.parent.isEmpty
@@ -159,7 +160,9 @@ class SearchCtx(
                 println(indent + "resolution: " + mit.map(a => a + " " + a.getClass).toList + postfix)
             }
 
-            putToCache(exprCtx, expr, mit)
+            if (!exprCtx.doNotCache) {
+              putToCache(exprCtx, expr, mit)
+            }
             mit.itr().map(t => {
               typeToDecl.put(t, expr)
               t
