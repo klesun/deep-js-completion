@@ -137,7 +137,7 @@ object DeepJsLang {
     sw.toString
   }
 
-  def getStackTrace: String = getStackTrace(new Exception)
+  def getStackTrace(): String = getStackTrace(new Exception)
 
   implicit class BetterArray[T](base: Array[T]) {
     def itr(): It[T] = {

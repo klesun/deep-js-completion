@@ -286,12 +286,12 @@ case class ArgRes(ctx: IExprCtx) {
 
   def resolve(para: JSParameterListElement): GenTraversableOnce[JSType] = {
     val types = Option(para.getDeclaringFunction)
-      .itr.flatMap(func => List[JSType]()
-      ++ getArgDocExprType(func, para)
-      ++ getCtxArgType(func, para)
-      ++ getInlineFuncArgType(func, func.getParameters.indexOf(para))
-      ++ getPrivateFuncArgType(func, func.getParameters.indexOf(para))
-    )
+      .itr.flatMap(func => cnc(
+        getArgDocExprType(func, para),
+        getCtxArgType(func, para),
+        getInlineFuncArgType(func, func.getParameters.indexOf(para)),
+        getPrivateFuncArgType(func, func.getParameters.indexOf(para))
+    ))
     types
   }
 }
