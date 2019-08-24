@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.08.19.001</version>
+  <version>2019.08.24.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,10 +58,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Fix: iterator was casted to list in a core function; because of that options started to appear only when the latest was calculated - 200 ms now in my case instead of 1260 ms</li>
-  <li>Fix: do not ignore "doNotCache" flag set during variable key resolution</li>
-  <li>Use inferred built-in function resolution, not just dry doc comment parsing (As only this way IDEA keeps record of what you specify in generics)</li>
-  <li>Resolve arg in an anonymous function passed to somewhere with generics using generics. (Instead of hardcoded logic for map/filter/forEach/reduce/etc...)</li>
+  <li>Support spread operator inside destructuring object var declaration</li>
     ]]>
   </change-notes>
 
