@@ -128,7 +128,8 @@ case class VarRes(ctx: IExprCtx) {
     nit(dest.getInitializer)
       .flatMap(expr => ctx.findExprType(expr)) ++
     nit(dest.getParent).itr.flatMap {
-      case prop: JSDestructuringShorthandedProperty =>
+      case prop: JSDestructuringProperty =>
+        val isSpread = prop.getText().startsWith("...")
         val types = Option(prop.getParent)
           .flatMap(cast[JSDestructuringObject](_))
           .flatMap(obj => Option(obj.getParent)).itr
@@ -136,7 +137,17 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(qualT => {
             val keyTOpt = Option(dest.getName)
               .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            ctx.mt().getKey(qualT, keyTOpt)
+            if (isSpread) {
+              val removedKeys = Option(prop.getParent).itr()
+                .flatMap(cast[JSDestructuringObject](_))
+                .flatMap(dobj => dobj.getProperties)
+                .filter(otherProp => !otherProp.equals(prop))
+                .flatMap(otherProp => Option(otherProp.getName))
+                .toList
+              Mt.removeKeys(qualT, removedKeys)
+            } else {
+              ctx.mt().getKey(qualT, keyTOpt)
+            }
           })
         types
       case arr: JSDestructuringArray =>

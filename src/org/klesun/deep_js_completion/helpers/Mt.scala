@@ -115,6 +115,26 @@ object Mt {
     str.matches("\\d*\\.?\\d+")
   }
 
+  def removeKeys(objt: JSType, removedKeys: List[String]): GenTraversableOnce[JSType] = {
+    Mt.flattenTypes(objt).flatMap {
+      case rect: JSRecordType => rect.getTypeMembers.asScala.flatMap {
+        case deep: DeepIndexSignatureImpl => frs(
+          Mt.getAnyLiteralValues(deep.keyt).map(name => {
+            if (removedKeys.contains(name)) {
+              new JSRecordTypeImpl(JSTypeSource.EMPTY, List().asJava)
+            } else {
+              val newMem = Mt.mkProp(name, Option(deep.valt), deep.psi)
+              new JSRecordTypeImpl(JSTypeSource.EMPTY, List(newMem).asJava)
+            }
+          }),
+          Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, List(deep).asJava))
+        )
+        case other => Some(new JSRecordTypeImpl(JSTypeSource.EMPTY, List(other).asJava))
+      }
+      case t => Some(t)
+    }
+  }
+
   private def getKey(objt: JSType, keyTIt: GenTraversableOnce[JSType], proj: Option[Project]): GenTraversableOnce[JSType] = {
     val keyTOpt = Mt.mergeTypes(keyTIt)
     val litValsOpt = keyTOpt.flatMap(keyT => getAllLiteralValues(keyT))
