@@ -258,12 +258,16 @@ object Mt {
       }
   }
 
+  def assertPromise(t: JSType): Option[JSGenericTypeImpl] = {
+    cast[JSGenericTypeImpl](t)
+      .filter(gene => List("Promise", "Bluebird")
+        .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
+  }
+
   def unwrapPromise(promiset: JSType): It[JSType] = {
     flattenTypes(promiset)
       .flatMap(t => frs(
-        cast[JSGenericTypeImpl](t)
-          .filter(gene => List("Promise", "Bluebird")
-            .contains(gene.getType.getTypeText(TypeTextFormat.CODE)))
+        assertPromise(t)
           .map(gene => gene.getArguments.asScala.lift(0).getOrElse(JSUnknownType.JS_INSTANCE)),
         cast[JSTypeImpl](t)
           .filter(gene => List("Promise")

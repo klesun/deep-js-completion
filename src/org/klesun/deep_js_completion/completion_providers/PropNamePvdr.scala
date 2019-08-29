@@ -31,6 +31,7 @@ import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.List
 import scala.collection.mutable
 
 object PropNamePvdr {
@@ -118,7 +119,8 @@ object PropNamePvdr {
       t.isInstanceOf[JSFunction] ||
       t.isInstanceOf[JSDeepFunctionTypeImpl] ||
       t.isInstanceOf[JSArrayType] ||
-      t.isInstanceOf[JSTupleType]
+      t.isInstanceOf[JSTupleType] ||
+      Mt.assertPromise(t).nonEmpty
   }
 
   private def resolveMems(qual: JSExpression, parameters: CompletionParameters): It[PropRec] = {
