@@ -21,6 +21,11 @@ object RequirePvdr {
       if (!relPath.startsWith(".")) {
         relPath = "./" + relPath
       }
+      val Pattern = ".*/node_modules/(.*)".r
+      relPath match {
+        case Pattern(c) => relPath = c
+        case _ =>
+      }
       relPath
     })
   }
