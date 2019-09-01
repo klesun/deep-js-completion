@@ -144,14 +144,13 @@ object Mt {
 
     val elts = Mt.flattenTypes(objt).flatMap {
       case tupT: JSTupleTypeImpl if canBeNum =>
-        val arrFallback = mergeTypes(tupT.getTypes.asScala.itr)
-        val tupResultOpt = litValsOpt.map(litVals => {
-          val types = litVals
-            .flatMap(litVal => Try(litVal.toDouble.toInt).toOption)
-            .flatMap(num => Option(tupT.getTypeByIndex(num)))
-          JSDeepMultiType(types.mem())
-        })
-        tupResultOpt.orElse(arrFallback)
+        frs(
+          litValsOpt.itr().flatMap(litVals => litVals
+              .flatMap(litVal => Try(litVal.toDouble.toInt).toOption)
+              .flatMap(num => Option(tupT.getTypeByIndex(num)))
+          ),
+          tupT.getTypes.asScala
+        )
       case arrT: JSArrayTypeImpl if canBeNum => Option(arrT.getType)
       case objT: JSRecordType => getRecordKey(objT, litVals)
       case typedef: JSType =>
