@@ -16,17 +16,16 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.{PsiElement, PsiFile, PsiFileFactory, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
-import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
+import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
 import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
-import org.klesun.deep_js_completion.structures.{EInstType, JSDeepFunctionTypeImpl, JSDeepModuleTypeImpl, JSDeepMultiType}
+import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang
-import org.klesun.lang.DeepJsLang.{cast, nit}
+import org.klesun.lang.DeepJsLang.{cast, nit, _}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import org.klesun.lang.DeepJsLang._
 
 object ArgRes {
 

@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.08.01.001</version>
+  <version>2019.08.03.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,6 +58,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
+  <li>Resolve built-in generic functions even when built-in GoTo does not work</li>
   <li>Do not include path to node_modules in _Require by var name_ intention</li>
     ]]>
   </change-notes>

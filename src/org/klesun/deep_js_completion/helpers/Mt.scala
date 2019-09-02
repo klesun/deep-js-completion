@@ -4,6 +4,7 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
+import com.intellij.lang.javascript.psi.ecma6.{TypeScriptFunctionSignature, TypeScriptPropertySignature}
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureImpl
 import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
@@ -13,6 +14,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.EverythingGlobalScope
 import org.klesun.deep_js_completion.contexts.IExprCtx
+import org.klesun.deep_js_completion.resolvers.var_res.GenericRes
 import org.klesun.deep_js_completion.structures._
 import org.klesun.lang.DeepJsLang.{It, _}
 
@@ -154,6 +156,9 @@ object Mt {
       case arrT: JSArrayTypeImpl if canBeNum => Option(arrT.getType)
       case objT: JSRecordType => getRecordKey(objT, litVals)
       case typedef: JSType =>
+        if (!typedef.getClass.equals(classOf[JSType])) { // sub classes
+          //Console.println("Unsupported key qualifier type - " + typedef.getClass + " " + typedef)
+        }
         // usually this is the class names used in jsdoc like Promise<String>
         // but keep in mind that everything that did not match above will get here
         if (proj.nonEmpty) {
@@ -163,7 +168,6 @@ object Mt {
           getRecordKey(typedef.asRecordType(), litVals)
         }
       case other => {
-        //Console.println("Unsupported key qualifier type - " + other.getClass + " " + other)
         None
       }
     }
@@ -177,9 +181,22 @@ object Mt {
         val scope = new EverythingGlobalScope(project)
         val tsMems = JSClassResolver.getInstance().findClassesByQName(fqn, scope).asScala
           .itr.flatMap(ifc => ifc.getMembers.asScala)
-          .flatMap(cast[TypeMember](_))
+          .flatMap(mem => {
+            mem match {
+              case typed: TypeScriptPropertySignature => Some(typed)
+              case typed: TypeScriptFunctionSignature =>
+                val funcOpt = Some(JSDeepFunctionTypeImpl(typed, ctx => {
+                  GenericRes(ctx.subCtxEmpty()).resolveFunc(typed, Some(typ).mem())
+                    .itr().flatMap(f => Mt.getReturnType(f, ctx))
+                }))
+                Option(typed.getMemberName)
+                  .map(n => Mt.mkProp(n, funcOpt, Some(typed)))
+              case typed: TypeMember => Some(typed)
+              case _ => None
+            }
+          })
         // I suspect just asRecordType() would be enough
-        mt.asRecordType().getTypeMembers.asScala ++ tsMems
+        cnc(mt.asRecordType().getTypeMembers.asScala, tsMems)
       })
     var mems: GenTraversableOnce[TypeMember] = typ match {
       case objT: JSRecordType => objT.getTypeMembers.asScala

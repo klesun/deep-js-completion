@@ -1,16 +1,12 @@
 package org.klesun.deep_js_completion.resolvers
 
-import java.util
 import java.util.Objects
 
-import com.intellij.lang.javascript.documentation.JSDocumentationUtils
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
-import com.intellij.lang.javascript.psi.ecmal4.{JSAttributeList, JSClass}
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
-import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSScopeNamesCache
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.search.GlobalSearchScope
@@ -20,10 +16,9 @@ import com.intellij.psi.{PsiElement, PsiFile, PsiReference}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.deep_js_completion.resolvers.MainRes.getReturns
 import org.klesun.deep_js_completion.resolvers.VarRes._
 import org.klesun.deep_js_completion.resolvers.var_res.{ArgRes, AssRes, GenericRes}
-import org.klesun.deep_js_completion.structures.{JSDeepClassType, JSDeepFunctionTypeImpl}
+import org.klesun.deep_js_completion.structures.JSDeepClassType
 import org.klesun.lang.DeepJsLang._
 
 import scala.collection.GenTraversableOnce
@@ -178,6 +173,7 @@ case class VarRes(ctx: IExprCtx) {
         if (FuncRes.shouldTypedefBeIgnored(tsFunc)) {
           None
         } else {
+          // possibly won't be needed, since resolved in Mt.getFlatMems()
           GenericRes(ctx).resolveFunc(tsFunc, qualMem)
         }
       }

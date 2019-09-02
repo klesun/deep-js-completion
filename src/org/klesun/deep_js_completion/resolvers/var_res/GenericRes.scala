@@ -1,16 +1,15 @@
 package org.klesun.deep_js_completion.resolvers.var_res
 
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.{JSParameter, JSParameterTypeDecorator, JSType, JSTypeUtils}
+import com.intellij.lang.javascript.psi.{JSParameter, JSType}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.generic_res.{ToGetTypeFromExpr, ToGetTypeOfExpr}
-import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
-import org.klesun.lang.DeepJsLang.cast
+import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
+import org.klesun.lang.DeepJsLang.{cast, _}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
-import org.klesun.lang.DeepJsLang._
 
 
 object GenericRes {
