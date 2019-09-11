@@ -286,9 +286,12 @@ object Mt {
         assertPromise(t)
           .map(gene => gene.getArguments.asScala.lift(0).getOrElse(JSUnknownType.JS_INSTANCE)),
         cast[JSTypeImpl](t)
-          .filter(gene => List("Promise")
-            .contains(gene.getTypeText(TypeTextFormat.CODE)))
-          .map(gene => JSUnknownType.JS_INSTANCE),
+          .filter(jst => List("Promise")
+            .contains(jst.getTypeText(TypeTextFormat.CODE)))
+          .map(jst => JSUnknownType.JS_INSTANCE),
+        Option(t.getClass.getCanonicalName) // stupid new type they added in latest builds
+          .filter(cls => cls.equals("com.intellij.lang.javascript.psi.types.JSAsyncReturnType"))
+          .map(jst => JSUnknownType.JS_INSTANCE),
         Some(t),
       ))
   }

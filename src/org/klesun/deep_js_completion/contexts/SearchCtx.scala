@@ -1,13 +1,15 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSRecordType, JSReferenceExpression, JSType}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
+import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
 import org.klesun.lang.DeepJsLang._
 
+import scala.collection.JavaConverters._
 import scala.collection.{GenTraversableOnce, mutable}
 
 object SearchCtx {
@@ -121,6 +123,18 @@ class SearchCtx(
         i += 1
       }
       isRecursion
+    }
+
+    def formatType(jst: JSType): String = {
+      jst match {
+        case rect: JSRecordType => "{\n" + rect.getTypeMembers.asScala.map {
+          case deep: DeepIndexSignatureImpl => {
+            deep.psi + ""
+          }
+          case mem => "    zhopa mem: " + (mem.getClass + "").replaceAll(".*\\.", "") + " - " + mem
+        }.mkString(",\n") +  "\n}"
+        case _ => jst + " of " + (jst.getClass + "")
+      }
     }
 
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
