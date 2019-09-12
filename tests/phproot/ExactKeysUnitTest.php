@@ -221,4 +221,13 @@ class ExactKeysUnitTest
     // ========================
     // following not implemented yet
     // ========================
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provideCircularGenerics() */
+    public function provideCircularGenerics($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['gotThroughCircularGenerics']],
+        ];
+    }
 }

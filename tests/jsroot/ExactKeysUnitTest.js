@@ -335,3 +335,13 @@ exports.provideLodash = () => {
     });
     mapped[0].data;
 };
+
+exports.provideCircularGenerics = () => {
+    return Promise.resolve()
+        .then(() => JSON.parse())
+        .then(() => ({}))
+        .then(() => Object.assign({}))
+        .then(() => Object.assign({}))
+        .then(() => ({}))
+        .then(result => ({...result, asd: result.asd, gotThroughCircularGenerics: true}));
+};
