@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.09.12.001</version>
+  <version>2019.09.13.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,7 +58,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Fix: handle new JSAsyncReturnType class properly. It caused meaningless then/catch/finally suggestion appear everywhere</li>
+  <li>HitFix: infinite resolution of self-referencing typescript definitions (like Promise)</li>
     ]]>
   </change-notes>
 

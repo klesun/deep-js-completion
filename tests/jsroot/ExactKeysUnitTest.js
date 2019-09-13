@@ -343,5 +343,5 @@ exports.provideCircularGenerics = () => {
         .then(() => Object.assign({}))
         .then(() => Object.assign({}))
         .then(() => ({}))
-        .then(result => ({...result, asd: result.asd, gotThroughCircularGenerics: true}));
+        .then(result => ({...result, gotThroughCircularGenerics: result.asd}));
 };
