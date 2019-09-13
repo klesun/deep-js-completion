@@ -177,20 +177,24 @@ object DeepJsLang {
     }
   }
 
+  def onDemand[T](supplier: () => T): () => T = {
+    var valueOpt: Option[T] = None
+    () => {
+      if (valueOpt.isEmpty) {
+        valueOpt = Some(supplier())
+      }
+      valueOpt.get
+    }
+  }
+
   class MemIt[T](values: GenTraversableOnce[T]) extends AbstractIterable[T] {
-    // we can't use .toStream() at once, since it
-    // would instantly calculate the first value
-    private var streamOpt: Option[Stream[T]] = None
+    val memoizedValues = new util.ArrayList[T]()
+    var complete = false
+    val sourceBle = onDemand(() => values.toIterator)
     // make sure nobody will start iterating over this
     // src before first iteration finished, since it
     // could cause an infinite recursion otherwise
     private var isNexting = false
-    private val getStream = () => {
-      if (streamOpt.isEmpty) {
-        streamOpt = Some(values.toStream)
-      }
-      streamOpt.get
-    }
 
     /** for debug mostly */
     def fst(): Option[T] = {
@@ -203,20 +207,18 @@ object DeepJsLang {
     }
 
     override def iterator: Iterator[T] = {
-      var torOpt: Option[Iterator[T]] = None
-      val getSrc = () => {
-        if (torOpt.isEmpty) {
-          torOpt = Some(getStream().iterator)
-        }
-        torOpt.get
-      }
+      val source = sourceBle()
+      var idx = 0
       new Iterator[T] {
         def hasNext(): Boolean = {
           if (isNexting) {
             false
           } else {
             isNexting = true
-            val has = getSrc().hasNext
+            val has = idx < memoizedValues.size() || (!complete && source.hasNext)
+            if (!has) {
+              complete = true
+            }
             isNexting = false
             has
           }
@@ -226,7 +228,11 @@ object DeepJsLang {
             throw new RuntimeException("Tried to next MemIt again when still not done nexting")
           }
           isNexting = true
-          val next = getSrc().next
+          if (idx >= memoizedValues.size()) {
+            memoizedValues.add(source.next())
+          }
+          val next = memoizedValues.get(idx)
+          idx = memoizedValues.size()
           isNexting = false
           next
         }
