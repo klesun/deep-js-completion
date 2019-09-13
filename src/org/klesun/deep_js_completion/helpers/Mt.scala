@@ -221,7 +221,7 @@ object Mt {
   def getProps(objt: JSType, proj: Project): It[DeepIndexSignatureImpl] = {
     val mems = Mt.flattenTypes(objt).flatMap(t => getFlatMems(t, proj))
     mems.itr().map(mem => {
-      var kpsi: Option[PsiElement] = None
+      var kpsi: Option[PsiElement] = cast[PsiElement](mem) // ts mems are also psi-s
       var keyt: JSType = JSUnknownType.JS_INSTANCE
       var valt: JSType = JSUnknownType.JS_INSTANCE
       mem match {
