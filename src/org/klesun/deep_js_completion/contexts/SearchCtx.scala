@@ -144,6 +144,8 @@ class SearchCtx(
       override def hashCode(): Int = fqn.hashCode()
       override def equals(that: Any): Boolean = {
         cast[FqnTypeHash](that).exists(that => {
+          // this operation seems to be CPU consuming, I thought of extending
+          // JSTypeImpl to make the FQN string public, but the class is final sadly...
           val otherFqn = that.fqnt.getTypeText
           fqn.equals(otherFqn)
         })

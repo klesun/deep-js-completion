@@ -4,11 +4,12 @@ import java.util
 
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature, TypeMember}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
-import com.intellij.lang.javascript.psi.ecma6.{TypeScriptFunctionSignature, TypeScriptPropertySignature}
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptFunctionSignatureImpl
+import com.intellij.lang.javascript.psi.ecma6.{TypeScriptFunctionSignature, TypeScriptPropertySignature}
 import com.intellij.lang.javascript.psi.resolve.JSClassResolver
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.IndexSignatureImpl
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.lang.javascript.psi.types.evaluable.JSReferenceType
 import com.intellij.lang.javascript.psi.{JSRecordType, JSType, JSTypeUtils}
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -46,7 +47,7 @@ object Mt {
         new It(None)
       } else {
         val nextChain = chain + t
-        val flattened: It[JSType] = t match {
+        val flattened: GenTraversableOnce[JSType] = t match {
           case mt: JSContextualUnionTypeImpl => {
             mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           }
@@ -57,10 +58,13 @@ object Mt {
             mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           case mt: JSDeepMultiType =>
             mt.mit.itr().flatMap(mt => internal(mt, nextChain))
-          case ut: JSUnknownType => None.itr()
+          case ut: JSUnknownType => None
+          // dunno what it is, but it probably does not hold any useful type info
+          // it caused array prototype properties to leak in completion prototype-less completion
+          case rt: JSReferenceType => None
           case _ => Some(t).itr()
         }
-        flattened
+        flattened.itr()
       }
     }
     internal(t, Set())

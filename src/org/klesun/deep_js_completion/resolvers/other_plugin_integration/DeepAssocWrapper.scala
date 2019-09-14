@@ -1,7 +1,5 @@
 package org.klesun.deep_js_completion.resolvers.other_plugin_integration
 
-import java.lang.NoSuchMethodError
-
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.lang.javascript.psi.types.primitives.{JSBooleanType, JSNumberType, JSStringType}
 import com.intellij.lang.javascript.psi.{JSFunction, JSType}
