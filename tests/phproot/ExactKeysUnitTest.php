@@ -50,6 +50,17 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideArrayMerge() */
+    public function provideArrayMerge($arg)
+    {
+        $arg['mergedObj'][''];
+        $arg['mergedArr'][0][''];
+        return [
+            [$arg['mergedObj'], ['a', 'b', 'c', 'd', 'e']],
+            [$arg['mergedArr'][0], ['f', 'g']],
+        ];
+    }
+
     /** @param $arg = require('ExactKeysUnitTest.js').provideForInExistingVar() */
     public function provideForInExistingVar($arg)
     {
@@ -119,17 +130,6 @@ class ExactKeysUnitTest
             [$arg, ['id', 'context', 'gdsData']],
             [$arg['context'], ['agentId', 'gds']],
             [$arg['gdsData'], ['profile', 'token']],
-        ];
-    }
-
-    /** @param $arg = require('ExactKeysUnitTest.js').provideArrayMerge() */
-    public function provideArrayMerge($arg)
-    {
-        $arg['mergedObj'][''];
-        $arg['mergedArr'][0][''];
-        return [
-            [$arg['mergedObj'], ['a', 'b', 'c', 'd', 'e']],
-            [$arg['mergedArr'][0], ['f', 'g']],
         ];
     }
 
@@ -218,10 +218,6 @@ class ExactKeysUnitTest
         ];
     }
 
-    // ========================
-    // following not implemented yet
-    // ========================
-
     /** @param $arg = require('ExactKeysUnitTest.js').provideCircularGenerics() */
     public function provideCircularGenerics($arg)
     {
@@ -230,4 +226,17 @@ class ExactKeysUnitTest
             [$arg, ['gotThroughCircularGenerics']],
         ];
     }
+
+    /** @param $arg = require('ExactKeysUnitTest.js').provide15kDupeFqns() */
+    public function provide15kDupeFqns($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['id', 'ololo']],
+        ];
+    }
+
+    // ========================
+    // following not implemented yet
+    // ========================
 }

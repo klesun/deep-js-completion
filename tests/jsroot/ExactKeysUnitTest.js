@@ -9,9 +9,9 @@ const SabPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Sabre/
 const AmaPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Amadeus/Pnr/PnrParser");
 const GalPnrParser = require("../unv/grect/backend/Transpiled/Gds/Parsers/Galileo/Pnr/PnrParser");
 const CmdLogs = require('../unv/grect/backend/Repositories/CmdLogs.js');
-
-
 const _ = require('lodash');
+const PersistentHttpRq = require('klesun-node-tools/src/Utils/PersistentHttpRq.js');
+const Rej = require("klesun-node-tools/src/Rej");
 
 class OfficeCompletion extends Component
 {
@@ -344,4 +344,57 @@ exports.provideCircularGenerics = () => {
         .then(() => Object.assign({}))
         .then(() => ({}))
         .then(result => ({...result, gotThroughCircularGenerics: result.asd}));
+};
+
+exports.provide15kDupeFqns = async () => {
+    const getAndSetJson = (setCallback) => {
+        return setCallback().then(result => result);
+    };
+
+    const iqJson = async () =>
+        PersistentHttpRq().catch(exc => Promise.reject(exc))
+            .then(respRec => {
+                let body = respRec.body;
+                let resp;
+                try {
+                    resp = JSON.parse(body);
+                } catch (exc) {
+                    return Rej.BadGateway('Could not parse IQ service ' + functionName + ' json response - ' + body);
+                }
+                if (resp.status !== 'OK' || !('result' in resp)) {
+                    return Rej.BadGateway('Unexpected IQ service response format - ' + body, resp);
+                } else {
+                    return Promise.resolve(resp);
+                }
+            });
+
+    /** @return {Promise<{result: {data: {pqData: {flightOptions: {itinerary: {segments: {id: 123, ololo: 2222}[]}}[]}}}}>} */
+    const getBookingData = (params) => iqJson().then(rpcRs => rpcRs);
+
+    const getBookingDataByToken = () => {
+        return getAndSetJson(getBookingData)
+            .catch(exc => Promise.reject(exc))
+            .then(async iqRs => ({result: iqRs.result}));
+    };
+
+
+    let prepareSubmitData = async (params) => {
+        let cmsData = await getBookingDataByToken();
+        let cmsItinObj = cmsData.result.data.pqData.flightOptions[0].itinerary;
+
+        return {cmsItinObj};
+    };
+
+    /**
+     * either create new PNR or add data to existing one
+     */
+    const main = async () => {
+        let {cmsItinObj} = await prepareSubmitData();
+
+        let cmsSegments = cmsItinObj.segments.filter(s => !+s.hiddenSegmentType);
+        return cmsSegments[0];
+    };
+
+    const cmsSegment = await main();
+    return cmsSegment;
 };
