@@ -57,6 +57,7 @@ object Mt {
             mt.getTypes.asScala.itr().flatMap(mt => internal(mt, nextChain))
           case mt: JSDeepMultiType =>
             mt.mit.itr().flatMap(mt => internal(mt, nextChain))
+          case ut: JSUnknownType => None.itr()
           case _ => Some(t).itr()
         }
         flattened
