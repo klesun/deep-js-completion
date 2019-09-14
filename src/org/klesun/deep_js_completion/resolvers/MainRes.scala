@@ -31,7 +31,7 @@ object MainRes {
       .filter(c => !c.isInstanceOf[JSFunction])
       .flatMap(c => getReturns(c) ++ cast[JSReturnStatement](c)
         .flatMap(ret => Option(ret.getExpression)))
-    arrow.++(classic)
+    cnc(arrow, classic)
   }
 
   def getThisCls(expr: JSThisExpression) = {

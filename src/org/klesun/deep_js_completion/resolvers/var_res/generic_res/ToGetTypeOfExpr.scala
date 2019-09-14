@@ -1,18 +1,14 @@
 package org.klesun.deep_js_completion.resolvers.var_res.generic_res
 
-import com.intellij.lang.javascript.ecmascript6.TypeScriptQualifiedNameResolver
-import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.ecma6._
-import com.intellij.lang.javascript.psi.resolve.{JSClassResolver, JSResolveUtil}
 import com.intellij.lang.javascript.psi.types._
-import com.intellij.psi.search.EverythingGlobalScope
+import com.intellij.lang.javascript.psi.{JSParameterTypeDecorator, JSType, JSTypeUtils}
 import org.klesun.deep_js_completion.structures
 import org.klesun.deep_js_completion.structures.JSDeepMultiType
-import org.klesun.lang.DeepJsLang.{MemIt, cast, nit}
+import org.klesun.lang.DeepJsLang.{MemIt, cast, nit, _}
 
 import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
-import org.klesun.lang.DeepJsLang._
 
 case class ToGetTypeOfExpr(
   generics: collection.mutable.Map[String, () => MemIt[JSType]],
@@ -72,10 +68,21 @@ case class ToGetTypeOfExpr(
           applyToFuncData(argtypes, retts)
         } else {
           val clsType = JSTypeUtils.createType(sints.getQualifiedTypeName, JSTypeSource.EMPTY)
-          val clsGenerics: java.util.List[JSType] = sints.getTypeArguments.map(
-            gena => JSDeepMultiType(apply(gena).mem()): JSType
-          ).toList.asJava
-          Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
+          val typeArgs = sints.getTypeArguments
+          if (typeArgs.length == 1) {
+            // a hack, or an optimization, for Promise<List(List(List()))> mostly
+            frs(
+              typeArgs.lift(0).itr().flatMap(gena => apply(gena)).map(gent => {
+                new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, List(gent).asJava)
+              }),
+              Some(clsType),
+            )
+          } else {
+            val clsGenerics: java.util.List[JSType] = typeArgs.map(
+              gena => JSDeepMultiType(apply(gena).mem()): JSType
+            ).toList.asJava
+            Some(new JSGenericTypeImpl(JSTypeSource.EMPTY, clsType, clsGenerics))
+          }
         }
       case _ =>
         //Console.println("unsupported return generic kind: " + typePsi.getClass + " " + typePsi.getText)

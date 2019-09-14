@@ -29,8 +29,12 @@ case class JSDeepMultiType(
   }
 
   override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
-    "*|*|*"
-    // uncomment for debug
-    //mit.itr().toList + ""
+    if (mit.complete) {
+      mit.itr().mkString("|")
+    } else {
+      "*|*|*"
+      // uncomment for debug
+      //mit.itr().toList + ""
+    }
   }
 }

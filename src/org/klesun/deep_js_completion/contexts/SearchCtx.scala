@@ -1,7 +1,8 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.resolve.JSTypeEvaluator
-import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSRecordType, JSReferenceExpression, JSType}
+import com.intellij.lang.javascript.psi.types.JSTypeImpl
+import com.intellij.lang.javascript.psi._
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.helpers.Mt
@@ -137,9 +138,29 @@ class SearchCtx(
       }
     }
 
+    case class FqnTypeHash(fqnt: JSTypeImpl) {
+      private val fqn = fqnt.getTypeText
+
+      override def hashCode(): Int = fqn.hashCode()
+      override def equals(that: Any): Boolean = {
+        cast[FqnTypeHash](that).exists(that => {
+          val otherFqn = that.fqnt.getTypeText
+          fqn.equals(otherFqn)
+        })
+      }
+    }
+
+    private def makeTypeHash(jst: JSType) = {
+      jst match {
+        case null => null
+        case fqnt: JSTypeImpl => FqnTypeHash(fqnt)
+        case _ => jst
+      }
+    }
+
     def findExprType(expr: JSExpression, exprCtx: ExprCtx): GenTraversableOnce[JSType] = {
         val indent = "  " * exprCtx.depth + "| "
-
+        val startNs = System.nanoTime
         if (Debug.PRINT_RESOLVE_START) {
             println(indent + "resolving: " + singleLine(expr.getText, 100) + " " + expr.getClass)
         }
@@ -165,12 +186,17 @@ class SearchCtx(
             val isAtCaret = exprCtx.parent.isEmpty
             val builtIn = getWsType(expr).filter(t => !isAtCaret)
             var result = frs(resolved, builtIn)
-            val mit = result.flatMap(t => Mt.flattenTypes(t)).unq().mem()
+            val mit = result.flatMap(t => Mt.flattenTypes(t)).unq(makeTypeHash).mem()
 
             val postfix = " ||| " + singleLine(expr.getText, 350)
             // TODO: one of types happens to be null sometimes - fix!
             if (Debug.PRINT_RESOLVE_RESULT_FIRST) {
-                println(indent + "resolution: " + mit.fst().map(a => "fst: " + a + " " + a.getClass) + postfix)
+                val durationSec = (System.nanoTime() - startNs) / 1000000000.0
+                var prefix = indent + "resolution: "
+                if (durationSec > 0.001) {
+                  prefix += "in " + (Math.round(durationSec * 1000) / 1000.0) + " "
+                }
+                println(prefix + mit.fst().map(a => "fst: " + a + " " + a.getClass) + postfix)
             }
             if (Debug.PRINT_RESOLVE_RESULT_FULL) {
                 println(indent + "resolution: " + mit.map(a => a + " " + a.getClass).toList + postfix)

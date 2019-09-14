@@ -333,6 +333,19 @@ object DeepJsLang {
       })
     }
 
+    def unq[Thash](getHash: (T) => Thash): It[T] = {
+      val met = new util.HashSet[Thash]()
+      filter(el => {
+        val hash = getHash(el)
+        if (met.contains(hash)) {
+          false
+        } else {
+          met.add(hash)
+          true
+        }
+      })
+    }
+
     /**
      * should not be needed in deep-js code, but deep-assoc, which uses it, has
      * MemIt implementation that may ping hasNext() multiple times for same value
