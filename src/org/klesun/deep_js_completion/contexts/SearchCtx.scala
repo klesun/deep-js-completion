@@ -132,7 +132,7 @@ class SearchCtx(
           case deep: DeepIndexSignatureImpl => {
             deep.psi + ""
           }
-          case mem => "    zhopa mem: " + (mem.getClass + "").replaceAll(".*\\.", "") + " - " + mem
+          case mem => "    mem: " + (mem.getClass + "").replaceAll(".*\\.", "") + " - " + mem
         }.mkString(",\n") +  "\n}"
         case _ => jst + " of " + (jst.getClass + "")
       }

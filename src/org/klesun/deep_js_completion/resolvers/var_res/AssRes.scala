@@ -66,7 +66,7 @@ class AssRes(val ctx: IExprCtx) {
           artit.itr().flatMap(elt => ctx.mt().getKey(elt, kit))
         })
       case untyped =>
-        //Console.println("zhopa unsupported assignment destination " + untyped.getClass + " " + untyped.getText)
+        //Console.println("Unsupported assignment destination " + untyped.getClass + " " + untyped.getText)
         None
     }
   }
