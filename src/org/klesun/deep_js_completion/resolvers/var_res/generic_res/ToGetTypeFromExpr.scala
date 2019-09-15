@@ -91,7 +91,9 @@ case class ToGetTypeFromExpr(
       case func: TypeScriptFunctionTypeImpl =>
         val retts = func.getReturnTypeElement
         val getRetType = () => getArgt().itr().flatMap(t => Mt.getReturnType(t, ctx.subCtxEmpty()))
-        apply(retts, getRetType)
+        // causes 25k expressions on a test case - disabled for now
+        //apply(retts, getRetType)
+        None
       case _ =>
         //Console.println("Unsupported generic type expr arg kind - " + argTypePsi.getClass + " - " + argTypePsi)
         None
