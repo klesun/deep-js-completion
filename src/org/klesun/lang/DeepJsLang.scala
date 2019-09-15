@@ -238,6 +238,11 @@ object DeepJsLang {
         }
       }.itr()
     }
+
+    override def toString(): String = {
+      val infix = if (complete) "" else ", ..."
+      "MemIt(" + memoizedValues.asScala.mkString(",") + infix + ")"
+    }
   }
 
   /**
