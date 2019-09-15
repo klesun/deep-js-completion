@@ -1,18 +1,14 @@
 package org.klesun.deep_js_completion.resolvers.var_res.generic_res
 
-import java.util
-
 import com.intellij.lang.javascript.psi.JSType
-import com.intellij.lang.javascript.psi.ecma6.impl.{TypeScriptArrayTypeImpl, TypeScriptTupleTypeImpl}
+import com.intellij.lang.javascript.psi.ecma6.impl.{TypeScriptArrayTypeImpl, TypeScriptFunctionTypeImpl, TypeScriptTupleTypeImpl}
 import com.intellij.lang.javascript.psi.ecma6.{JSTypeDeclaration, TypeScriptObjectType, TypeScriptSingleType, TypeScriptUnionOrIntersectionType}
 import com.intellij.lang.javascript.psi.types.{JSStringLiteralTypeImpl, JSTypeSource}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
-import org.klesun.lang.DeepJsLang.MemIt
+import org.klesun.lang.DeepJsLang.{MemIt, _}
 
 import scala.collection.GenTraversableOnce
-import scala.collection.JavaConverters._
-import org.klesun.lang.DeepJsLang._
 
 case class ToGetTypeFromExpr(
   ctx: IExprCtx,
@@ -27,7 +23,7 @@ case class ToGetTypeFromExpr(
     val fqn = sints.getQualifiedTypeName
     if (generic equals fqn) {
       getArgt()
-    } else if ("Iterable" equals fqn) {
+    } else if (List("Iterable", "ReadonlyArray").contains(fqn)) {
       val getSubType = () => getArgt().itr.flatMap(t => ctx.mt().getKey(t, None))
       sints.getTypeArguments.headOption.itr
         .flatMap(eldec => apply(eldec, getSubType))
@@ -55,6 +51,8 @@ case class ToGetTypeFromExpr(
       val getSubType = () => getArgt().itr.flatMap(t => Mt.unwrapPromise(t))
       sints.getTypeArguments.headOption.itr
         .flatMap(eldec => apply(eldec, getSubType))
+    } else if ("any".equals(fqn)) {
+      None
     } else {
       //Console.println("Unsupported generic type expr arg class - " + fqn + " - " + sints)
       None
@@ -90,6 +88,10 @@ case class ToGetTypeFromExpr(
         tupts.getElements.zipWithIndex.itr().flatMap({
           case (typePsi, i) => apply(typePsi, () => getSubType(i))
         })
+      case func: TypeScriptFunctionTypeImpl =>
+        val retts = func.getReturnTypeElement
+        val getRetType = () => getArgt().itr().flatMap(t => Mt.getReturnType(t, ctx.subCtxEmpty()))
+        apply(retts, getRetType)
       case _ =>
         //Console.println("Unsupported generic type expr arg kind - " + argTypePsi.getClass + " - " + argTypePsi)
         None

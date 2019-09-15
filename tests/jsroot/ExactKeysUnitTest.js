@@ -398,3 +398,10 @@ exports.provide15kDupeFqns = async () => {
     const cmsSegment = await main();
     return cmsSegment;
 };
+
+exports.provideFlatMap = () => {
+    const flattenedEl = [{asd: 123}]
+        .flatMap(el => [el, {dsa: 234}])[0];
+    flattenedEl.asd;
+    return flattenedEl;
+};

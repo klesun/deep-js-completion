@@ -236,6 +236,15 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideFlatMap() */
+    public function provideFlatMap($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['asd', 'dsa']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================
