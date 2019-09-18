@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.09.15.002</version>
+  <version>2019.09.18.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,8 +58,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>HitFix: infinite resolution of self-referencing typescript definitions (like Promise)</li>
-  <li>Optimize: remove duplicate plain FQN types upon resolution (as there were 15k of the them in a simple 10 steps long Promise chain)</li>
+  <li>Remove debug in STDOUT</li>
     ]]>
   </change-notes>
 
