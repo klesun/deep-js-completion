@@ -7,7 +7,7 @@ import com.intellij.codeInsight.completion.{CompletionParameters, CompletionProv
 import com.intellij.codeInsight.lookup.{LookupElement, LookupElementBuilder}
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.ecmascript6.ES6FileType
-import com.intellij.lang.javascript.JavaScriptFileType
+import com.intellij.lang.javascript.{JavaScriptFileType, TypeScriptFileType}
 import com.intellij.lang.javascript.psi.JSRecordType.{IndexSignature, PropertySignature}
 import com.intellij.lang.javascript.psi.JSType.TypeTextFormat
 import com.intellij.lang.javascript.psi.types.JSRecordMemberSourceFactory.EmptyMemberSource
@@ -26,6 +26,7 @@ import com.intellij.util.ProcessingContext
 import javax.swing.ImageIcon
 import org.klesun.deep_js_completion.completion_providers.PropNamePvdr._
 import org.klesun.deep_js_completion.contexts.{ExprCtx, FuncCtx, SearchCtx}
+import org.klesun.deep_js_completion.entry.DeepJsSettings
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.structures.JSDeepFunctionTypeImpl
 import org.klesun.lang.DeepJsLang._
@@ -44,8 +45,13 @@ object PropNamePvdr {
 
   def getIcon = icon
 
-  private def getMaxDepth(isAutoPopup: Boolean) = {
-    if (isAutoPopup) 35 else 120
+  private def getMaxDepth(isAutoPopup: Boolean, projectOpt: Option[Project]): Int = {
+    if (projectOpt.nonEmpty) {
+      val settings = DeepJsSettings.inst(projectOpt.get)
+      if (isAutoPopup) settings.implicitDepthLimit else settings.explicitDepthLimit
+    } else {
+      if (isAutoPopup) 35 else 120
+    }
   }
 
   private def formatKeyPsiValue(name: String, psi: PsiElement) = {
@@ -124,7 +130,7 @@ object PropNamePvdr {
   }
 
   private def resolveMems(qual: JSExpression, parameters: CompletionParameters): It[PropRec] = {
-    val depth = getMaxDepth(parameters.isAutoPopup)
+    val depth = getMaxDepth(parameters.isAutoPopup, Option(qual.getProject))
     val search = new SearchCtx(depth, project=Some(qual.getProject))
 
     val funcCtx = FuncCtx(search)
@@ -241,17 +247,20 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
     context: ProcessingContext,
     result: CompletionResultSet
   ) {
-    if (!parameters.getOriginalFile.getFileType.equals(JavaScriptFileType.INSTANCE) &&
-        !parameters.getOriginalFile.getFileType.equals(ES6FileType.INSTANCE)
-    ) {
+    val qualOpt = getQualifier(parameters)
+    if (qualOpt.isEmpty) return
+    val qual = qualOpt.get
+
+    var coveredFlavours = List(JavaScriptFileType.INSTANCE, ES6FileType.INSTANCE)
+    if (DeepJsSettings.inst(qual.getProject).enableInTypescript) {
+      coveredFlavours = coveredFlavours :+ TypeScriptFileType.INSTANCE
+    }
+
+    if (!coveredFlavours.contains(parameters.getOriginalFile.getFileType)) {
       // do not run this plugin in typescript, the language is
       // fully typed itself, no need for additional _deep_ typing
       return
     }
-
-    val qualOpt = getQualifier(parameters)
-    if (qualOpt.isEmpty) return
-    val qual = qualOpt.get
 
     val jsConfig = JSRootConfiguration.getInstance(qual.getProject)
     val (suggested, builtInsLeft) = processBuiltIns(parameters, result, jsConfig)
@@ -301,17 +310,19 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
   }
 
   override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
-    val depth = getMaxDepth(false)
-    val search = new SearchCtx(depth, project=Option(editor.getProject))
 
     nit(caretPsi)
       .flatMap(leaf => Option(leaf.getParent))
       .flatMap(cast[JSReferenceExpression](_))
-      .flatMap(ref => nit(ref.getQualifier)
-        .flatMap(qual => search.findExprType(qual))
-        .flatMap(typ => Mt.getProps(typ, caretPsi.getProject))
-        .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
-          .exists(lit => lit equals ref.getReferenceName)))
+      .flatMap(ref => {
+          val depth = getMaxDepth(false, Option(ref.getProject))
+          val search = new SearchCtx(depth, project=Option(editor.getProject))
+          nit(ref.getQualifier)
+            .flatMap(qual => search.findExprType(qual))
+            .flatMap(typ => Mt.getProps(typ, caretPsi.getProject))
+            .filter(prop => Mt.getAnyLiteralValues(prop.getMemberParameterType)
+              .exists(lit => lit equals ref.getReferenceName))
+      })
       .flatMap(p => p.psi)
       .itr().lift(0)
       .toArray

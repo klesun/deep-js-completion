@@ -377,7 +377,6 @@ exports.provide15kDupeFqns = async () => {
             .then(async iqRs => ({result: iqRs.result}));
     };
 
-
     let prepareSubmitData = async (params) => {
         let cmsData = await getBookingDataByToken();
         let cmsItinObj = cmsData.result.data.pqData.flightOptions[0].itinerary;

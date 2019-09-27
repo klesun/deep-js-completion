@@ -5,6 +5,7 @@ import com.intellij.lang.javascript.psi.types.JSTypeImpl
 import com.intellij.lang.javascript.psi._
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import org.klesun.deep_js_completion.entry.DeepJsSettings
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes
 import org.klesun.deep_js_completion.structures.DeepIndexSignatureImpl
@@ -32,6 +33,12 @@ class SearchCtx(
     val typeToDecl = scala.collection.mutable.Map[JSType, JSExpression]()
     // caching - to not re-resolve same expression 100500 times, also prevents many recursion cases
     val ctxToExprToResult = mutable.Map[IFuncCtx, mutable.Map[JSExpression, MemIt[JSType]]]()
+
+    private def getMaxExpressions(): Integer = {
+      project
+        .map(p => DeepJsSettings.inst(p).totalExpressionLimit)
+        .getOrElse(7500)
+    }
 
     private def getWsType(expr: JSExpression) = {
         val isProp = cast[JSReferenceExpression](expr)
@@ -175,7 +182,7 @@ class SearchCtx(
           fromCache.get
         } else if (exprCtx.depth > maxDepth) {
             None
-        } else if (expressionsResolved >= 7500) {
+        } else if (expressionsResolved >= getMaxExpressions()) {
             None
         } else if (isRecursion(exprCtx)) {
             None
