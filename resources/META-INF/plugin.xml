@@ -80,6 +80,14 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
       <category>JavaScript/Module import</category>
       <className>org.klesun.deep_js_completion.entry.AddRequireByVarNameInt</className>
     </intentionAction>
+    <projectConfigurable
+        instance="org.klesun.deep_js_completion.entry.DeepJsSettingsForm"
+        id="deep-js-completion.SettingsForm"
+        displayName="deep-js-completion"
+        parentId="Settings.JavaScript"
+        nonDefaultProject="true"
+    />
+    <projectService serviceImplementation="org.klesun.deep_js_completion.entry.DeepJsSettings"/>
   </extensions>
 
   <actions>
