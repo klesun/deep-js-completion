@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.09.27.001</version>
+  <version>2019.10.05.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,8 +58,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Make it possible to enable the plugin in typescript via _Settings -> Languages & Frameworks -> JavaScript -> deep-js-completion_ (not enabled by default, see #14)</li>
-  <li>Also make explicit/implicit completion depth limits configurable</li>
+  <li>Infer private func arg type from where this func is passed as a reference (Not just from explicit call in arrow function)</li>
     ]]>
   </change-notes>
 
