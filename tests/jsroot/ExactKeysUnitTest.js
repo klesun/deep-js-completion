@@ -404,3 +404,12 @@ exports.provideFlatMap = () => {
     flattenedEl.asd;
     return flattenedEl;
 };
+
+const providePrivateByFuncRef = (arg) => {
+    return arg;
+};
+
+[{ololo: 1, lalala: 2}].map(providePrivateByFuncRef);
+[{lululu: 1, kokoko: 2}].map(a => providePrivateByFuncRef(a));
+
+exports.providePrivateByFuncRef = providePrivateByFuncRef;

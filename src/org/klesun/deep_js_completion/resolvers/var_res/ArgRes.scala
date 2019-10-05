@@ -85,7 +85,8 @@ case class ArgRes(ctx: IExprCtx) {
         .map(parArg => new {val par = parArg; val func = callerFunc}))
   }
 
-  private def getInlineFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
+  /** @param func - anonymous function or var holding the function */
+  private def getInlineFuncArgType(func: PsiElement, argOrder: Integer): GenTraversableOnce[JSType] = {
     nit(func.getParent)
       .flatMap(cast[JSArgumentList](_))
       .flatMap(argList => nit(argList.getArguments.indexOf(func))
@@ -123,11 +124,17 @@ case class ArgRes(ctx: IExprCtx) {
           .flatMap(vari => VarRes.findVarUsages(vari)),
         VarRes.findVarUsages(func),
       )
-      usages.flatMap(usage => nit(usage.getParent)
+      usages.flatMap(usage => cnc(
+        // arr.map(a => someFunc(a))
+        nit(usage.getParent)
           .flatMap(cast[JSCallExpression](_))
-          .filter(call => usage eq call.getMethodExpression))
+          .filter(call => usage eq call.getMethodExpression)
           .flatMap(call => call.getArguments.lift(argOrder))
           .flatMap(value => ctx.subCtxEmpty().findExprType(value))
+        ,
+        // arr.map(someFunc)
+        getInlineFuncArgType(usage, argOrder)
+      ))
     }
   }
 

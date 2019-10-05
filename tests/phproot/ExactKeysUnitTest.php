@@ -236,6 +236,15 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').providePrivateByFuncRef() */
+    public function providePrivateByFuncRef($arg)
+    {
+        $arg[''];
+        return [
+            [$arg, ['ololo', 'lalala', 'lululu', 'kokoko']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================
