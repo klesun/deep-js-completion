@@ -115,7 +115,9 @@ case class ArgRes(ctx: IExprCtx) {
   // private function completion (based on scanning current
   // file for usages and taking what is passed to the function)
   private def getPrivateFuncArgType(func: JSFunction, argOrder: Integer): GenTraversableOnce[JSType] = {
-    if (ctx.func().areArgsKnown()) {
+    val isNoArgDoc = !ctx.func().hasArgs() && ctx.func().isInComment()
+    val resolveFromUsage = !ctx.func().areArgsKnown() || isNoArgDoc
+    if (!resolveFromUsage) {
       None
     } else {
       val usages = cnc(
@@ -273,7 +275,7 @@ case class ArgRes(ctx: IExprCtx) {
           nit(psiFile.getFirstChild)
             .flatMap(cast[JSExpressionStatementImpl](_))
             .flatMap(st => Option(st.getExpression))
-            .flatMap(expr => ctx.subCtxEmpty().findExprType(expr))
+            .flatMap(expr => ctx.subCtxDoc(caretPsi).findExprType(expr))
             .flatMap(promiset => Mt.unwrapPromise(promiset)) // since we wrapped it in async
         })
     )

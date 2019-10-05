@@ -22,6 +22,7 @@ case class FuncCtx(
   argPsiType: EArgPsiType = EArgPsiType.NONE,
   closurePsi: Option[JSFunction] = None,
   closureCtx: Option[IFuncCtx] = None,
+  fakeFileSource: Option[PsiElement] = None,
 ) extends IFuncCtx {
   var hashCodeField: Option[Int] = None
 
@@ -32,11 +33,18 @@ case class FuncCtx(
     val argGetters = psiArgs.map(psi => cast[JSExpression](psi).itr
           .flatMap(arg => findExprType.apply(arg)).mem()
     ).toList
-    FuncCtx(search, Some(this), Some(funcCall), argGetters, EArgPsiType.DIRECT)
+    FuncCtx(
+      search = search,
+      parent = Some(this),
+      uniqueRef = Some(funcCall),
+      argGetters = argGetters,
+      argPsiType = EArgPsiType.DIRECT,
+      fakeFileSource = fakeFileSource,
+    )
   }
 
   def subCtxEmpty(): FuncCtx = {
-    FuncCtx(search, Some(this), None, List(), EArgPsiType.NONE)
+    FuncCtx(search = search, parent = Some(this), fakeFileSource = fakeFileSource)
   }
 
   def findExprType(expr: JSExpression): GenTraversableOnce[JSType] = {
@@ -56,8 +64,15 @@ case class FuncCtx(
     }
   }
 
-  override def areArgsKnown(): Boolean = {
-    !argPsiType.equals(EArgPsiType.NONE)
+  /** will return false if function was called with 0 arguments or args unknown */
+  override def hasArgs(): Boolean = argGetters.length > 0
+
+  /** will return true if function was called with 0 arguments */
+  override def areArgsKnown(): Boolean = !argPsiType.equals(EArgPsiType.NONE)
+
+  override def isInComment(): Boolean = {
+    Console.println("guzno is in comment " + fakeFileSource + " ")
+    fakeFileSource.nonEmpty
   }
 
   override def getSpreadArg(): JSArrayType = {

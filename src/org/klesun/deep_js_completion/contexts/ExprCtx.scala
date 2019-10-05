@@ -30,6 +30,15 @@ case class ExprCtx(
       subExpr(expr, funcCtx.subCtxEmpty())
   }
 
+  def subCtxDoc(fakeFileSource: PsiElement): ExprCtx = {
+    val funcSubCtx = FuncCtx(
+      search = funcCtx.search,
+      parent = Some(funcCtx),
+      fakeFileSource = Some(fakeFileSource)
+    )
+    subExpr(expr, funcSubCtx)
+  }
+
   def withClosure(funcPsi: JSFunction, closureCtx: IFuncCtx): IExprCtx = {
     subExpr(expr, funcCtx.withClosure(funcPsi, closureCtx))
   }

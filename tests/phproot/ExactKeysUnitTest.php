@@ -241,7 +241,7 @@ class ExactKeysUnitTest
     {
         $arg[''];
         return [
-            [$arg, ['ololo', 'lalala', 'lululu', 'kokoko']],
+            [$arg, ['ololo', 'lalala', 'lululu', 'kokoko', 'tt']],
         ];
     }
 

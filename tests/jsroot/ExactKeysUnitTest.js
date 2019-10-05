@@ -406,7 +406,7 @@ exports.provideFlatMap = () => {
 };
 
 const providePrivateByFuncRef = (arg) => {
-    return arg;
+    return {...arg, tt: 777};
 };
 
 [{ololo: 1, lalala: 2}].map(providePrivateByFuncRef);

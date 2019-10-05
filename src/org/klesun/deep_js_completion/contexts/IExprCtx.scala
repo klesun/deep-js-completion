@@ -1,6 +1,7 @@
 package org.klesun.deep_js_completion.contexts
 
 import com.intellij.lang.javascript.psi.{JSCallExpression, JSExpression, JSFunction, JSType}
+import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.lang.DeepJsLang.It
 
@@ -17,6 +18,7 @@ abstract class IExprCtx {
   def limitResolveDepth(depthLimit: Int, expr: JSExpression): It[JSType]
   def subCtxDirect(funcCall: JSCallExpression): IExprCtx
   def subCtxEmpty(): IExprCtx
+  def subCtxDoc(fakeFileSource: PsiElement): IExprCtx
   def withClosure(funcPsi: JSFunction, closureCtx: IFuncCtx): IExprCtx
   def getDepth(): Int
 }
