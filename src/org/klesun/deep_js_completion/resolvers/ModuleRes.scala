@@ -1,6 +1,6 @@
 package org.klesun.deep_js_completion.resolvers
 
-import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
+import com.intellij.lang.ecmascript6.psi.{ES6ExportDeclaration, ES6ExportDefaultAssignment}
 import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
 import com.intellij.lang.javascript.psi.types.{JSRecordTypeImpl, JSTypeSource}
 import com.intellij.lang.javascript.psi._
@@ -33,15 +33,28 @@ case class ModuleRes(ctx: IExprCtx) {
         Some(modulet)
       case varSt: JSVarStatement =>
         if (varSt.getText.startsWith("export ")) {
-          varSt.getVariables.itr().flatMap(v => {
+          varSt.getVariables.itr().map(v => {
             val valtit = Option(v.getInitializer).itr().flatMap(i => ctx.findExprType(i))
             val prop = Mt.mkProp(v.getName, valtit, Some(v))
             val modulet = new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)
-            Some(modulet)
+            modulet
           })
         } else {
           None
         }
+      case expDec: ES6ExportDeclaration =>
+        expDec.getExportSpecifiers.flatMap(sp => {
+          Option(sp.getReferenceName).itr().map(name => {
+            val valtit = Option(sp.getReference)
+              .flatMap(ref => Option(ref.resolve()))
+              .itr().flatMap(rved => {
+                VarRes(ctx).resolveFromMainDecl(rved, None.mem())
+              })
+            val prop = Mt.mkProp(name, valtit, Some(sp))
+            val modulet = new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)
+            modulet
+          })
+        })
       case _ => None
     })
   }

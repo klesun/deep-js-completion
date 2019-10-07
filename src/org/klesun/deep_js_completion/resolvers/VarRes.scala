@@ -162,7 +162,7 @@ case class VarRes(ctx: IExprCtx) {
   }
 
   // may be defined in a different file unlike resolveAssignment()
-  private def resolveFromMainDecl(psi: PsiElement, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
+  def resolveFromMainDecl(psi: PsiElement, qualMem: MemIt[JSType]): GenTraversableOnce[JSType] = {
     psi match {
       case para: JSParameter => ArgRes(ctx).resolve(para) ++ resolveMainDeclVar(para)
       case dest: JSVariable => resolveMainDeclVar(dest)
