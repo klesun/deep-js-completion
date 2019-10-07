@@ -249,6 +249,16 @@ class ExactKeysUnitTest
     // following not implemented yet
     // ========================
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideEs6Imports() */
+    public function provideEs6Imports($arg)
+    {
+        $arg['stuff'];
+        return [
+            [$arg['inst'], ['aala', 'oolo', 'uulu']],
+            [$arg['all'], ['default', /*'abc', 'doStuff', 'getList'*/]],
+        ];
+    }
+
     /** @param $arg = require('ExactKeysUnitTest.js').provideFlatMap() */
     public function provideFlatMap($arg)
     {

@@ -1,6 +1,10 @@
 
 import {Component} from 'react';
 
+import SomeEs6Module from "./src/SomeEs6Module";
+import * as SomeEs6ModuleAll from "./src/SomeEs6Module";
+import {doStuff, abc, getList} from "./src/SomeEs6Module";
+
 let php = require('./../unv/grect/backend/Transpiled/php.js');
 let php2 = require('../php.js');
 let php3 = require('../php3.js');
@@ -403,6 +407,16 @@ exports.provideFlatMap = () => {
         .flatMap(el => [el, {dsa: 234}])[0];
     flattenedEl.asd;
     return flattenedEl;
+};
+
+exports.provideEs6Imports = () => {
+    return {
+        inst: SomeEs6Module(),
+        all: noBuiltIn(SomeEs6ModuleAll),
+        stuff: doStuff(),
+        abc: abc,
+        list: getList(),
+    };
 };
 
 const providePrivateByFuncRef = (arg) => {

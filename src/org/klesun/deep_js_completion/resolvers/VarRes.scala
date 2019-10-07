@@ -2,6 +2,7 @@ package org.klesun.deep_js_completion.resolvers
 
 import java.util.Objects
 
+import com.intellij.lang.ecmascript6.psi.{ES6FromClause, ES6ImportedBinding}
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.ecma6._
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
@@ -184,6 +185,18 @@ case class VarRes(ctx: IExprCtx) {
             val clst = JSDeepClassType(cls, ctx.subCtxEmpty())
             clst
           })
+      case es6Imp: ES6ImportedBinding =>
+        val moduleValue = Option(es6Imp.getDeclaration).itr()
+          .flatMap(decl => findChildren[ES6FromClause](decl))
+          .flatMap(cl => cl.resolveReferencedElements().asScala)
+          .flatMap(cast[PsiFile](_))
+          .flatMap(ModuleRes(ctx.subCtxEmpty()).resolve)
+        if (es6Imp.getText.startsWith("* as ")) {
+          moduleValue
+        } else {
+          val keyt = new JSStringLiteralTypeImpl("default", true, JSTypeSource.EMPTY)
+          moduleValue.flatMap(t => ctx.mt().getKey(t, Some(keyt)))
+        }
       case _ =>
         //println("Unsupported var declaration - " + psi.getClass + " " + psi.getText)
         None

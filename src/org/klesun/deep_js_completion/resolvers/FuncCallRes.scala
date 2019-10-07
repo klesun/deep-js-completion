@@ -5,12 +5,11 @@ import com.intellij.lang.javascript.psi.types._
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.{Mkt, Mt}
-import org.klesun.deep_js_completion.resolvers.var_res.ArgRes
 import org.klesun.deep_js_completion.structures.{EInstType, JSDeepModuleTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang._
 
-import scala.collection.JavaConverters._
 import scala.collection.GenTraversableOnce
+import scala.collection.JavaConverters._
 import scala.collection.immutable.List
 
 /**
@@ -71,7 +70,7 @@ case class FuncCallRes(ctx: IExprCtx) {
         cnc(
           PathStrGoToDecl.getReferencedFileAnyDir(arg),
           PathStrGoToDecl.getModuleFile(arg)
-        ).flatMap(file => ArgRes(ctx.subCtxEmpty()).resolveCommonJsFormatDef(file)),
+        ).flatMap(file => ModuleRes(ctx.subCtxEmpty()).resolveCommonJsFormatDef(file)),
         cast[JSLiteralExpression](arg)
           .map(lit => JSDeepModuleTypeImpl(lit.getValue + "", EInstType.Required))
       ))

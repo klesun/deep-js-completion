@@ -12,13 +12,12 @@ import com.intellij.lang.javascript.psi.jsdoc.JSDocTag
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.{PsiElement, PsiFile, PsiFileFactory, PsiWhiteSpace}
+import com.intellij.psi.{PsiElement, PsiFileFactory, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
 import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
-import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
+import org.klesun.deep_js_completion.resolvers.{MainRes, ModuleRes, VarRes}
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang.{cast, nit, _}
@@ -147,46 +146,6 @@ case class ArgRes(ctx: IExprCtx) {
       .flatMap(ctx => if (para.isRest) Some(ctx.getSpreadArg) else ctx.getArg(order))
   }
 
-  private def resolveRequireJsSupplierDef(file: PsiFile): GenTraversableOnce[JSType] = {
-    PsiTreeUtil.findChildrenOfType(file, classOf[JSCallExpression]).asScala
-      .find(assi => assi.getText.startsWith("define("))
-      .flatMap(call => call.getArguments.lift(1)).itr
-      .flatMap(moduleSupplier => ctx.findExprType(moduleSupplier))
-  }
-
-  def resolveCommonJsFormatDef(file: PsiFile): GenTraversableOnce[JSType] = {
-    val types = file.getChildren
-      .flatMap(cast[JSExpressionStatement](_))
-      .flatMap(_.getChildren)
-      .flatMap(cast[JSAssignmentExpression](_)).itr()
-      .flatMap(ass => nit(ass.getROperand)
-        .flatMap(value => nit(ass.getLOperand)
-          .flatMap(vari => {
-            val txt = Option(vari.getText).getOrElse("")
-            if (txt startsWith "module.exports") {
-              ctx.findExprType(value)
-            } else if (txt startsWith "exports.") {
-              cast[JSDefinitionExpression](vari)
-                .filter(ref => Option(vari.getText).exists(txt => txt startsWith "exports."))
-                .flatMap(defi => Option(defi.getFirstChild))
-                .flatMap(cast[JSReferenceExpressionImpl](_))
-                .flatMap(ref => Option(ref.getReferencedName))
-                .map(name => Mt.mkProp(name, ctx.findExprType(value), Some(vari)))
-                .map(prop => new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava))
-            } else {
-              None
-            }
-          })
-        )
-      )
-    types
-  }
-
-  private def resolveRequireJsFormatDef(file: PsiFile): GenTraversableOnce[JSType] = {
-    val types = resolveRequireJsSupplierDef(file)
-    types.itr().flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
-  }
-
   def getDocTagComment(docTag: JSDocTag) = {
     var next = docTag.getNextSibling
     val tokens = new ListBuffer[PsiElement]
@@ -258,10 +217,7 @@ case class ArgRes(ctx: IExprCtx) {
           val isFuncCall = !found.group(2).equals("")
           nit(caretPsi.getContainingFile)
             .flatMap(f => PathStrGoToDecl.getRelativeFile(path, f)).itr
-            .flatMap(file => List()
-              ++ resolveCommonJsFormatDef(file)
-              ++ resolveRequireJsFormatDef(file)
-            ).lift(0).itr
+            .flatMap(ModuleRes(ctx.subCtxEmpty()).resolve)
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
         })
       ,

@@ -71,7 +71,6 @@ case class FuncCtx(
   override def areArgsKnown(): Boolean = !argPsiType.equals(EArgPsiType.NONE)
 
   override def isInComment(): Boolean = {
-    Console.println("guzno is in comment " + fakeFileSource + " ")
     fakeFileSource.nonEmpty
   }
 
