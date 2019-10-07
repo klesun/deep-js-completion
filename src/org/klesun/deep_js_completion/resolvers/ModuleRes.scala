@@ -31,6 +31,17 @@ case class ModuleRes(ctx: IExprCtx) {
         val prop = Mt.mkProp("default", valtit, Some(defExp))
         val modulet = new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)
         Some(modulet)
+      case varSt: JSVarStatement =>
+        if (varSt.getText.startsWith("export ")) {
+          varSt.getVariables.itr().flatMap(v => {
+            val valtit = Option(v.getInitializer).itr().flatMap(i => ctx.findExprType(i))
+            val prop = Mt.mkProp(v.getName, valtit, Some(v))
+            val modulet = new JSRecordTypeImpl(JSTypeSource.EMPTY, List(prop).asJava)
+            Some(modulet)
+          })
+        } else {
+          None
+        }
       case _ => None
     })
   }

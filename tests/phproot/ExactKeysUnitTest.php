@@ -253,9 +253,10 @@ class ExactKeysUnitTest
     public function provideEs6Imports($arg)
     {
         $arg['stuff'];
+        $arg['all'][''];
         return [
             [$arg['inst'], ['aala', 'oolo', 'uulu']],
-            [$arg['all'], ['default', /*'abc', 'doStuff', 'getList'*/]],
+            [$arg['all'], ['default', 'getList', /*'abc', 'doStuff'*/]],
         ];
     }
 
