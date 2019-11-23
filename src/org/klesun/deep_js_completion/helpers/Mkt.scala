@@ -2,6 +2,7 @@ package org.klesun.deep_js_completion.helpers
 
 import com.intellij.lang.javascript.psi.{JSType, JSTypeUtils}
 import com.intellij.lang.javascript.psi.types._
+import com.intellij.lang.javascript.psi.types.primitives.JSNullType
 import com.intellij.psi.PsiElement
 import org.klesun.deep_js_completion.structures.JSDeepMultiType
 
@@ -16,8 +17,20 @@ object Mkt {
     values.map(value => new JSStringLiteralTypeImpl(value, false, JSTypeSource.EMPTY))
   }
 
+  def bool(value: Boolean): Some[JSBooleanLiteralTypeImpl] = {
+    Some(new JSBooleanLiteralTypeImpl(value, false, JSTypeSource.EMPTY))
+  }
+
   def bool(): Some[JSBooleanLiteralTypeImpl] = {
-    Some(new JSBooleanLiteralTypeImpl(false, false, JSTypeSource.EMPTY))
+    bool(false)
+  }
+
+  def nul(): Some[JSNullType] = {
+    Some(new JSNullType(JSTypeSource.EMPTY))
+  }
+
+  def num(value: Double): Some[JSNumberLiteralTypeImpl] = {
+    Some(new JSNumberLiteralTypeImpl(value, false, JSTypeSource.EMPTY, null))
   }
 
   def func(): Some[JSFunctionTypeImpl] = {
