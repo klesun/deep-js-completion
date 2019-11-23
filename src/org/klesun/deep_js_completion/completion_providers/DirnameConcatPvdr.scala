@@ -37,7 +37,7 @@ class DirnameConcatPvdr extends CompletionProvider[CompletionParameters]
     val caretPath = basePath + relPath
     val vf = notNull(LocalFileSystem.getInstance.findFileByPath(caretPath))
     vf.getChildren.map(f => f.getName).itr()
-      .map(name => LookupElementBuilder.create("/" + name)
+      .map(name => LookupElementBuilder.create(relPath + name)
         .withLookupString(relPath + name)
         .withIcon(PropNamePvdr.icon))
   }
