@@ -43,6 +43,8 @@ object PathStrGoToDecl {
     } else if (relPath.endsWith(".es6")
             || relPath.endsWith(".js")
             || relPath.endsWith(".ts")
+            || relPath.endsWith(".json")
+            || relPath.endsWith(".json5")
     ) {
       // get any file in project named this way
       val proj = caretFile.getProject

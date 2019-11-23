@@ -1,5 +1,6 @@
 package org.klesun.deep_js_completion.resolvers
 
+import com.intellij.json.psi.JsonFile
 import com.intellij.lang.javascript.psi._
 import com.intellij.lang.javascript.psi.types._
 import org.klesun.deep_js_completion.contexts.IExprCtx
@@ -70,7 +71,16 @@ case class FuncCallRes(ctx: IExprCtx) {
         cnc(
           PathStrGoToDecl.getReferencedFileAnyDir(arg),
           PathStrGoToDecl.getModuleFile(arg)
-        ).flatMap(file => ModuleRes(ctx.subCtxEmpty()).resolveCommonJsFormatDef(file)),
+        ).flatMap(file => {
+          cnc(
+            cast[JSFile](file).itr()
+              .flatMap(jsFile => ModuleRes(ctx.subCtxEmpty())
+                .resolveCommonJsFormatDef(jsFile)),
+            cast[JsonFile](file)
+              .flatMap(jsonFile => Option(jsonFile.getTopLevelValue)).itr()
+              .flatMap(jsonVal => JsonRes().resolve(jsonVal))
+          )
+        }),
         cast[JSLiteralExpression](arg)
           .map(lit => JSDeepModuleTypeImpl(lit.getValue + "", EInstType.Required))
       ))

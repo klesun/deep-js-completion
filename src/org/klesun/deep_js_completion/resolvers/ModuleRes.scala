@@ -92,7 +92,7 @@ case class ModuleRes(ctx: IExprCtx) {
     types.itr().flatMap(sup => Mt.getReturnType(sup, ctx.subCtxEmpty()))
   }
 
-  def resolve(file: PsiFile): It[JSType] = {
+  def resolveWebpackImport(file: PsiFile): It[JSType] = {
     frs(
       resolveEs6FormatDef(file),
       resolveCommonJsFormatDef(file),

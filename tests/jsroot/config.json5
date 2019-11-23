@@ -1,0 +1,18 @@
+{
+  environment: "test",
+  httpListenPort: 8080,
+  dbNodes: [
+    {
+      host: "123.123.234.234",
+      dbName: "ololo",
+      password: "qwerty",
+      user: "vasya"
+    },
+    {
+      host: "43.123.46.234",
+      dbName: "ololo",
+      password: "asdasd",
+      user: "misha"
+    }
+  ],
+}

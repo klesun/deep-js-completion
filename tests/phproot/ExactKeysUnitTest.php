@@ -260,6 +260,17 @@ class ExactKeysUnitTest
         ];
     }
 
+    /** @param $arg = require('ExactKeysUnitTest.js').provideJsonRequire() */
+    public function provideJsonRequire($arg)
+    {
+        $arg[''];
+        $arg['dbNodes'][0][''];
+        return [
+            [$arg, ['environment', 'httpListenPort', 'dbNodes']],
+            [$arg['dbNodes'][0], ['host', 'dbName', 'password', 'user']],
+        ];
+    }
+
     // ========================
     // following not implemented yet
     // ========================

@@ -190,7 +190,7 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(decl => findChildren[ES6FromClause](decl))
           .flatMap(cl => cl.resolveReferencedElements().asScala)
           .flatMap(cast[PsiFile](_))
-          .flatMap(ModuleRes(ctx.subCtxEmpty()).resolve)
+          .flatMap(ModuleRes(ctx.subCtxEmpty()).resolveWebpackImport)
         if (es6Imp.getText.startsWith("* as ")) {
           moduleValue
         } else {

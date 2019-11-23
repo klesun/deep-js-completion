@@ -427,3 +427,10 @@ const providePrivateByFuncRef = (arg) => {
 [{lululu: 1, kokoko: 2}].map(a => providePrivateByFuncRef(a));
 
 exports.providePrivateByFuncRef = providePrivateByFuncRef;
+
+exports.provideJsonRequire = () => {
+    /** @var zhopaConfig = require('config.json5') */
+    var zhopaConfig = getConfigFromSomewhere();
+    zhopaConfig.dbNodes[0].;
+    return zhopaConfig;
+};
