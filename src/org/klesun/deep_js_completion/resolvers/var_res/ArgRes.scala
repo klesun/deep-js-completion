@@ -14,10 +14,9 @@ import com.intellij.lang.javascript.psi.types._
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.{PsiElement, PsiFileFactory, PsiWhiteSpace}
 import org.klesun.deep_js_completion.contexts.{IExprCtx, IFuncCtx}
-import org.klesun.deep_js_completion.entry.PathStrGoToDecl
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.var_res.ArgRes._
-import org.klesun.deep_js_completion.resolvers.{MainRes, ModuleRes, VarRes}
+import org.klesun.deep_js_completion.resolvers.{MainRes, VarRes}
 import org.klesun.deep_js_completion.structures.{JSDeepFunctionTypeImpl, JSDeepMultiType}
 import org.klesun.lang.DeepJsLang
 import org.klesun.lang.DeepJsLang.{cast, nit, _}
@@ -207,17 +206,6 @@ case class ArgRes(ctx: IExprCtx) {
           val varName = found.group(1)
           val isFuncCall = !found.group(2).equals("")
           findVarDecl(caretPsi, varName).itr()
-            .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
-        })
-      ,
-      """^\s*=\s*require\('([^']+)'\)(\([^\)]*\)|)\s*$""".r.findFirstMatchIn(expr)
-        .itr()
-        .flatMap(found => {
-          val path = found.group(1)
-          val isFuncCall = !found.group(2).equals("")
-          nit(caretPsi.getContainingFile)
-            .flatMap(f => PathStrGoToDecl.getRelativeFile(path, f)).itr
-            .flatMap(ModuleRes(ctx.subCtxEmpty()).resolve)
             .flatMap(t => if (isFuncCall) Mt.getReturnType(t, ctx.subCtxEmpty()) else Some(t))
         })
       ,
