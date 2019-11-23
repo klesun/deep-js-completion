@@ -1,0 +1,10 @@
+{
+  "name": "deep-js-completion-tests",
+  "version": "2019.08.04.001",
+  "description": "this package stores some unit and manual test files for the deep-js-completion WebStorm plugin",
+  "author": "klesun",
+  "license": "MIT",
+  "dependencies": {
+    "klesun-node-tools": "git+https://github.com/klesun-misc/klesun-node-tools.git#229e07370548c8ac8f9ed0ba9ecbafa41a6d7012"
+  }
+}
