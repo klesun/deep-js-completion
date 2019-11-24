@@ -120,32 +120,34 @@ case class VarRes(ctx: IExprCtx) {
     }
   }
 
+  def resolveDestrProp(prop: JSDestructuringProperty, dest: JSVariable): GenTraversableOnce[JSType] = {
+    val isSpread = prop.getText().startsWith("...")
+    nit(prop.getParent)
+      .flatMap(cast[JSDestructuringObject](_))
+      .flatMap(obj => Option(obj.getParent))
+      .flatMap(resolveDestructEl)
+      .flatMap(qualT => {
+        val keyTOpt = Option(dest.getName)
+          .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
+        if (isSpread) {
+          val removedKeys = Option(prop.getParent).itr()
+            .flatMap(cast[JSDestructuringObject](_))
+            .flatMap(dobj => dobj.getProperties)
+            .filter(otherProp => !otherProp.equals(prop))
+            .flatMap(otherProp => Option(otherProp.getName))
+            .toList
+          Mt.removeKeys(qualT, removedKeys)
+        } else {
+          ctx.mt().getKey(qualT, keyTOpt)
+        }
+      })
+  }
+
   def resolveMainDeclVar(dest: JSVariable): GenTraversableOnce[JSType] = {
-    nit(dest.getInitializer)
-      .flatMap(expr => ctx.findExprType(expr)) ++
-    nit(dest.getParent).itr.flatMap {
-      case prop: JSDestructuringProperty =>
-        val isSpread = prop.getText().startsWith("...")
-        val types = Option(prop.getParent)
-          .flatMap(cast[JSDestructuringObject](_))
-          .flatMap(obj => Option(obj.getParent)).itr
-          .flatMap(resolveDestructEl)
-          .flatMap(qualT => {
-            val keyTOpt = Option(dest.getName)
-              .map(name => new JSStringLiteralTypeImpl(name, true, JSTypeSource.EMPTY))
-            if (isSpread) {
-              val removedKeys = Option(prop.getParent).itr()
-                .flatMap(cast[JSDestructuringObject](_))
-                .flatMap(dobj => dobj.getProperties)
-                .filter(otherProp => !otherProp.equals(prop))
-                .flatMap(otherProp => Option(otherProp.getName))
-                .toList
-              Mt.removeKeys(qualT, removedKeys)
-            } else {
-              ctx.mt().getKey(qualT, keyTOpt)
-            }
-          })
-        types
+    val assValTit = nit(dest.getInitializer)
+      .flatMap(expr => ctx.findExprType(expr))
+    val posTit = nit(dest.getParent).itr.flatMap {
+      case prop: JSDestructuringProperty => resolveDestrProp(prop, dest)
       case arr: JSDestructuringArray =>
         val types = Option(arr.getParent).itr
           .flatMap(el => resolveDestructEl(el))
@@ -159,6 +161,7 @@ case class VarRes(ctx: IExprCtx) {
       case varst: JSVarStatement => resolveVarSt(varst)
       case _ => None
     }
+    cnc(posTit, assValTit)
   }
 
   // may be defined in a different file unlike resolveAssignment()
@@ -245,6 +248,9 @@ case class VarRes(ctx: IExprCtx) {
     val qualMem = nit(ref.getQualifier)
       .flatMap(qual => ctx.findExprType(qual)).mem()
     var tit = cnc(
+      getDeclarationsFromWs(ref).itr()
+        .flatMap(psi => resolveFromMainDecl(psi, qualMem))
+      ,
       qualMem.itr()
         .flatMap(qualT => {
           val keyTOpt = Option(ref.getReferenceName)
@@ -258,9 +264,6 @@ case class VarRes(ctx: IExprCtx) {
           .flatMap(assertAtModuleEpxr)
           .flatMap(file => findVarAt(file, varName))
           .flatMap(vari => resolveMainDeclVar(vari)))
-      ,
-      getDeclarationsFromWs(ref).itr()
-        .flatMap(psi => resolveFromMainDecl(psi, qualMem))
       ,
       findRefUsages(ref).itr()
         .flatMap(usage => new AssRes(ctx)
