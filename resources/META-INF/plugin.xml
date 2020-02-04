@@ -63,7 +63,7 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]>
   </change-notes>
 
-  <idea-version since-build="182.3569.36"/>
+  <idea-version since-build="191.8026.42"/>
 
   <!-- if you don't add this, you'll get "plugin does not include any module dependency tags" error  -->
   <depends>com.intellij.modules.lang</depends>
