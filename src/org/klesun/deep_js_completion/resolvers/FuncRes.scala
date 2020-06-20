@@ -7,7 +7,7 @@ import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList
 import com.intellij.lang.javascript.psi.{JSFunction, JSParameterTypeDecorator, JSType}
 import com.intellij.lang.javascript.psi.ecmal4.JSAttributeList.ModifierType
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
-import com.intellij.lang.javascript.psi.types.{JSFunctionTypeImpl, JSTypeParser, JSTypeSource}
+import com.intellij.lang.javascript.psi.types.{JSFunctionTypeImpl, JSGenericTypeImpl, JSTypeParser, JSTypeSource}
 import org.klesun.deep_js_completion.contexts.IExprCtx
 import org.klesun.deep_js_completion.helpers.Mt
 import org.klesun.deep_js_completion.resolvers.MainRes.getReturns
@@ -38,9 +38,8 @@ case class FuncRes(ctx: IExprCtx) {
       .map(tagVal => tagVal.getText)
       .flatMap(typeText => {
         // the parser does not seem to like {Promise<number>}, it only accepts Promise<number>
-        val plain = new JSTypeParser(typeText, JSTypeSource.EMPTY).parseParameterType(true)
         val noBrac = new JSTypeParser(substr(typeText, 1, -1), JSTypeSource.EMPTY).parseParameterType(true)
-        cnc(Option(plain), Option(noBrac)).flatMap(dec => Option(dec.getType))
+        nit(noBrac).flatMap(dec => Option(dec.getType))
       })
       .map(rett => new JSFunctionTypeImpl(JSTypeSource.EMPTY,
         new util.ArrayList[JSParameterTypeDecorator](), rett))
