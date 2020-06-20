@@ -12,9 +12,9 @@ import org.jetbrains.annotations.Nullable;
     }
 )
 public class DeepJsSettings implements PersistentStateComponent<DeepJsSettings> {
-    public Integer explicitDepthLimit = 120;
+    public Integer explicitDepthLimit = 90;
     public Integer implicitDepthLimit = 35;
-    public Integer totalExpressionLimit = 7500;
+    public Integer totalExpressionLimit = 5000;
     public Boolean enableInTypescript = false;
 
     public static DeepJsSettings inst(Project project) {

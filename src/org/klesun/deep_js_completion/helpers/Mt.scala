@@ -179,6 +179,7 @@ object Mt {
     elts
   }
 
+  /** взять плоские члены */
   private def getFlatMems(typ: JSType, project: Project): GenTraversableOnce[TypeMember] = {
     val genMems = Mt.asGeneric(typ, project).itr
       .flatMap(mt => {
