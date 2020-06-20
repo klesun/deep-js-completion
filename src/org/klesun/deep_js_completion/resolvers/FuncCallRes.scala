@@ -30,6 +30,9 @@ case class FuncCallRes(ctx: IExprCtx) {
       args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
         .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
         .map(elT => new JSArrayTypeImpl(elT, JSTypeSource.EMPTY))
+    } else if (List("flatMap").contains(methName)) {
+      args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
+        .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
     } else if (List("reduce").contains(methName)) {
       args.lift(0).itr.flatMap(arg => ctx.findExprType(arg))
         .flatMap(funcT => Mt.getReturnType(funcT, ctx.subCtxEmpty()))
