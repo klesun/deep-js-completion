@@ -309,6 +309,27 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
 		//}
 	}
 
+	private def areOnSameLine(caretPsi: PsiElement, goToPsi: PsiElement): Boolean = {
+		val isSameFile = Option(caretPsi.getContainingFile) eq Option(goToPsi.getContainingFile)
+		val caretLine = Option(caretPsi.getContainingFile).itr()
+			.map(f => substr(f.getText, 0, caretPsi.getTextOffset))
+			.flatMap(str => str.split("\n"))
+			.length
+		val goToLine = Option(goToPsi.getContainingFile).itr()
+			.map(f => substr(f.getText, 0, goToPsi.getTextOffset))
+			.flatMap(str => str.split("\n"))
+			.length
+		val isOnSameLine = caretLine == goToLine
+
+		isSameFile && isOnSameLine
+	}
+
+	private def isPartOf(caretPsi: PsiElement, goToPsi: PsiElement): Boolean = {
+		val isInside = goToPsi.getTextRange.contains(caretPsi.getTextOffset)
+
+		isInside
+	}
+
 	override def getGotoDeclarationTargets(caretPsi: PsiElement, mouseOffset: Int, editor: Editor): Array[PsiElement] = {
 
 		nit(caretPsi)
@@ -324,6 +345,7 @@ class PropNamePvdr extends CompletionProvider[CompletionParameters] with GotoDec
 						.exists(lit => lit equals ref.getReferenceName))
 			})
 			.flatMap(p => p.psi)
+			.filter(psi => !isPartOf(caretPsi, psi))
 			.itr().lift(0)
 			.toArray
 	}
