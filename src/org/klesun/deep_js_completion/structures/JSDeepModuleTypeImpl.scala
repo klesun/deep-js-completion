@@ -9,39 +9,39 @@ import com.intellij.util.ProcessingContext
 import org.klesun.lang.DeepJsLang._
 
 object EInstType extends Enumeration {
-  type T = Value
-  val Required, Called, New = Value
+	type T = Value
+	val Required, Called, New = Value
 }
 
 /**
-  * a type that includes the name of npm module - needed to add
-  * hardcoded logic for stuff like express which does not have a d.ts
-  */
+ * a type that includes the name of npm module - needed to add
+ * hardcoded logic for stuff like express which does not have a d.ts
+ */
 case class JSDeepModuleTypeImpl(
-  val name: String, val instType: EInstType.T
+	val name: String, val instType: EInstType.T
 ) extends JSTypeBaseImpl(JSTypeSource.EMPTY) {
 
-  override def copyTypeHierarchy(function: util.Function[JSType, JSType]): JSType = this
+	override def copyTypeHierarchy(function: util.Function[JSType, JSType]): JSType = this
 
-  override def copyWithNewSource(jsTypeSource: JSTypeSource): JSType = this
+	override def copyWithNewSource(jsTypeSource: JSTypeSource): JSType = this
 
-  def isEquivalentToWithSameClass(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = {
-    cast[JSDeepModuleTypeImpl](jsType).exists(that => that.name == name)
-  }
+	def isEquivalentToWithSameClass(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = {
+		cast[JSDeepModuleTypeImpl](jsType).exists(that => that.name == name)
+	}
 
-  def isEquivalentToImpl(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = isEquivalentToWithSameClass(jsType, processingContext, b)
+	def isEquivalentToImpl(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = isEquivalentToWithSameClass(jsType, processingContext, b)
 
-  override def resolvedHashCodeImpl(): Int = {
-    Objects.hash(List(name))
-  }
+	override def resolvedHashCodeImpl(): Int = {
+		Objects.hash(List(name))
+	}
 
-  override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
-    var typeStr = "require('" + name + "')"
-    if (instType == EInstType.Called) {
-      typeStr += "()"
-    } else if (instType == EInstType.New) {
-      typeStr = "new " + typeStr;
-    }
-    typeStr
-  }
+	override def getTypeText(typeTextFormat: JSType.TypeTextFormat): String = {
+		var typeStr = "require('" + name + "')"
+		if (instType == EInstType.Called) {
+			typeStr += "()"
+		} else if (instType == EInstType.New) {
+			typeStr = "new " + typeStr;
+		}
+		typeStr
+	}
 }

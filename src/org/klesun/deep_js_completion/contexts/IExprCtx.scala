@@ -12,13 +12,21 @@ import scala.collection.GenTraversableOnce
  * resolver for depth/recursion tracing and passed parameters typing
  */
 abstract class IExprCtx {
-  def func(): IFuncCtx
-  def mt(): Mt
-  def findExprType(expr: JSExpression): GenTraversableOnce[JSType]
-  def limitResolveDepth(depthLimit: Int, expr: JSExpression): It[JSType]
-  def subCtxDirect(funcCall: JSCallExpression): IExprCtx
-  def subCtxEmpty(): IExprCtx
-  def subCtxDoc(fakeFileSource: PsiElement): IExprCtx
-  def withClosure(funcPsi: JSFunction, closureCtx: IFuncCtx): IExprCtx
-  def getDepth(): Int
+	def func(): IFuncCtx
+
+	def mt(): Mt
+
+	def findExprType(expr: JSExpression): GenTraversableOnce[JSType]
+
+	def limitResolveDepth(depthLimit: Int, expr: JSExpression): It[JSType]
+
+	def subCtxDirect(funcCall: JSCallExpression): IExprCtx
+
+	def subCtxEmpty(): IExprCtx
+
+	def subCtxDoc(fakeFileSource: PsiElement): IExprCtx
+
+	def withClosure(funcPsi: JSFunction, closureCtx: IFuncCtx): IExprCtx
+
+	def getDepth(): Int
 }
