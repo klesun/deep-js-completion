@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2019.11.24.001</version>
+  <version>2020.06.22.001</version>
   <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
 
   <description><![CDATA[
@@ -58,8 +58,10 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Fix: do not overwrite existing path in string literal when providing __dirname concat completion</li>
-  <li>Support require("something.json")</li>
+  <li>Do not GoTo declaration that is on same line</li>
+  <li>Resolve flatMap() result</li>
+  <li>Make default depth limits stricter</li>
+  <li>Fix: do not suggest "Tile" as property instead of class from jsdoc `@return {Tile}`</li>
     ]]>
   </change-notes>
 
