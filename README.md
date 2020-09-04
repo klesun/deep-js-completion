@@ -1,6 +1,7 @@
 
-I think this project is more or less oficially abandoned, as I'm mostly coding in typescript nowadays and don't have enough time for it. If I get fired from my current job or something, and have nothing to do, I may possibly return to developing it, but I would not expect that in near future, unless someone really-really wishes some simple feature implemented here.
+I think this project development is more or less oficially halted, as I'm mostly coding in typescript nowadays and don't have enough time for it. If I get fired from my current job or something, and have nothing to do, I may possibly return to developing it, but I would not expect that in near future, unless someone really-really wishes some simple feature implemented here.
 
+__________________________________________
 
 A Webstorm/IDEA plugin for js object property completion inferred from a complex context.
 
