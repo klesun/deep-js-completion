@@ -20,7 +20,7 @@ case class DeepIndexSignatureImpl(val keyt: JSType, val valt: JSType, val psi: O
 	override def toString() = {
 		val propName = Mt.getAllLiteralValues(keyt)
 			.map(vals => vals.mkString("-"))
-			.getOrElse(keyt + "huj")
+			.getOrElse(keyt + "")
 		"[p: " + propName + "]: " + valt
 	}
 }
