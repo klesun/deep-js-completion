@@ -90,7 +90,7 @@ case class ArgRes(ctx: IExprCtx) {
 	private def getInlineFuncArgType(func: PsiElement, argOrder: Integer): GenTraversableOnce[JSType] = {
 		nit(func.getParent)
 			.flatMap(cast[JSArgumentList](_))
-			.flatMap(argList => nit(argList.getArguments.indexWhere(arg => arg.equals(func)))
+			.flatMap(argList => nit(argList.getArguments.indexWhere(_ == func))
 				.flatMap(inlineFuncArgOrder => Option(true)
 					.flatMap(ok => Option(argList.getParent))
 					.flatMap(cast[JSCallExpression](_)).itr
