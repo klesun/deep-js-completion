@@ -19,7 +19,7 @@ import scala.collection.GenTraversableOnce
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-case class ThisCls(isStatic: Boolean, clsPsi: JSClass[StubElement[_]])
+case class ThisCls(isStatic: Boolean, clsPsi: JSClass)
 
 object MainRes {
 
@@ -36,7 +36,7 @@ object MainRes {
 
 	def getThisCls(expr: JSThisExpression) = {
 		var parent = expr.getParent
-		var clsOpt: Option[JSClass[StubElement[_]]] = None
+		var clsOpt: Option[JSClass] = None
 		var isStatic = false
 		var done = false
 		while (parent != null && clsOpt.isEmpty) {
@@ -47,7 +47,7 @@ object MainRes {
 					isStatic = parent.getChildren
 						.flatMap(cast[JSAttributeList](_))
 						.exists(attrs => attrs.hasModifier(ModifierType.STATIC))
-					clsOpt = Option(parent.getParent).flatMap(cast[JSClass[StubElement[_]]](_))
+					clsOpt = Option(parent.getParent).flatMap(cast[JSClass](_))
 					done = true
 				}
 			}

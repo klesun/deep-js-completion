@@ -23,7 +23,7 @@ import scala.collection.JavaConverters._
  * you _any_ type when you call .asRecordType()
  */
 case class JSDeepClassType(
-	clsPsi: JSClass[StubElement[_]],
+	clsPsi: JSClass,
 	closureCtx: IExprCtx,
 ) extends JSType {
 
@@ -67,7 +67,7 @@ case class JSDeepClassType(
 
 	override def acceptChildren(jsRecursiveTypeVisitor: JSRecursiveTypeVisitor): Unit = ???
 
-	override def resolveClass(): JSClass[_ <: StubElement[_ <: PsiElement]] = ???
+	override def resolveClass(): JSClass = ???
 
 	override def getSource: JSTypeSource = ???
 
@@ -77,7 +77,7 @@ case class JSDeepClassType(
 
 	override def isEquivalentTo(jsType: JSType, processingContext: ProcessingContext): Boolean = ???
 
-	override def transformTypeHierarchy(function: util.Function[JSType, JSType]): JSType = ???
+	override def transformTypeHierarchy(function: util.Function[_ >: JSType, _ <: JSType]): JSType = ???
 
 	override def transformTypeHierarchy(jsRecursiveTypeTransformer: JSRecursiveTypeTransformer): JSType = ???
 

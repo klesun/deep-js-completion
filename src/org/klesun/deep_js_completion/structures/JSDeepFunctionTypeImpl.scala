@@ -21,7 +21,7 @@ case class JSDeepFunctionTypeImpl(
 	val closureCtx: Option[IFuncCtx] = None,
 ) extends JSTypeBaseImpl(JSTypeSource.EMPTY) {
 
-	override def copyTypeHierarchy(function: util.Function[JSType, JSType]): JSType = this
+	override def copyTypeHierarchy(function: util.Function[_ >: JSType, _ <: JSType]): JSType = this
 
 	override def copyWithNewSource(jsTypeSource: JSTypeSource): JSType = this
 
@@ -31,7 +31,7 @@ case class JSDeepFunctionTypeImpl(
 
 	def isEquivalentToImpl(jsType: JSType, processingContext: ProcessingContext, b: Boolean): Boolean = isEquivalentToWithSameClass(jsType, processingContext, b)
 
-	override def resolvedHashCodeImpl(): Int = {
+	override def hashCodeImpl(): Int = {
 		Objects.hash(List(funcPsi))
 	}
 

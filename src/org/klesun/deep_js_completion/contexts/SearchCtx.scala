@@ -40,7 +40,7 @@ class SearchCtx(
 			.getOrElse(7500)
 	}
 
-	private def getWsType(expr: JSExpression) = {
+	private def getWsType(expr: JSExpression): GenTraversableOnce[JSType] = {
 		val isProp = cast[JSReferenceExpression](expr)
 			.exists(ref => ref.getQualifier != null)
 		val isMeth = cast[JSCallExpression](expr)
@@ -55,7 +55,8 @@ class SearchCtx(
 		} else {
 			// would be nice to find a better function - that would
 			// try _guessing_ declaration by just member name
-			Option(JSTypeEvaluator.getExpressionType(expr))
+			Option(JSTypeEvaluator.getElementType(expr))
+				.flatMap(res => if (res.getResults().size() > 0) Some(res.getResults().get(0)) else None)
 				.flatMap(res => Option(res.getType))
 		}
 	}
