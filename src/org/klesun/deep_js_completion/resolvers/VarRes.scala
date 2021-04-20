@@ -182,8 +182,8 @@ case class VarRes(ctx: IExprCtx) {
 				}
 			}
 			case func: JSFunction => FuncRes(ctx).resolve(func)
-			case cls: JSClass[StubElement[_]] =>
-				cast[JSClass[StubElement[_]]](cls)
+			case cls: JSClass =>
+				cast[JSClass](cls)
 					.map(cls => {
 						val clst = JSDeepClassType(cls, ctx.subCtxEmpty())
 						clst

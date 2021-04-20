@@ -1,8 +1,8 @@
 <idea-plugin>
   <id>lv.midiana.misc.idea-plugins.deep-js-completion</id>
   <name>deep-js-completion</name>
-  <version>2020.06.22.001</version>
-  <vendor email="arturklesun@gmail.com" url="http://midiana.lv/entry/deep-js-completion">klesun</vendor>
+  <version>2020.11.30.001</version>
+  <vendor email="arturklesun@gmail.com" url="https://klesun-productions.com">klesun</vendor>
 
   <description><![CDATA[
 <p>
@@ -58,14 +58,13 @@ Reference unexposed vars defined in a file using magical <code>at('FileName.js')
     ]]></description>
 
   <change-notes><![CDATA[
-  <li>Do not GoTo declaration that is on same line</li>
-  <li>Resolve flatMap() result</li>
-  <li>Make default depth limits stricter</li>
-  <li>Fix: do not suggest "Tile" as property instead of class from jsdoc `@return {Tile}`</li>
+  <li>Re-build with target jre 8, not 11 (caused crashes on idea running with a non-bundled jre)</li>
+  <li>Fix few API incompatibilities in newer idea builds</li>
+  <li>(A lot of tests seem to fail since recently, pretty big changes in WebStorm plugin codebase, I did not fix that in this build)</li>
     ]]>
   </change-notes>
 
-  <idea-version since-build="191.8026.42"/>
+  <idea-version since-build="202.8194.7"/>
 
   <!-- if you don't add this, you'll get "plugin does not include any module dependency tags" error  -->
   <depends>com.intellij.modules.lang</depends>
